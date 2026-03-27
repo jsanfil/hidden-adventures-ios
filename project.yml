@@ -1,0 +1,39 @@
+name: HiddenAdventures
+
+options:
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "18.0"
+
+settings:
+  base:
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 0.1
+    SWIFT_VERSION: "5.0"
+
+targets:
+  HiddenAdventures:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: App
+        excludes:
+          - README.md
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        PRODUCT_BUNDLE_IDENTIFIER: com.hiddenadventures.ios
+
+schemes:
+  HiddenAdventures:
+    build:
+      targets:
+        HiddenAdventures: all
+    run:
+      config: Debug
+    archive:
+      config: Release
