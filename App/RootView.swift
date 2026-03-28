@@ -1,33 +1,59 @@
 import SwiftUI
 
 struct RootView: View {
+  private let adventureService: AdventureService
+  private let profileService: ProfileService
+
+  @StateObject private var coordinator = AppCoordinator()
+
+  init(
+    adventureService: AdventureService,
+    profileService: ProfileService
+  ) {
+    self.adventureService = adventureService
+    self.profileService = profileService
+  }
+
   var body: some View {
-    NavigationStack {
-      List {
-        Section("Release Slice 1") {
-          Label("Auth bootstrap", systemImage: "person.badge.key")
-          Label("Feed", systemImage: "newspaper")
-          Label("Map", systemImage: "map")
-          Label("Adventure detail", systemImage: "binoculars")
-        }
-
-        Section("Local Setup") {
-          LabeledContent("iOS app") {
-            Text("Bootstrapped")
-              .foregroundStyle(HATheme.accent)
+    NavigationStack(path: coordinator.pathBinding) {
+      Group {
+        switch coordinator.stage {
+        case .welcome:
+          WelcomeView {
+            coordinator.stage = .profileSetup
           }
 
-          LabeledContent("Server repo") {
-            Text("Sibling workspace")
-          }
+        case .profileSetup:
+          ProfileSetupView(
+            profileService: profileService,
+            onBack: { coordinator.stage = .welcome },
+            onSkip: { coordinator.stage = .explore },
+            onContinue: { _ in coordinator.stage = .explore }
+          )
 
-          LabeledContent("Architecture") {
-            Text("SwiftUI-first")
-          }
+        case .explore:
+          ExploreShellView(
+            adventureService: adventureService,
+            viewerHandle: coordinator.viewerHandle,
+            mode: coordinator.exploreModeBinding,
+            onOpenDetail: { adventureID in
+              coordinator.path.append(.detail(adventureID))
+            }
+          )
         }
       }
-      .navigationTitle("Hidden Adventures")
+      .navigationDestination(for: AppRoute.self) { route in
+        switch route {
+        case .detail(let adventureID):
+          AdventureDetailView(
+            adventureID: adventureID,
+            adventureService: adventureService,
+            viewerHandle: coordinator.viewerHandle
+          )
+        }
+      }
     }
-    .tint(HATheme.accent)
+    .tint(HATheme.Colors.primary)
+    .preferredColorScheme(.light)
   }
 }

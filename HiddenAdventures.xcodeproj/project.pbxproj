@@ -7,15 +7,54 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		350BDCD8C51543FBFFC22DE2 /* HATheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC27E538CD55963BD02373EE /* HATheme.swift */; };
+		1A9F0B5216EB828C06527DD6 /* AppCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF0D6EAEC5DC0568832CF9E0 /* AppCoordinator.swift */; };
+		297C277C6A85B02B7C78DFB3 /* ProfileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85DEB3130C9F6520644EA13B /* ProfileService.swift */; };
+		3A331D5A0A6905217C15FB84 /* HiddenAdventuresUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47EFC8F76ECB832AC0562E1F /* HiddenAdventuresUITests.swift */; };
+		3F49A76E8A480F177CC5E38C /* ProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2A8856125A0CA6BB1A9B602 /* ProfileSetupView.swift */; };
+		50405A84C4F24E92D60CFA7B /* MockFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6728D21F886AE321FCB1FCF7 /* MockFixtures.swift */; };
+		5B58C9379D10CC5F756AB455 /* AdventureDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51AEB6FD9CC9D30EC2CC883E /* AdventureDetailView.swift */; };
 		5FF1999DA0CDC78210EAAEC8 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B33EC6D97B65EF29FDCB70C /* RootView.swift */; };
+		62C06078139D3DE7646834ED /* ExploreShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 742712AC53B2228B513E2B06 /* ExploreShellView.swift */; };
+		67B2C8F82886F8611EA41B19 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A85B19635A8492F38A602880 /* WelcomeView.swift */; };
+		7C1BD75A72A2384DDDF4B5E5 /* MapExploreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9C204CDC9CECCE3B5C52BB /* MapExploreView.swift */; };
+		9ADA44B142A6FA2CA40C4B42 /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88AEF072A39B651C9DDE2C67 /* DomainModels.swift */; };
+		A8C4B0E9F16AC84BEC0B95E9 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEBD234077F99604B20D3700 /* FeedView.swift */; };
+		AF5F56F417AC628A475C211F /* HATheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C28907C1C2F454066D9FD614 /* HATheme.swift */; };
+		BB778F9D50706FEC787C6EB1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8853742130D14660B95AFB3A /* Assets.xcassets */; };
+		C9E91AFB760282C44A5742A1 /* HAComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E40A4A859110E763484291F /* HAComponents.swift */; };
 		D1D79C7D9E1EBDA25A8F421F /* HiddenAdventuresApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF981AA58002EB9F259A6D6A /* HiddenAdventuresApp.swift */; };
+		F00FAC9FEA692263063DE968 /* AdventureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7ACE178766C7775048192A0 /* AdventureService.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		08556D58D96155637E95DD71 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D5D621C1B400F524E9218075 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B98AE35036B51D3B2379C6A2;
+			remoteInfo = HiddenAdventures;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		0E40A4A859110E763484291F /* HAComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HAComponents.swift; sourceTree = "<group>"; };
 		2B33EC6D97B65EF29FDCB70C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
-		DC27E538CD55963BD02373EE /* HATheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HATheme.swift; sourceTree = "<group>"; };
+		47EFC8F76ECB832AC0562E1F /* HiddenAdventuresUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiddenAdventuresUITests.swift; sourceTree = "<group>"; };
+		51AEB6FD9CC9D30EC2CC883E /* AdventureDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdventureDetailView.swift; sourceTree = "<group>"; };
+		6728D21F886AE321FCB1FCF7 /* MockFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockFixtures.swift; sourceTree = "<group>"; };
+		742712AC53B2228B513E2B06 /* ExploreShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreShellView.swift; sourceTree = "<group>"; };
+		7B9C204CDC9CECCE3B5C52BB /* MapExploreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapExploreView.swift; sourceTree = "<group>"; };
+		808A87D5F1BF4CFE8454A0FB /* HiddenAdventuresUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = HiddenAdventuresUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		85DEB3130C9F6520644EA13B /* ProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileService.swift; sourceTree = "<group>"; };
+		8853742130D14660B95AFB3A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		88AEF072A39B651C9DDE2C67 /* DomainModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainModels.swift; sourceTree = "<group>"; };
+		A2A8856125A0CA6BB1A9B602 /* ProfileSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSetupView.swift; sourceTree = "<group>"; };
+		A85B19635A8492F38A602880 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		C28907C1C2F454066D9FD614 /* HATheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HATheme.swift; sourceTree = "<group>"; };
+		DEBD234077F99604B20D3700 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
+		DF0D6EAEC5DC0568832CF9E0 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
 		EB87F70F720779779FE45065 /* HiddenAdventures.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HiddenAdventures.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F7ACE178766C7775048192A0 /* AdventureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdventureService.swift; sourceTree = "<group>"; };
 		FF981AA58002EB9F259A6D6A /* HiddenAdventuresApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiddenAdventuresApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -24,36 +63,150 @@
 			isa = PBXGroup;
 			children = (
 				EB87F70F720779779FE45065 /* HiddenAdventures.app */,
+				808A87D5F1BF4CFE8454A0FB /* HiddenAdventuresUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		20C12242F95980704EE3812D /* ProfileBootstrap */ = {
+			isa = PBXGroup;
+			children = (
+				A2A8856125A0CA6BB1A9B602 /* ProfileSetupView.swift */,
+			);
+			path = ProfileBootstrap;
+			sourceTree = "<group>";
+		};
+		4A1F5C5CFEB6F26BA9B4B6BA /* AdventureDetail */ = {
+			isa = PBXGroup;
+			children = (
+				51AEB6FD9CC9D30EC2CC883E /* AdventureDetailView.swift */,
+			);
+			path = AdventureDetail;
+			sourceTree = "<group>";
+		};
+		6CF1AF50D57A2A1F4BCC4F20 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				0E40A4A859110E763484291F /* HAComponents.swift */,
+				C28907C1C2F454066D9FD614 /* HATheme.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		738BAC709F49B08D4EE36609 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				8853742130D14660B95AFB3A /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		85F7323197D11952A9B18FDB /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				88AEF072A39B651C9DDE2C67 /* DomainModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		8728E8C8A9491542C1D6E724 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				4A1F5C5CFEB6F26BA9B4B6BA /* AdventureDetail */,
+				FC61830ABAC26CE0AB6C717C /* Explore */,
+				C9C995517BF0BFD5909370F1 /* Onboarding */,
+				20C12242F95980704EE3812D /* ProfileBootstrap */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		8F3F60336DEB74234F65FCDC /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				F7ACE178766C7775048192A0 /* AdventureService.swift */,
+				6728D21F886AE321FCB1FCF7 /* MockFixtures.swift */,
+				85DEB3130C9F6520644EA13B /* ProfileService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A1238FFB3500EC585085AA40 /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				47EFC8F76ECB832AC0562E1F /* HiddenAdventuresUITests.swift */,
+			);
+			path = UITests;
 			sourceTree = "<group>";
 		};
 		A510D2FDDD997580938528D7 /* App */ = {
 			isa = PBXGroup;
 			children = (
-				DC27E538CD55963BD02373EE /* HATheme.swift */,
+				DF0D6EAEC5DC0568832CF9E0 /* AppCoordinator.swift */,
 				FF981AA58002EB9F259A6D6A /* HiddenAdventuresApp.swift */,
 				2B33EC6D97B65EF29FDCB70C /* RootView.swift */,
+				6CF1AF50D57A2A1F4BCC4F20 /* DesignSystem */,
+				8728E8C8A9491542C1D6E724 /* Features */,
+				85F7323197D11952A9B18FDB /* Models */,
+				8F3F60336DEB74234F65FCDC /* Services */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		C9C995517BF0BFD5909370F1 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				A85B19635A8492F38A602880 /* WelcomeView.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		EE413C19A988380DB34C497F = {
 			isa = PBXGroup;
 			children = (
 				A510D2FDDD997580938528D7 /* App */,
+				738BAC709F49B08D4EE36609 /* Resources */,
+				A1238FFB3500EC585085AA40 /* UITests */,
 				12042FEDBB0F6CE952B293BB /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		FC61830ABAC26CE0AB6C717C /* Explore */ = {
+			isa = PBXGroup;
+			children = (
+				742712AC53B2228B513E2B06 /* ExploreShellView.swift */,
+				DEBD234077F99604B20D3700 /* FeedView.swift */,
+				7B9C204CDC9CECCE3B5C52BB /* MapExploreView.swift */,
+			);
+			path = Explore;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		2E243C4235B4CFEF9545C046 /* HiddenAdventuresUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 26D1DEC77D2206A6D38CFF88 /* Build configuration list for PBXNativeTarget "HiddenAdventuresUITests" */;
+			buildPhases = (
+				20D8DF074CC6FC9698BC104C /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7D1B52E86DA21951F8E452F3 /* PBXTargetDependency */,
+			);
+			name = HiddenAdventuresUITests;
+			packageProductDependencies = (
+			);
+			productName = HiddenAdventuresUITests;
+			productReference = 808A87D5F1BF4CFE8454A0FB /* HiddenAdventuresUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		B98AE35036B51D3B2379C6A2 /* HiddenAdventures */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D291D6B0999B77BDC91F4357 /* Build configuration list for PBXNativeTarget "HiddenAdventures" */;
 			buildPhases = (
 				6283027F47A142E5477CECF0 /* Sources */,
+				4CBEC4271AA4A33C4ABE59EA /* Resources */,
 			);
 			buildRules = (
 			);
@@ -75,6 +228,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					2E243C4235B4CFEF9545C046 = {
+						ProvisioningStyle = Automatic;
+						TestTargetID = B98AE35036B51D3B2379C6A2;
+					};
 					B98AE35036B51D3B2379C6A2 = {
 						ProvisioningStyle = Automatic;
 					};
@@ -95,24 +252,102 @@
 			projectRoot = "";
 			targets = (
 				B98AE35036B51D3B2379C6A2 /* HiddenAdventures */,
+				2E243C4235B4CFEF9545C046 /* HiddenAdventuresUITests */,
 			);
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		4CBEC4271AA4A33C4ABE59EA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB778F9D50706FEC787C6EB1 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
+		20D8DF074CC6FC9698BC104C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3A331D5A0A6905217C15FB84 /* HiddenAdventuresUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		6283027F47A142E5477CECF0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				350BDCD8C51543FBFFC22DE2 /* HATheme.swift in Sources */,
+				5B58C9379D10CC5F756AB455 /* AdventureDetailView.swift in Sources */,
+				F00FAC9FEA692263063DE968 /* AdventureService.swift in Sources */,
+				1A9F0B5216EB828C06527DD6 /* AppCoordinator.swift in Sources */,
+				9ADA44B142A6FA2CA40C4B42 /* DomainModels.swift in Sources */,
+				62C06078139D3DE7646834ED /* ExploreShellView.swift in Sources */,
+				A8C4B0E9F16AC84BEC0B95E9 /* FeedView.swift in Sources */,
+				C9E91AFB760282C44A5742A1 /* HAComponents.swift in Sources */,
+				AF5F56F417AC628A475C211F /* HATheme.swift in Sources */,
 				D1D79C7D9E1EBDA25A8F421F /* HiddenAdventuresApp.swift in Sources */,
+				7C1BD75A72A2384DDDF4B5E5 /* MapExploreView.swift in Sources */,
+				50405A84C4F24E92D60CFA7B /* MockFixtures.swift in Sources */,
+				297C277C6A85B02B7C78DFB3 /* ProfileService.swift in Sources */,
+				3F49A76E8A480F177CC5E38C /* ProfileSetupView.swift in Sources */,
 				5FF1999DA0CDC78210EAAEC8 /* RootView.swift in Sources */,
+				67B2C8F82886F8611EA41B19 /* WelcomeView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		7D1B52E86DA21951F8E452F3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B98AE35036B51D3B2379C6A2 /* HiddenAdventures */;
+			targetProxy = 08556D58D96155637E95DD71 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		0BDACA920C5867DE59E3FCEA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hiddenadventures.ios.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HiddenAdventures;
+			};
+			name = Debug;
+		};
+		0F4C0462246F4AC176298245 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hiddenadventures.ios.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HiddenAdventures;
+			};
+			name = Release;
+		};
 		6A5EE3C89C17496E9AA45585 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -187,7 +422,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.hiddenadventures.ios;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -207,7 +442,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.hiddenadventures.ios;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -279,6 +514,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		26D1DEC77D2206A6D38CFF88 /* Build configuration list for PBXNativeTarget "HiddenAdventuresUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0BDACA920C5867DE59E3FCEA /* Debug */,
+				0F4C0462246F4AC176298245 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		5161FD6C0CDAD67608D7A009 /* Build configuration list for PBXProject "HiddenAdventures" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

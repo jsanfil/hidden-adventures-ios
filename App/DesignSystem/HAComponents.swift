@@ -1,0 +1,279 @@
+import SwiftUI
+
+struct HAPrimaryButton: View {
+  let title: String
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Text(title)
+        .font(HATheme.Typography.bodyMedium)
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity)
+        .frame(height: 56)
+        .background(HATheme.Colors.primary)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+struct HAChip: View {
+  let title: String
+  var systemImage: String?
+  var isSelected: Bool
+  var action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 6) {
+        if let systemImage {
+          Image(systemName: systemImage)
+            .font(.system(size: 12, weight: .semibold))
+        }
+
+        Text(title)
+          .font(.system(size: 13, weight: .medium))
+      }
+      .foregroundStyle(isSelected ? Color.white : HATheme.Colors.foreground)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 8)
+      .background(isSelected ? HATheme.Colors.primary : HATheme.Colors.card)
+      .overlay {
+        Capsule(style: .continuous)
+          .stroke(isSelected ? HATheme.Colors.primary : HATheme.Colors.border, lineWidth: 1)
+      }
+      .clipShape(Capsule(style: .continuous))
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+struct HASegmentedControl<Option: Hashable & Identifiable>: View where Option: CustomStringConvertible {
+  let options: [Option]
+  @Binding var selection: Option
+
+  var body: some View {
+    HStack(spacing: 6) {
+      ForEach(options) { option in
+        Button {
+          selection = option
+        } label: {
+          Text(option.description)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(selection == option ? HATheme.Colors.foreground : HATheme.Colors.mutedForeground)
+            .frame(maxWidth: .infinity)
+            .frame(height: 36)
+            .background(selection == option ? HATheme.Colors.card : .clear)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+      }
+    }
+    .padding(4)
+    .background(HATheme.Colors.secondary)
+    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+  }
+}
+
+struct HAAvatarView: View {
+  let initials: String
+  var size: CGFloat = 44
+  var background: Color = HATheme.Colors.secondary
+  var foreground: Color = HATheme.Colors.mutedForeground
+
+  var body: some View {
+    Text(initials)
+      .font(.system(size: size * 0.34, weight: .medium))
+      .foregroundStyle(foreground)
+      .frame(width: size, height: size)
+      .background(background)
+      .clipShape(Circle())
+  }
+}
+
+struct HAStatusBarSpacer: View {
+  var body: some View {
+    Color.clear
+      .frame(height: 56)
+  }
+}
+
+struct HAImageCarousel: View {
+  let imageNames: [String]
+  let aspectRatio: CGFloat?
+  let cornerRadius: CGFloat
+  let dotsInside: Bool
+
+  @State private var selection = 0
+
+  init(
+    imageNames: [String],
+    aspectRatio: CGFloat? = 4 / 3,
+    cornerRadius: CGFloat = 22,
+    dotsInside: Bool = true
+  ) {
+    self.imageNames = imageNames
+    self.aspectRatio = aspectRatio
+    self.cornerRadius = cornerRadius
+    self.dotsInside = dotsInside
+  }
+
+  var body: some View {
+    VStack(spacing: dotsInside ? 0 : 8) {
+      ZStack(alignment: dotsInside ? .bottom : .center) {
+        carouselContent
+          .background(HATheme.Colors.muted)
+          .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+
+        if dotsInside && imageNames.count > 1 {
+          HADots(count: imageNames.count, currentIndex: selection, activeColor: .white, inactiveColor: .white.opacity(0.5))
+            .padding(.bottom, 12)
+        }
+      }
+
+      if !dotsInside && imageNames.count > 1 {
+        HADots(
+          count: imageNames.count,
+          currentIndex: selection,
+          activeColor: HATheme.Colors.mutedForeground,
+          inactiveColor: HATheme.Colors.mutedForeground.opacity(0.4)
+        )
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var carouselContent: some View {
+    let tabView = TabView(selection: $selection) {
+      ForEach(Array(imageNames.enumerated()), id: \.offset) { index, imageName in
+        Image(imageName)
+          .resizable()
+          .scaledToFill()
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .clipped()
+          .tag(index)
+      }
+    }
+    .tabViewStyle(.page(indexDisplayMode: .never))
+
+    if let aspectRatio {
+      tabView
+        .aspectRatio(aspectRatio, contentMode: .fit)
+    } else {
+      tabView
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+  }
+}
+
+struct HADots: View {
+  let count: Int
+  let currentIndex: Int
+  let activeColor: Color
+  let inactiveColor: Color
+
+  var body: some View {
+    HStack(spacing: 6) {
+      ForEach(0..<count, id: \.self) { index in
+        Circle()
+          .fill(index == currentIndex ? activeColor : inactiveColor)
+          .frame(width: index == currentIndex ? 8 : 6, height: index == currentIndex ? 8 : 6)
+      }
+    }
+  }
+}
+
+extension ExploreMode: CustomStringConvertible {
+  var description: String { rawValue }
+}
+
+enum HAAppTab {
+  case home
+  case explore
+  case post
+  case saved
+  case profile
+}
+
+struct HABottomTabBar: View {
+  let selectedTab: HAAppTab
+  let onSelect: (HAAppTab) -> Void
+
+  var body: some View {
+    HStack(alignment: .bottom, spacing: 4) {
+      tabItem(title: "Home", tab: .home, systemImage: selectedTab == .home ? "house.fill" : "house")
+      tabItem(title: "Explore", tab: .explore, systemImage: selectedTab == .explore ? "map.fill" : "map")
+
+      VStack(spacing: 2) {
+        Button(action: { onSelect(.post) }) {
+          ZStack {
+            Circle()
+              .fill(HATheme.Colors.primary)
+              .frame(width: 48, height: 48)
+              .shadow(color: HATheme.Colors.shadow, radius: 8, x: 0, y: 4)
+
+            Image(systemName: "plus")
+              .font(.system(size: 22, weight: .bold))
+              .foregroundStyle(.white)
+          }
+        }
+        .buttonStyle(.plain)
+        .offset(y: -10)
+        .accessibilityIdentifier("tab.post")
+
+        Text("Post")
+          .font(.system(size: 10, weight: .medium))
+          .foregroundStyle(HATheme.Colors.mutedForeground)
+          .offset(y: -6)
+      }
+      .frame(maxWidth: .infinity)
+
+      tabItem(title: "Saved", tab: .saved, systemImage: selectedTab == .saved ? "bookmark.fill" : "bookmark")
+      tabItem(title: "Profile", tab: .profile, systemImage: selectedTab == .profile ? "person.fill" : "person")
+    }
+    .padding(.horizontal, 8)
+    .padding(.top, 8)
+    .padding(.bottom, 10)
+    .background(.white)
+    .overlay(alignment: .top) {
+      Rectangle()
+        .fill(HATheme.Colors.border.opacity(0.85))
+        .frame(height: 1)
+    }
+  }
+
+  private func tabItem(title: String, tab: HAAppTab, systemImage: String) -> some View {
+    Button(action: { onSelect(tab) }) {
+      VStack(spacing: 6) {
+        Image(systemName: systemImage)
+          .font(.system(size: 23, weight: .regular))
+          .foregroundStyle(color(for: tab))
+
+        Text(title)
+          .font(.system(size: 10, weight: .medium))
+          .foregroundStyle(color(for: tab))
+      }
+      .frame(maxWidth: .infinity)
+      .frame(height: 46)
+    }
+    .buttonStyle(.plain)
+    .accessibilityIdentifier("tab.\(tab.accessibilityID)")
+  }
+
+  private func color(for tab: HAAppTab) -> Color {
+    selectedTab == tab ? HATheme.Colors.primary : HATheme.Colors.mutedForeground
+  }
+}
+
+extension HAAppTab {
+  var accessibilityID: String {
+    switch self {
+    case .home: "home"
+    case .explore: "explore"
+    case .post: "post"
+    case .saved: "saved"
+    case .profile: "profile"
+    }
+  }
+}

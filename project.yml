@@ -20,6 +20,10 @@ targets:
       - path: App
         excludes:
           - README.md
+      - path: Resources
+        buildPhase: resources
+        excludes:
+          - .gitkeep
     settings:
       base:
         CODE_SIGN_STYLE: Automatic
@@ -27,6 +31,21 @@ targets:
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
         INFOPLIST_KEY_UILaunchScreen_Generation: true
         PRODUCT_BUNDLE_IDENTIFIER: com.hiddenadventures.ios
+        TARGETED_DEVICE_FAMILY: 1
+
+  HiddenAdventuresUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: UITests
+    dependencies:
+      - target: HiddenAdventures
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: true
+        PRODUCT_BUNDLE_IDENTIFIER: com.hiddenadventures.ios.uitests
 
 schemes:
   HiddenAdventures:
@@ -35,5 +54,9 @@ schemes:
         HiddenAdventures: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - name: HiddenAdventuresUITests
     archive:
       config: Release
