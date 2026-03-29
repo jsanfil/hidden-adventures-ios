@@ -8,15 +8,19 @@ SwiftUI iOS client for the Hidden Adventures rebuild.
 - use Xcode as the primary IDE
 - link global roadmap and release context back to `hidden-adventures-plan`
 
-## Bootstrap Status
+## Current State
 
-This repo now includes a minimal SwiftUI app scaffold plus a checked-in `xcodegen` spec.
+- the repo contains a native Slice 1 shell for welcome, profile setup, unified explore feed and map, and adventure detail
+- the repo includes a deterministic UI-gallery and walkthrough harness under `UITests`
+- the current Slice 1 shell is still fixture-backed for data and viewer identity
+- the next milestone is real server and auth bootstrap integration against the sibling `hidden-adventures-server` repo
 
-Local workflow:
+## Local Workflow
 
 1. Run `xcodegen generate` after changing `project.yml`.
 2. Open `HiddenAdventures.xcodeproj` in Xcode.
-3. Point the app at the sibling `hidden-adventures-server` repo during local development.
+3. Use the sibling `hidden-adventures-server` repo as the local backend target for the next integration step.
+4. Keep the UI harness green while replacing fixture-backed services with real network clients.
 
 ## Suggested App Structure
 
@@ -28,4 +32,4 @@ Local workflow:
 
 ## Program Context
 
-The global roadmap, workstreams, and release slices live in the `hidden-adventures-plan` repo.
+The global roadmap, workstreams, release slices, and acceptance criteria live in the `hidden-adventures-plan` repo.
