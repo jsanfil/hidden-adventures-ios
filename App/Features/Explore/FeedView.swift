@@ -20,6 +20,7 @@ struct FeedView: View {
       .padding(.horizontal, 20)
       .padding(.bottom, 24)
     }
+    .accessibilityIdentifier("feed.scroll")
   }
 }
 
@@ -31,7 +32,7 @@ private struct FeedCardView: View {
   }
 
   var body: some View {
-    ZStack(alignment: .topTrailing) {
+    ZStack {
       ZStack(alignment: .bottomLeading) {
         HAImageCarousel(
           imageNames: images,
@@ -43,65 +44,82 @@ private struct FeedCardView: View {
           RoundedRectangle(cornerRadius: 16, style: .continuous)
             .fill(
               LinearGradient(
-                colors: [.clear, .black.opacity(0.18), .black.opacity(0.68)],
+                colors: [.clear, .black.opacity(0.10), .black.opacity(0.65)],
                 startPoint: .top,
                 endPoint: .bottom
               )
             )
         }
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
-        VStack(alignment: .leading, spacing: 10) {
-          if let category = adventure.categorySlug {
-            Text(category.displayTitle)
+        VStack(alignment: .leading, spacing: 8) {
+          Text(adventure.title)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(.white)
+            .multilineTextAlignment(.leading)
+            .lineSpacing(1)
+            .accessibilityIdentifier("feed.card.title.\(adventure.id.uuidString)")
+
+          HStack(alignment: .center) {
+            HStack(spacing: 4) {
+              Image(systemName: "mappin")
+                .font(.system(size: 12, weight: .medium))
+              Text(adventure.placeLabel ?? "Hidden location")
+                .lineLimit(1)
+            }
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(.white.opacity(0.82))
+            .accessibilityIdentifier("feed.card.location.\(adventure.id.uuidString)")
+
+            Spacer(minLength: 8)
+
+            HStack(spacing: 14) {
+              HStack(spacing: 4) {
+                Image(systemName: "star.fill")
+                Text(String(format: "%.1f", adventure.stats.averageRating))
+              }
+              HStack(spacing: 4) {
+                Image(systemName: "heart")
+                Text(adventure.stats.favoriteCount.formatted())
+              }
+            }
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(.white.opacity(0.86))
+          }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+      }
+
+      VStack {
+        HStack {
+          if let categoryLabel = adventure.categoryLabel ?? adventure.categorySlug?.displayTitle {
+            Text(categoryLabel)
               .font(.system(size: 11, weight: .medium))
               .foregroundStyle(HATheme.Colors.foreground)
               .padding(.horizontal, 10)
               .padding(.vertical, 4)
               .background(.white.opacity(0.92))
               .clipShape(Capsule(style: .continuous))
+              .accessibilityIdentifier("feed.card.category.\(adventure.id.uuidString)")
           }
 
           Spacer()
 
-          VStack(alignment: .leading, spacing: 8) {
-            Text(adventure.title)
-              .font(.system(size: 16, weight: .semibold))
-              .foregroundStyle(.white)
-              .multilineTextAlignment(.leading)
-
-            HStack(alignment: .bottom) {
-              Label(
-                adventure.author.homeCity.map { "\($0), \(adventure.author.homeRegion ?? "")" } ?? "Hidden location",
-                systemImage: "mappin"
-              )
-              .font(.system(size: 13, weight: .medium))
-              .foregroundStyle(.white.opacity(0.8))
-
-              Spacer()
-
-              HStack(spacing: 12) {
-                Label(String(format: "%.1f", adventure.stats.averageRating), systemImage: "star.fill")
-                Label("\(adventure.stats.favoriteCount.formatted())", systemImage: "heart")
-              }
-              .font(.system(size: 13, weight: .medium))
-              .foregroundStyle(.white.opacity(0.86))
-            }
+          Button(action: {}) {
+            Image(systemName: "bookmark")
+              .font(.system(size: 14, weight: .medium))
+              .foregroundStyle(HATheme.Colors.foreground)
+              .frame(width: 32, height: 32)
+              .background(.white.opacity(0.92))
+              .clipShape(Circle())
           }
+          .buttonStyle(.plain)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        Spacer()
       }
-
-      Button(action: {}) {
-        Image(systemName: "bookmark")
-          .font(.system(size: 14, weight: .semibold))
-          .foregroundStyle(HATheme.Colors.foreground)
-          .frame(width: 32, height: 32)
-          .background(.white.opacity(0.92))
-          .clipShape(Circle())
-      }
-      .buttonStyle(.plain)
-      .padding(14)
+      .padding(12)
     }
   }
 }

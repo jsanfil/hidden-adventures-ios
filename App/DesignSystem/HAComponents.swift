@@ -201,41 +201,41 @@ struct HABottomTabBar: View {
   let onSelect: (HAAppTab) -> Void
 
   var body: some View {
-    HStack(alignment: .bottom, spacing: 4) {
-      tabItem(title: "Home", tab: .home, systemImage: selectedTab == .home ? "house.fill" : "house")
-      tabItem(title: "Explore", tab: .explore, systemImage: selectedTab == .explore ? "map.fill" : "map")
+    HStack(alignment: .bottom, spacing: 0) {
+      tabItem(title: "Home", tab: .home)
+      tabItem(title: "Explore", tab: .explore)
 
-      VStack(spacing: 2) {
+      VStack(spacing: 1) {
         Button(action: { onSelect(.post) }) {
           ZStack {
             Circle()
               .fill(HATheme.Colors.primary)
-              .frame(width: 48, height: 48)
-              .shadow(color: HATheme.Colors.shadow, radius: 8, x: 0, y: 4)
+              .frame(width: 52, height: 52)
+              .shadow(color: HATheme.Colors.shadow.opacity(0.18), radius: 14, x: 0, y: 6)
 
             Image(systemName: "plus")
-              .font(.system(size: 22, weight: .bold))
+              .font(.system(size: 23, weight: .bold))
               .foregroundStyle(.white)
           }
         }
         .buttonStyle(.plain)
-        .offset(y: -10)
+        .offset(y: -16)
         .accessibilityIdentifier("tab.post")
 
         Text("Post")
           .font(.system(size: 10, weight: .medium))
           .foregroundStyle(HATheme.Colors.mutedForeground)
-          .offset(y: -6)
+          .offset(y: -7)
       }
       .frame(maxWidth: .infinity)
 
-      tabItem(title: "Saved", tab: .saved, systemImage: selectedTab == .saved ? "bookmark.fill" : "bookmark")
-      tabItem(title: "Profile", tab: .profile, systemImage: selectedTab == .profile ? "person.fill" : "person")
+      tabItem(title: "Saved", tab: .saved)
+      tabItem(title: "Profile", tab: .profile)
     }
-    .padding(.horizontal, 8)
-    .padding(.top, 8)
-    .padding(.bottom, 10)
-    .background(.white)
+    .padding(.horizontal, 10)
+    .padding(.top, 6)
+    .padding(.bottom, 22)
+    .background(HATheme.Colors.card)
     .overlay(alignment: .top) {
       Rectangle()
         .fill(HATheme.Colors.border.opacity(0.85))
@@ -243,22 +243,40 @@ struct HABottomTabBar: View {
     }
   }
 
-  private func tabItem(title: String, tab: HAAppTab, systemImage: String) -> some View {
+  private func tabItem(title: String, tab: HAAppTab) -> some View {
     Button(action: { onSelect(tab) }) {
-      VStack(spacing: 6) {
-        Image(systemName: systemImage)
-          .font(.system(size: 23, weight: .regular))
+      VStack(spacing: 1.5) {
+        Image(systemName: symbolName(for: tab))
+          .font(.system(size: 24, weight: selectedTab == tab ? .medium : .regular))
           .foregroundStyle(color(for: tab))
+          .frame(height: 24)
 
         Text(title)
           .font(.system(size: 10, weight: .medium))
           .foregroundStyle(color(for: tab))
       }
       .frame(maxWidth: .infinity)
-      .frame(height: 46)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 5)
     }
     .buttonStyle(.plain)
     .accessibilityIdentifier("tab.\(tab.accessibilityID)")
+    .accessibilityValue(selectedTab == tab ? "selected" : "unselected")
+  }
+
+  private func symbolName(for tab: HAAppTab) -> String {
+    switch tab {
+    case .home:
+      return selectedTab == .home ? "house.fill" : "house"
+    case .explore:
+      return "map"
+    case .post:
+      return "plus"
+    case .saved:
+      return "bookmark"
+    case .profile:
+      return "person"
+    }
   }
 
   private func color(for tab: HAAppTab) -> Color {

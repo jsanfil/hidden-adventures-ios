@@ -58,7 +58,7 @@ extension View {
   func haFieldStyle() -> some View {
     self
       .padding(.horizontal, 16)
-      .frame(height: 52)
+      .frame(height: 48)
       .background(HATheme.Colors.secondary)
       .clipShape(RoundedRectangle(cornerRadius: HATheme.Radius.input, style: .continuous))
   }

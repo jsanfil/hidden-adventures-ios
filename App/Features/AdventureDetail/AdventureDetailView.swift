@@ -13,16 +13,13 @@ struct AdventureDetailView: View {
   }
 
   var body: some View {
-    ZStack(alignment: .bottom) {
-      HATheme.Colors.background
-        .ignoresSafeArea()
-
+    VStack(spacing: 0) {
       if let detail {
         ScrollView {
           VStack(spacing: 0) {
             hero(detail: detail)
 
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 20) {
               header(detail: detail)
               statRow
               authorRow(detail: detail)
@@ -31,22 +28,26 @@ struct AdventureDetailView: View {
               activityPreview
             }
             .padding(20)
-            .padding(.bottom, 120)
+            .padding(.bottom, 36)
             .background(HATheme.Colors.background)
             .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
             .offset(y: -18)
             .padding(.bottom, -18)
           }
         }
-      } else {
-        ProgressView()
-          .tint(HATheme.Colors.primary)
-      }
 
-      if let detail {
         bottomCTA(detail: detail)
+      } else {
+        ZStack {
+          HATheme.Colors.background
+            .ignoresSafeArea()
+
+          ProgressView()
+            .tint(HATheme.Colors.primary)
+        }
       }
     }
+    .background(HATheme.Colors.background.ignoresSafeArea())
     .toolbar(.hidden, for: .navigationBar)
     .task {
       guard detail == nil else { return }
@@ -62,7 +63,7 @@ struct AdventureDetailView: View {
         cornerRadius: 0,
         dotsInside: true
       )
-      .frame(height: 320)
+      .frame(height: 304)
       .overlay {
         LinearGradient(
           colors: [.black.opacity(0.30), .clear, .clear],
@@ -100,14 +101,15 @@ struct AdventureDetailView: View {
   private func header(detail: AdventureDetail) -> some View {
     VStack(alignment: .leading, spacing: 14) {
       HStack {
-        if let category = detail.categorySlug {
-          Text(category.displayTitle)
+        if let categoryTitle = detail.categoryLabel ?? detail.categorySlug?.displayTitle {
+          Text(categoryTitle)
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(HATheme.Colors.foreground)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(HATheme.Colors.secondary)
             .clipShape(Capsule(style: .continuous))
+            .accessibilityIdentifier("detail.category")
         }
 
         Spacer()
@@ -120,16 +122,19 @@ struct AdventureDetailView: View {
         }
         .font(.system(size: 14, weight: .semibold))
         .foregroundStyle(.orange)
+        .accessibilityIdentifier("detail.ratingSummary")
       }
 
       VStack(alignment: .leading, spacing: 8) {
         Text(detail.title)
           .font(.system(size: 28, weight: .semibold))
           .foregroundStyle(HATheme.Colors.foreground)
+          .accessibilityIdentifier("detail.title")
 
         Label(detail.placeLabel ?? "Hidden location", systemImage: "mappin.and.ellipse")
           .font(.system(size: 15, weight: .medium))
           .foregroundStyle(HATheme.Colors.mutedForeground)
+          .accessibilityIdentifier("detail.location")
       }
     }
   }
@@ -140,7 +145,7 @@ struct AdventureDetailView: View {
       DetailStatItem(title: "Difficulty", value: "Moderate", systemImage: "chart.line.uptrend.xyaxis")
       DetailStatItem(title: "Distance", value: "4.2 mi", systemImage: "location.north.line")
     }
-    .padding(.vertical, 18)
+    .padding(.vertical, 14)
     .overlay(alignment: .top) { Divider().overlay(HATheme.Colors.border) }
     .overlay(alignment: .bottom) { Divider().overlay(HATheme.Colors.border) }
   }
@@ -165,7 +170,7 @@ struct AdventureDetailView: View {
         .font(.system(size: 13, weight: .semibold))
         .foregroundStyle(HATheme.Colors.foreground)
         .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.vertical, 7)
         .overlay {
           Capsule(style: .continuous)
             .stroke(HATheme.Colors.border, lineWidth: 1)
@@ -175,20 +180,24 @@ struct AdventureDetailView: View {
   }
 
   private func aboutSection(detail: AdventureDetail) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: 10) {
       Text("About this place")
         .font(HATheme.Typography.sectionTitle)
         .foregroundStyle(HATheme.Colors.foreground)
+        .accessibilityIdentifier("detail.aboutTitle")
 
       Text(detail.body ?? detail.summary ?? "No description yet.")
         .font(HATheme.Typography.body)
         .foregroundStyle(HATheme.Colors.mutedForeground)
         .lineSpacing(4)
+        .lineLimit(4)
+        .accessibilityIdentifier("detail.aboutBody")
 
       Button("Read more", action: {})
         .font(.system(size: 14, weight: .semibold))
         .foregroundStyle(HATheme.Colors.primary)
         .buttonStyle(.plain)
+        .accessibilityIdentifier("detail.readMore")
     }
   }
 
@@ -198,6 +207,7 @@ struct AdventureDetailView: View {
         Text("Location")
           .font(HATheme.Typography.sectionTitle)
           .foregroundStyle(HATheme.Colors.foreground)
+          .accessibilityIdentifier("detail.locationSectionTitle")
 
         Spacer()
 
@@ -283,23 +293,37 @@ struct AdventureDetailView: View {
   }
 
   private func bottomCTA(detail: AdventureDetail) -> some View {
-    VStack(spacing: 8) {
+    VStack(spacing: 6) {
       Divider()
         .overlay(HATheme.Colors.border)
 
-      HStack(spacing: 16) {
+      HStack(spacing: 14) {
         Text("\(detail.stats.favoriteCount.formatted()) people saved this")
-          .font(.system(size: 13, weight: .regular))
+          .font(.system(size: 12, weight: .regular))
           .foregroundStyle(HATheme.Colors.mutedForeground)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .accessibilityIdentifier("detail.savedCount")
 
-        HAPrimaryButton(title: "Start Adventure") {}
-          .frame(maxWidth: .infinity)
+        Button(action: {}) {
+          HStack(spacing: 8) {
+            Image(systemName: "location.north.fill")
+              .font(.system(size: 16, weight: .semibold))
+            Text("Start Adventure")
+              .font(.system(size: 17, weight: .semibold))
+          }
+          .foregroundStyle(.white)
+          .frame(width: 184, height: 48)
+          .background(HATheme.Colors.primary)
+          .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("detail.startCTA")
       }
       .padding(.horizontal, 20)
-      .padding(.top, 12)
-      .padding(.bottom, 18)
+      .padding(.top, 8)
+      .padding(.bottom, 10)
     }
-    .background(.white.opacity(0.96))
+    .background(.white.opacity(0.95))
   }
 }
 

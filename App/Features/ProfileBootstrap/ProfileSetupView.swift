@@ -28,6 +28,7 @@ struct ProfileSetupView: View {
               .font(.system(size: 22, weight: .medium))
               .foregroundStyle(HATheme.Colors.foreground)
               .frame(width: 40, height: 40)
+              .offset(x: -2)
           }
           .buttonStyle(.plain)
           .accessibilityIdentifier("profile.back")
@@ -40,8 +41,8 @@ struct ProfileSetupView: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier("profile.skip")
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
 
         VStack(alignment: .leading, spacing: 28) {
           VStack(alignment: .leading, spacing: 8) {
@@ -67,7 +68,7 @@ struct ProfileSetupView: View {
                 Image(systemName: "camera.fill")
                   .font(.system(size: 14, weight: .semibold))
                   .foregroundStyle(.white)
-                  .frame(width: 36, height: 36)
+                  .frame(width: 34, height: 34)
                   .background(HATheme.Colors.primary)
                   .clipShape(Circle())
                   .shadow(color: HATheme.Colors.shadow, radius: 6, x: 0, y: 3)
@@ -86,7 +87,8 @@ struct ProfileSetupView: View {
 
               field(title: "Home base") {
                 HStack(spacing: 12) {
-                  Image(systemName: "mappin.and.ellipse")
+                  Image(systemName: "mappin")
+                    .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(HATheme.Colors.mutedForeground)
 
                   TextField("City or region", text: $draft.homeBase)
@@ -138,12 +140,12 @@ struct ProfileSetupView: View {
     VStack(alignment: .leading, spacing: 8) {
       HStack(spacing: 4) {
         Text(title)
-          .font(.system(size: 15, weight: .medium))
+          .font(.system(size: 14, weight: .medium))
           .foregroundStyle(HATheme.Colors.foreground)
 
         if let secondaryTitle {
           Text(secondaryTitle)
-            .font(.system(size: 15, weight: .regular))
+            .font(.system(size: 14, weight: .regular))
             .foregroundStyle(HATheme.Colors.mutedForeground)
         }
       }

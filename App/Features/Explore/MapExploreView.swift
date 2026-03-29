@@ -16,6 +16,38 @@ struct MapExploreView: View {
     return items.first { $0.id == currentID }
   }
 
+  private var mapSheetItems: [MapSheetPreview] {
+    [
+      MapSheetPreview(
+        id: "blue-pool",
+        destinationID: MockFixtures.bluePoolID,
+        title: "Blue Pool",
+        distance: "2.4 mi",
+        rating: 4.8,
+        category: "Swimming",
+        imageNames: ["swimming-hole", "hidden-canyon", "hero-mountain"]
+      ),
+      MapSheetPreview(
+        id: "opal-creek-trail",
+        destinationID: MockFixtures.eagleID,
+        title: "Opal Creek Trail",
+        distance: "4.1 mi",
+        rating: 4.9,
+        category: "Trail",
+        imageNames: ["trail-forest", "coastal-path"]
+      ),
+      MapSheetPreview(
+        id: "tom-dick-harry",
+        destinationID: MockFixtures.tomDickID,
+        title: "Tom Dick & Harry",
+        distance: "8.2 mi",
+        rating: 4.7,
+        category: "Viewpoint",
+        imageNames: ["scenic-overlook"]
+      )
+    ]
+  }
+
   var body: some View {
     GeometryReader { geometry in
       ZStack(alignment: .bottom) {
@@ -24,12 +56,9 @@ struct MapExploreView: View {
         VStack(spacing: 0) {
           HAStatusBarSpacer()
 
-          VStack(spacing: 12) {
-            searchBar
-            visibilityBar
-            categoryStrip
-          }
+          visibilityBar
           .padding(.horizontal, 16)
+          .padding(.top, 4)
 
           if let selectedAdventure {
             Spacer()
@@ -44,7 +73,9 @@ struct MapExploreView: View {
         }
       }
       .onAppear {
-        selectedAdventureID = items.first?.id
+        selectedAdventureID = items.contains(where: { $0.id == MockFixtures.bluePoolID })
+          ? MockFixtures.bluePoolID
+          : items.first?.id
       }
     }
   }
@@ -71,57 +102,14 @@ struct MapExploreView: View {
           .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("map.visibility.\(filter.accessibilityKey)")
       }
     }
     .padding(4)
     .background(.white)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     .shadow(color: HATheme.Colors.shadow, radius: 6, x: 0, y: 2)
-  }
-
-  private var searchBar: some View {
-    HStack(spacing: 12) {
-      Image(systemName: "magnifyingglass")
-        .font(.system(size: 17, weight: .medium))
-        .foregroundStyle(HATheme.Colors.mutedForeground)
-
-      Text("Search places...")
-        .font(HATheme.Typography.body)
-        .foregroundStyle(HATheme.Colors.mutedForeground)
-
-      Spacer()
-
-      HStack(spacing: 4) {
-        Text("Portland, OR")
-        Image(systemName: "chevron.down")
-          .font(.system(size: 13, weight: .semibold))
-      }
-      .font(.system(size: 14, weight: .medium))
-      .foregroundStyle(HATheme.Colors.mutedForeground)
-    }
-    .padding(.horizontal, 16)
-    .frame(height: 52)
-    .background(HATheme.Colors.card)
-    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    .shadow(color: HATheme.Colors.shadow, radius: 10, x: 0, y: 4)
-  }
-
-  private var categoryStrip: some View {
-    ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: 8) {
-        ForEach(Category.allCases) { category in
-          HAChip(
-            title: category.displayTitle,
-            systemImage: category.systemImage,
-            isSelected: activeCategory == category
-          ) {
-            onCategoryToggle(category)
-          }
-        }
-      }
-      .padding(.horizontal, 1)
-      .padding(.bottom, 2)
-    }
+    .accessibilityIdentifier("map.visibilityBar")
   }
 
   private var currentLocationButton: some View {
@@ -135,6 +123,7 @@ struct MapExploreView: View {
         .shadow(color: HATheme.Colors.shadow, radius: 10, x: 0, y: 4)
     }
     .buttonStyle(.plain)
+    .accessibilityIdentifier("map.locationButton")
   }
 
   @ViewBuilder
@@ -187,9 +176,20 @@ struct MapExploreView: View {
         .frame(width: 150, height: 110)
         .position(x: size.width * 0.77, y: size.height * 0.57)
 
+      Path { path in
+        path.move(to: CGPoint(x: size.width * 0.56, y: 0))
+        path.addCurve(
+          to: CGPoint(x: size.width * 0.53, y: size.height * 0.34),
+          control1: CGPoint(x: size.width * 0.57, y: size.height * 0.11),
+          control2: CGPoint(x: size.width * 0.53, y: size.height * 0.22)
+        )
+      }
+      .stroke(.white.opacity(0.66), style: StrokeStyle(lineWidth: 5, lineCap: .round))
+
       ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-        let point = markerPoint(for: index, in: size)
+        let point = markerPoint(for: item.id, fallbackIndex: index, in: size)
         MapPinButton(
+          adventureID: item.id,
           isSelected: item.id == (selectedAdventureID ?? items.first?.id),
           action: { selectedAdventureID = item.id }
         )
@@ -198,14 +198,23 @@ struct MapExploreView: View {
     }
   }
 
-  private func markerPoint(for index: Int, in size: CGSize) -> CGPoint {
-    let points: [CGPoint] = [
-      CGPoint(x: size.width * 0.47, y: size.height * 0.31),
-      CGPoint(x: size.width * 0.69, y: size.height * 0.25),
-      CGPoint(x: size.width * 0.32, y: size.height * 0.47),
-      CGPoint(x: size.width * 0.71, y: size.height * 0.43)
-    ]
-    return points[index % points.count]
+  private func markerPoint(for id: UUID, fallbackIndex index: Int, in size: CGSize) -> CGPoint {
+    switch id {
+    case MockFixtures.bluePoolID:
+      return CGPoint(x: size.width * 0.45, y: size.height * 0.35)
+    case MockFixtures.eagleID:
+      return CGPoint(x: size.width * 0.65, y: size.height * 0.25)
+    case MockFixtures.tomDickID:
+      return CGPoint(x: size.width * 0.30, y: size.height * 0.50)
+    case MockFixtures.capeID:
+      return CGPoint(x: size.width * 0.70, y: size.height * 0.45)
+    default:
+      let points: [CGPoint] = [
+        CGPoint(x: size.width * 0.55, y: size.height * 0.60),
+        CGPoint(x: size.width * 0.25, y: size.height * 0.30)
+      ]
+      return points[index % points.count]
+    }
   }
 
   private func mapSheet(for adventure: AdventureCard) -> some View {
@@ -222,9 +231,10 @@ struct MapExploreView: View {
             .font(.system(size: 16, weight: .semibold))
             .foregroundStyle(HATheme.Colors.foreground)
 
-          Text("\(items.count) places within 25 miles")
+          Text("12 places within 25 miles")
             .font(.system(size: 14, weight: .regular))
             .foregroundStyle(HATheme.Colors.mutedForeground)
+            .accessibilityIdentifier("map.sheet.count")
         }
 
         Spacer()
@@ -239,15 +249,15 @@ struct MapExploreView: View {
 
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 14) {
-          ForEach(items) { item in
+          ForEach(mapSheetItems) { item in
             Button {
-              selectedAdventureID = item.id
-              onOpenDetail(item.id)
+              selectedAdventureID = item.destinationID
+              onOpenDetail(item.destinationID)
             } label: {
               mapCard(for: item)
             }
             .buttonStyle(.plain)
-            .accessibilityIdentifier("map.card.\(item.id.uuidString)")
+            .accessibilityIdentifier("map.card.\(item.id)")
           }
         }
         .padding(.horizontal, 20)
@@ -261,26 +271,24 @@ struct MapExploreView: View {
     .shadow(color: HATheme.Colors.shadow, radius: 20, x: 0, y: -4)
   }
 
-  private func mapCard(for adventure: AdventureCard) -> some View {
+  private func mapCard(for adventure: MapSheetPreview) -> some View {
     VStack(alignment: .leading, spacing: 0) {
       ZStack(alignment: .topLeading) {
         HAImageCarousel(
-          imageNames: MockFixtures.imageNamesByAdventureID[adventure.id] ?? ["hero-mountain"],
+          imageNames: adventure.imageNames,
           aspectRatio: 16 / 9,
           cornerRadius: 16,
           dotsInside: true
         )
 
-        if let category = adventure.categorySlug {
-          Text(category.displayTitle)
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(HATheme.Colors.foreground)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(.white.opacity(0.92))
-            .clipShape(Capsule(style: .continuous))
-            .padding(10)
-        }
+        Text(adventure.category)
+          .font(.system(size: 11, weight: .medium))
+          .foregroundStyle(HATheme.Colors.foreground)
+          .padding(.horizontal, 9)
+          .padding(.vertical, 5)
+          .background(.white.opacity(0.92))
+          .clipShape(Capsule(style: .continuous))
+          .padding(10)
       }
 
       VStack(alignment: .leading, spacing: 10) {
@@ -288,15 +296,16 @@ struct MapExploreView: View {
           .font(.system(size: 15, weight: .semibold))
           .foregroundStyle(HATheme.Colors.foreground)
           .lineLimit(1)
+          .accessibilityIdentifier("map.card.title.\(adventure.id)")
 
         HStack {
-          Label("\(distanceText(for: adventure))", systemImage: "mappin")
+          Label(adventure.distance, systemImage: "mappin")
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(HATheme.Colors.mutedForeground)
 
           Spacer()
 
-          Label(String(format: "%.1f", adventure.stats.averageRating), systemImage: "star.fill")
+          Label(String(format: "%.1f", adventure.rating), systemImage: "star.fill")
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(HATheme.Colors.mutedForeground)
         }
@@ -311,42 +320,88 @@ struct MapExploreView: View {
         .stroke(HATheme.Colors.border.opacity(0.7), lineWidth: 1)
     }
   }
+}
 
-  private func distanceText(for adventure: AdventureCard) -> String {
-    switch adventure.id {
-    case MockFixtures.bluePoolID: "2.4 mi"
-    case MockFixtures.tomDickID: "8.2 mi"
-    case MockFixtures.capeID: "12.6 mi"
-    default: "4.1 mi"
-    }
-  }
+private struct MapSheetPreview: Identifiable {
+  let id: String
+  let destinationID: UUID
+  let title: String
+  let distance: String
+  let rating: Double
+  let category: String
+  let imageNames: [String]
 }
 
 private struct MapPinButton: View {
+  let adventureID: UUID
   let isSelected: Bool
   let action: () -> Void
 
   var body: some View {
     Button(action: action) {
-      ZStack {
-        Circle()
-          .fill(isSelected ? HATheme.Colors.primary : .white)
-          .frame(width: 34, height: 34)
-          .shadow(color: HATheme.Colors.shadow, radius: 8, x: 0, y: 4)
-
-        Image(systemName: "mappin")
-          .font(.system(size: 16, weight: .semibold))
-          .foregroundStyle(isSelected ? .white : HATheme.Colors.primary)
-      }
-      .overlay(alignment: .bottom) {
-        if isSelected {
-          Circle()
-            .fill(HATheme.Colors.primary)
-            .frame(width: 9, height: 9)
-            .offset(y: 9)
-        }
+      if isSelected {
+        selectedMarker
+      } else {
+        unselectedMarker
       }
     }
     .buttonStyle(.plain)
+    .accessibilityIdentifier("map.pin.\(adventureID.uuidString)")
+  }
+
+  private var selectedMarker: some View {
+    ZStack(alignment: .bottom) {
+      Circle()
+        .fill(HATheme.Colors.primary)
+        .frame(width: 38, height: 38)
+
+      MarkerPoint()
+        .fill(HATheme.Colors.primary)
+        .frame(width: 18, height: 14)
+        .offset(y: 8)
+
+      ZStack {
+        Circle()
+          .fill(.white.opacity(0.18))
+          .frame(width: 18, height: 18)
+
+        Image(systemName: "mappin")
+          .font(.system(size: 10, weight: .bold))
+          .foregroundStyle(.white)
+          .offset(y: -1)
+      }
+      .offset(y: -1)
+    }
+    .frame(width: 38, height: 52)
+    .shadow(color: HATheme.Colors.primary.opacity(0.24), radius: 12, x: 0, y: 6)
+  }
+
+  private var unselectedMarker: some View {
+    ZStack {
+      Circle()
+        .fill(.white)
+        .frame(width: 38, height: 38)
+        .overlay {
+          Circle()
+            .stroke(.white.opacity(0.7), lineWidth: 1)
+        }
+
+      Image(systemName: "mappin")
+        .font(.system(size: 12, weight: .bold))
+        .foregroundStyle(HATheme.Colors.primary.opacity(0.78))
+        .offset(y: -1)
+    }
+    .shadow(color: HATheme.Colors.shadow.opacity(1.2), radius: 12, x: 0, y: 6)
+  }
+}
+
+private struct MarkerPoint: Shape {
+  func path(in rect: CGRect) -> Path {
+    var path = Path()
+    path.move(to: CGPoint(x: rect.midX, y: rect.maxY))
+    path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+    path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+    path.closeSubpath()
+    return path
   }
 }

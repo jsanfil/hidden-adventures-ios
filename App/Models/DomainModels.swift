@@ -89,10 +89,12 @@ struct AdventureCard: Codable, Identifiable, Hashable, Sendable {
   let summary: String?
   let body: String?
   let categorySlug: Category?
+  let categoryLabel: String?
   let visibility: Visibility
   let createdAt: String
   let publishedAt: String?
   let location: AdventureLocation?
+  let placeLabel: String?
   let author: AdventureAuthor
   let primaryMedia: MediaReference?
   let stats: AdventureStats
@@ -104,6 +106,7 @@ struct AdventureDetail: Codable, Identifiable, Hashable, Sendable {
   let summary: String?
   let body: String?
   let categorySlug: Category?
+  let categoryLabel: String?
   let visibility: Visibility
   let createdAt: String
   let publishedAt: String?

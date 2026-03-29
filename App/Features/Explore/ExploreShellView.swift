@@ -112,8 +112,8 @@ struct ExploreShellView: View {
       Spacer()
 
       HStack(spacing: 10) {
-        CircleIconButton(systemImage: "magnifyingglass")
-        CircleIconButton(systemImage: "bell", showsIndicator: true)
+        CircleIconButton(systemImage: "magnifyingglass", accessibilityID: "header.search")
+        CircleIconButton(systemImage: "bell", showsIndicator: true, accessibilityID: "header.notifications")
       }
     }
     .padding(.horizontal, 20)
@@ -171,6 +171,7 @@ struct ExploreShellView: View {
 private struct CircleIconButton: View {
   let systemImage: String
   var showsIndicator: Bool = false
+  let accessibilityID: String
 
   var body: some View {
     Button(action: {}) {
@@ -180,18 +181,19 @@ private struct CircleIconButton: View {
           .frame(width: 40, height: 40)
 
         Image(systemName: systemImage)
-          .font(.system(size: 16, weight: .semibold))
+          .font(.system(size: 18, weight: .medium))
           .foregroundStyle(HATheme.Colors.foreground)
 
         if showsIndicator {
           Circle()
             .fill(HATheme.Colors.primary)
-            .frame(width: 8, height: 8)
-            .offset(x: 12, y: -12)
+          .frame(width: 8, height: 8)
+            .offset(x: 11, y: -11)
         }
       }
     }
     .buttonStyle(.plain)
+    .accessibilityIdentifier(accessibilityID)
   }
 }
 
@@ -218,6 +220,15 @@ enum VisibilityFilter: CaseIterable, Identifiable {
     case .public: "globe"
     case .connections: "person.2"
     case .private: "lock"
+    }
+  }
+
+  var accessibilityKey: String {
+    switch self {
+    case .all: "all"
+    case .public: "public"
+    case .connections: "connections"
+    case .private: "private"
     }
   }
 

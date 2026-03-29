@@ -2,6 +2,8 @@ import SwiftUI
 
 struct WelcomeView: View {
   let onGetStarted: () -> Void
+  private let contentWidth: CGFloat = 320
+  private let bodyWidth: CGFloat = 286
 
   var body: some View {
     ZStack {
@@ -22,40 +24,49 @@ struct WelcomeView: View {
       .ignoresSafeArea()
 
       VStack {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
           ZStack {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-              .fill(.white.opacity(0.94))
+              .fill(.white.opacity(0.95))
               .frame(width: 64, height: 64)
+              .shadow(color: .black.opacity(0.18), radius: 16, x: 0, y: 8)
 
             Image(systemName: "safari")
               .font(.system(size: 34, weight: .regular))
               .foregroundStyle(HATheme.Colors.primary)
           }
+          .padding(.bottom, 16)
 
           Text("Hidden Adventures")
-            .font(HATheme.Typography.heroTitle)
+            .font(.system(size: 30, weight: .regular, design: .serif))
+            .tracking(-0.8)
             .foregroundStyle(.white)
+            .accessibilityIdentifier("welcome.brandTitle")
         }
-        .padding(.top, 92)
+        .padding(.top, 32)
 
         Spacer()
 
-        VStack(spacing: 26) {
-          VStack(spacing: 12) {
+        VStack(spacing: 24) {
+          VStack(spacing: 8) {
             Text("Discover the extraordinary")
-              .font(.system(size: 28, weight: .medium))
+              .font(.system(size: 24, weight: .medium))
               .multilineTextAlignment(.center)
               .foregroundStyle(.white)
-              .frame(maxWidth: .infinity)
+              .fixedSize(horizontal: false, vertical: true)
+              .frame(maxWidth: bodyWidth)
+              .accessibilityIdentifier("welcome.headline")
 
             Text("Find hidden gems, scenic trails, and unforgettable places shared by explorers like you.")
               .font(HATheme.Typography.body)
               .foregroundStyle(.white.opacity(0.82))
               .multilineTextAlignment(.center)
-              .lineSpacing(4)
-              .frame(maxWidth: .infinity)
+              .lineSpacing(3)
+              .fixedSize(horizontal: false, vertical: true)
+              .frame(maxWidth: bodyWidth)
+              .accessibilityIdentifier("welcome.subheadline")
           }
+          .frame(maxWidth: contentWidth)
 
           VStack(spacing: 12) {
             Button(action: onGetStarted) {
@@ -69,6 +80,7 @@ struct WelcomeView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("welcome.getStarted")
+            .frame(maxWidth: contentWidth)
 
             Button(action: {}) {
               Text("Already have an account? ")
@@ -82,18 +94,21 @@ struct WelcomeView: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier("welcome.signIn")
           }
+          .frame(maxWidth: contentWidth)
 
           Text("By continuing, you agree to our Terms of Service and Privacy Policy")
             .font(.system(size: 12, weight: .regular))
             .foregroundStyle(.white.opacity(0.6))
             .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 20)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: 260)
+            .accessibilityIdentifier("welcome.legal")
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 24)
-        .padding(.bottom, 40)
+        .padding(.bottom, 48)
       }
+      .padding(.top, 64)
     }
     .toolbar(.hidden, for: .navigationBar)
   }
