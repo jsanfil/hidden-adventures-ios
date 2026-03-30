@@ -131,6 +131,31 @@ struct ProfileDetail: Codable, Identifiable, Hashable, Sendable {
   let updatedAt: String
 }
 
+enum AuthAccountState: String, Codable, Sendable {
+  case linked
+  case legacyClaimed = "legacy_claimed"
+  case newUserNeedsHandle = "new_user_needs_handle"
+  case manualRecoveryRequired = "manual_recovery_required"
+}
+
+struct AuthBootstrapUser: Codable, Hashable, Sendable {
+  let id: String
+  let cognitoSubject: String?
+  let handle: String
+  let email: String?
+  let accountOrigin: String
+  let status: String
+  let createdAt: String
+  let updatedAt: String
+}
+
+struct AuthBootstrapResponse: Codable, Sendable {
+  let accountState: AuthAccountState
+  let user: AuthBootstrapUser?
+  let suggestedHandle: String?
+  let recoveryEmail: String?
+}
+
 struct FeedResponse: Codable, Sendable {
   let items: [AdventureCard]
   let paging: Paging

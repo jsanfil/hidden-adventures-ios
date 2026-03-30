@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WelcomeView: View {
   let onGetStarted: () -> Void
+  let onSignIn: () -> Void
   private let contentWidth: CGFloat = 320
   private let bodyWidth: CGFloat = 286
 
@@ -82,7 +83,7 @@ struct WelcomeView: View {
             .accessibilityIdentifier("welcome.getStarted")
             .frame(maxWidth: contentWidth)
 
-            Button(action: {}) {
+            Button(action: onSignIn) {
               Text("Already have an account? ")
                 .foregroundStyle(.white.opacity(0.72))
               +

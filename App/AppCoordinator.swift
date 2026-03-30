@@ -11,6 +11,7 @@ enum AppStage {
 enum ExploreMode: String, CaseIterable, Identifiable {
   case feed = "Feed"
   case map = "Map"
+  case profile = "Profile"
 
   var id: Self { self }
 }
@@ -23,10 +24,8 @@ final class AppCoordinator: ObservableObject {
   @Published var stage: AppStage
   @Published var path: [AppRoute]
   @Published var exploreMode: ExploreMode
-  @Published var viewerHandle: String?
 
   init(environment: [String: String] = ProcessInfo.processInfo.environment) {
-    viewerHandle = "jordan"
     path = []
 
     switch environment["UITEST_START_SCREEN"] {

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FeedView: View {
   let items: [AdventureCard]
+  let runtimeMode: AppRuntimeMode
   let onOpenDetail: (UUID) -> Void
 
   var body: some View {
@@ -11,7 +12,10 @@ struct FeedView: View {
           Button {
             onOpenDetail(adventure.id)
           } label: {
-            FeedCardView(adventure: adventure)
+            FeedCardView(
+              adventure: adventure,
+              runtimeMode: runtimeMode
+            )
           }
           .buttonStyle(.plain)
           .accessibilityIdentifier("feed.card.\(adventure.id.uuidString)")
@@ -26,19 +30,24 @@ struct FeedView: View {
 
 private struct FeedCardView: View {
   let adventure: AdventureCard
+  let runtimeMode: AppRuntimeMode
 
   private var images: [String] {
-    MockFixtures.imageNamesByAdventureID[adventure.id] ?? ["hero-mountain"]
+    AdventurePresentation.imageNames(
+      for: adventure.id,
+      runtimeMode: runtimeMode
+    )
   }
 
   var body: some View {
     ZStack {
       ZStack(alignment: .bottomLeading) {
-        HAImageCarousel(
+        HAMediaCarouselOrPlaceholder(
           imageNames: images,
           aspectRatio: 4 / 3,
           cornerRadius: 16,
-          dotsInside: true
+          dotsInside: true,
+          title: adventure.title
         )
         .overlay {
           RoundedRectangle(cornerRadius: 16, style: .continuous)

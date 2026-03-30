@@ -1,18 +1,31 @@
 import SwiftUI
 
 struct ProfileSetupView: View {
-  let profileService: ProfileService
+  let initialDraft: ProfileBootstrapDraft
+  let showsSkip: Bool
+  let usesHandleOnlyContract: Bool
   let onBack: () -> Void
   let onSkip: () -> Void
   let onContinue: (ProfileBootstrapDraft) -> Void
 
-  @State private var draft = ProfileBootstrapDraft(
-    displayName: "",
-    handle: "",
-    homeBase: "",
-    bio: "",
-    initials: "JD"
-  )
+  @State private var draft: ProfileBootstrapDraft
+
+  init(
+    initialDraft: ProfileBootstrapDraft,
+    showsSkip: Bool,
+    usesHandleOnlyContract: Bool,
+    onBack: @escaping () -> Void,
+    onSkip: @escaping () -> Void,
+    onContinue: @escaping (ProfileBootstrapDraft) -> Void
+  ) {
+    self.initialDraft = initialDraft
+    self.showsSkip = showsSkip
+    self.usesHandleOnlyContract = usesHandleOnlyContract
+    self.onBack = onBack
+    self.onSkip = onSkip
+    self.onContinue = onContinue
+    _draft = State(initialValue: initialDraft)
+  }
 
   var body: some View {
     ZStack {
@@ -35,11 +48,13 @@ struct ProfileSetupView: View {
 
           Spacer()
 
-          Button("Skip", action: onSkip)
-            .font(HATheme.Typography.body)
-            .foregroundStyle(HATheme.Colors.mutedForeground)
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("profile.skip")
+          if showsSkip {
+            Button("Skip", action: onSkip)
+              .font(HATheme.Typography.body)
+              .foregroundStyle(HATheme.Colors.mutedForeground)
+              .buttonStyle(.plain)
+              .accessibilityIdentifier("profile.skip")
+          }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
@@ -53,6 +68,17 @@ struct ProfileSetupView: View {
             Text("Let other explorers know who you are")
               .font(HATheme.Typography.body)
               .foregroundStyle(HATheme.Colors.mutedForeground)
+          }
+
+          if usesHandleOnlyContract {
+            Text("Slice 1 live setup only reserves your public handle. Display name, home base, and bio stay local until a profile-write contract lands.")
+              .font(.system(size: 13, weight: .medium))
+              .foregroundStyle(HATheme.Colors.mutedForeground)
+              .padding(14)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .background(HATheme.Colors.secondary)
+              .clipShape(RoundedRectangle(cornerRadius: HATheme.Radius.card, style: .continuous))
+              .accessibilityIdentifier("profile.handleOnlyNote")
           }
 
           VStack(spacing: 24) {
@@ -82,6 +108,7 @@ struct ProfileSetupView: View {
                   .font(HATheme.Typography.body)
                   .foregroundStyle(HATheme.Colors.foreground)
                   .haFieldStyle()
+                  .disabled(usesHandleOnlyContract)
                   .accessibilityIdentifier("profile.displayName")
               }
 
@@ -94,6 +121,7 @@ struct ProfileSetupView: View {
                   TextField("City or region", text: $draft.homeBase)
                     .font(HATheme.Typography.body)
                     .foregroundStyle(HATheme.Colors.foreground)
+                    .disabled(usesHandleOnlyContract)
                     .accessibilityIdentifier("profile.homeBase")
                 }
                 .haFieldStyle()
@@ -105,6 +133,7 @@ struct ProfileSetupView: View {
                   .foregroundStyle(HATheme.Colors.foreground)
                   .lineLimit(4, reservesSpace: true)
                   .padding(16)
+                  .disabled(usesHandleOnlyContract)
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .background(HATheme.Colors.secondary)
                   .clipShape(RoundedRectangle(cornerRadius: HATheme.Radius.input, style: .continuous))
@@ -124,9 +153,6 @@ struct ProfileSetupView: View {
         .padding(.top, 20)
         .padding(.bottom, 32)
       }
-    }
-    .task {
-      draft = await profileService.bootstrapDraft()
     }
     .toolbar(.hidden, for: .navigationBar)
   }

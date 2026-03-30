@@ -2,14 +2,19 @@ import SwiftUI
 
 struct ExploreShellView: View {
   let adventureService: AdventureService
+  let profileService: ProfileService
+  let runtimeMode: AppRuntimeMode
   let viewerHandle: String?
+  let viewerDisplayName: String?
   @Binding var mode: ExploreMode
+  let onViewerProfileLoaded: (ProfileDetail) -> Void
   let onOpenDetail: (UUID) -> Void
 
   @State private var feedItems: [AdventureCard] = []
   @State private var visibilityFilter: VisibilityFilter = .all
   @State private var activeCategory: Category?
   @State private var isLoading = true
+  @State private var errorMessage: String?
 
   var filteredItems: [AdventureCard] {
     feedItems.filter { item in
@@ -27,74 +32,86 @@ struct ExploreShellView: View {
       if isLoading {
         ProgressView()
           .tint(HATheme.Colors.primary)
-      } else if mode == .feed {
-        VStack(spacing: 0) {
-          HAStatusBarSpacer()
-          header
-
-          VStack(spacing: 12) {
-            visibilityControl
-            categoryStrip
-          }
-          .padding(.horizontal, 20)
-          .padding(.bottom, 12)
-
-          FeedView(
-            items: filteredItems,
-            onOpenDetail: onOpenDetail
-          )
-        }
+      } else if let errorMessage {
+        errorState(message: errorMessage)
       } else {
-        MapExploreView(
-          items: filteredItems,
-          visibilityFilter: visibilityFilter,
-          activeCategory: activeCategory,
-          onVisibilityChange: { visibilityFilter = $0 },
-          onCategoryToggle: { category in
-            activeCategory = activeCategory == category ? nil : category
-          },
-          onSelectTab: { tab in
-            switch tab {
-            case .home:
-              mode = .feed
-            case .explore:
-              mode = .map
-            case .post, .saved, .profile:
-              break
-            }
-          },
-          onOpenDetail: onOpenDetail
-        )
+        switch mode {
+        case .feed:
+          feedScreen
+        case .map:
+          mapScreen
+        case .profile:
+          profileScreen
+        }
       }
     }
     .safeAreaInset(edge: .bottom, spacing: 0) {
-      if mode == .feed {
-        HABottomTabBar(
-          selectedTab: .home,
-          onSelect: { tab in
-            switch tab {
-            case .home:
-              mode = .feed
-            case .explore:
-              mode = .map
-            case .post, .saved, .profile:
-              break
-            }
-          }
-        )
-      }
+      HABottomTabBar(
+        selectedTab: selectedTab,
+        onSelect: handleTabSelection
+      )
     }
     .task {
       guard feedItems.isEmpty else { return }
-      let response = try? await adventureService.listFeed(
-        viewerHandle: viewerHandle,
-        limit: 20,
-        offset: 0
-      )
-      feedItems = response?.items ?? []
-      isLoading = false
+      await loadFeed()
     }
     .toolbar(.hidden, for: .navigationBar)
+  }
+
+  private var selectedTab: HAAppTab {
+    switch mode {
+    case .feed:
+      return .home
+    case .map:
+      return .explore
+    case .profile:
+      return .profile
+    }
+  }
+
+  private var feedScreen: some View {
+    VStack(spacing: 0) {
+      HAStatusBarSpacer()
+      header
+
+      VStack(spacing: 12) {
+        visibilityControl
+        categoryStrip
+      }
+      .padding(.horizontal, 20)
+      .padding(.bottom, 12)
+
+      FeedView(
+        items: filteredItems,
+        runtimeMode: runtimeMode,
+        onOpenDetail: onOpenDetail
+      )
+    }
+  }
+
+  private var mapScreen: some View {
+    MapExploreView(
+      items: filteredItems,
+      runtimeMode: runtimeMode,
+      visibilityFilter: visibilityFilter,
+      activeCategory: activeCategory,
+      onVisibilityChange: { visibilityFilter = $0 },
+      onCategoryToggle: { category in
+        activeCategory = activeCategory == category ? nil : category
+      },
+      onSelectTab: handleTabSelection,
+      onOpenDetail: onOpenDetail
+    )
+  }
+
+  private var profileScreen: some View {
+    ProfileView(
+      handle: viewerHandle,
+      profileService: profileService,
+      runtimeMode: runtimeMode,
+      onProfileLoaded: onViewerProfileLoaded,
+      onOpenDetail: onOpenDetail
+    )
   }
 
   private var header: some View {
@@ -104,7 +121,7 @@ struct ExploreShellView: View {
           .font(.system(size: 14, weight: .regular))
           .foregroundStyle(HATheme.Colors.mutedForeground)
 
-        Text("Jordan")
+        Text(viewerDisplayName ?? viewerHandle ?? "Explorer")
           .font(.system(size: 20, weight: .semibold))
           .foregroundStyle(HATheme.Colors.foreground)
       }
@@ -166,6 +183,57 @@ struct ExploreShellView: View {
       .padding(.horizontal, 1)
     }
   }
+
+  private func errorState(message: String) -> some View {
+    VStack(spacing: 16) {
+      Image(systemName: "wifi.exclamationmark")
+        .font(.system(size: 32, weight: .medium))
+        .foregroundStyle(HATheme.Colors.primary)
+
+      Text("We couldn't load the Slice 1 feed.")
+        .font(HATheme.Typography.sectionTitle)
+        .foregroundStyle(HATheme.Colors.foreground)
+
+      Text(message)
+        .font(HATheme.Typography.body)
+        .foregroundStyle(HATheme.Colors.mutedForeground)
+        .multilineTextAlignment(.center)
+
+      HAPrimaryButton(title: "Try Again") {
+        Task {
+          await loadFeed()
+        }
+      }
+      .frame(maxWidth: 240)
+    }
+    .padding(24)
+  }
+
+  private func handleTabSelection(_ tab: HAAppTab) {
+    switch tab {
+    case .home:
+      mode = .feed
+    case .explore:
+      mode = .map
+    case .profile:
+      mode = .profile
+    case .post, .saved:
+      break
+    }
+  }
+
+  private func loadFeed() async {
+    isLoading = true
+    defer { isLoading = false }
+
+    do {
+      let response = try await adventureService.listFeed(limit: 20, offset: 0)
+      feedItems = response.items
+      errorMessage = nil
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
 }
 
 private struct CircleIconButton: View {
@@ -187,7 +255,7 @@ private struct CircleIconButton: View {
         if showsIndicator {
           Circle()
             .fill(HATheme.Colors.primary)
-          .frame(width: 8, height: 8)
+            .frame(width: 8, height: 8)
             .offset(x: 11, y: -11)
         }
       }

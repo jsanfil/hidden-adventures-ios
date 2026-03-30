@@ -9,28 +9,21 @@ struct ProfileBootstrapDraft: Sendable {
 }
 
 protocol ProfileService {
-  func bootstrapDraft() async -> ProfileBootstrapDraft
   func getProfile(
     handle: String,
-    viewerHandle: String?,
     limit: Int,
     offset: Int
   ) async throws -> ProfileResponse
 }
 
-struct MockProfileService: ProfileService {
-  func bootstrapDraft() async -> ProfileBootstrapDraft {
-    MockFixtures.bootstrapDraft
-  }
-
+struct FixtureProfileService: ProfileService {
   func getProfile(
     handle: String,
-    viewerHandle: String?,
     limit: Int,
     offset: Int
   ) async throws -> ProfileResponse {
     guard handle == MockFixtures.profile.handle else {
-      throw MockServiceError.notFound
+      throw FixtureServiceError.notFound
     }
 
     let adventures = Array(MockFixtures.feedItems.dropFirst(offset).prefix(limit))
@@ -38,6 +31,25 @@ struct MockProfileService: ProfileService {
       profile: MockFixtures.profile,
       adventures: adventures,
       paging: Paging(limit: limit, offset: offset, returned: adventures.count)
+    )
+  }
+}
+
+struct RemoteProfileService: ProfileService {
+  let client: APIClient
+
+  func getProfile(
+    handle: String,
+    limit: Int,
+    offset: Int
+  ) async throws -> ProfileResponse {
+    try await client.get(
+      pathComponents: ["profiles", handle],
+      queryItems: [
+        URLQueryItem(name: "limit", value: String(limit)),
+        URLQueryItem(name: "offset", value: String(offset))
+      ],
+      requiresAuth: true
     )
   }
 }
