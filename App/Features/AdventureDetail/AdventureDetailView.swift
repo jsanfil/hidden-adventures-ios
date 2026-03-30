@@ -3,13 +3,16 @@ import SwiftUI
 struct AdventureDetailView: View {
   let adventureID: UUID
   let adventureService: AdventureService
-  let viewerHandle: String?
+  let runtimeMode: AppRuntimeMode
 
   @Environment(\.dismiss) private var dismiss
   @State private var detail: AdventureDetail?
 
   private var imageNames: [String] {
-    MockFixtures.imageNamesByAdventureID[adventureID] ?? ["hero-mountain"]
+    AdventurePresentation.imageNames(
+      for: adventureID,
+      runtimeMode: runtimeMode
+    )
   }
 
   var body: some View {
@@ -51,17 +54,18 @@ struct AdventureDetailView: View {
     .toolbar(.hidden, for: .navigationBar)
     .task {
       guard detail == nil else { return }
-      detail = try? await adventureService.getAdventure(id: adventureID, viewerHandle: viewerHandle).item
+      detail = try? await adventureService.getAdventure(id: adventureID).item
     }
   }
 
   private func hero(detail: AdventureDetail) -> some View {
     ZStack(alignment: .top) {
-      HAImageCarousel(
+      HAMediaCarouselOrPlaceholder(
         imageNames: imageNames,
         aspectRatio: nil,
         cornerRadius: 0,
-        dotsInside: true
+        dotsInside: true,
+        title: detail.title
       )
       .frame(height: 304)
       .overlay {
@@ -152,7 +156,12 @@ struct AdventureDetailView: View {
 
   private func authorRow(detail: AdventureDetail) -> some View {
     HStack(spacing: 12) {
-      HAAvatarView(initials: "SK", size: 42, background: HATheme.Colors.primary.opacity(0.15), foreground: HATheme.Colors.primary)
+      HAAvatarView(
+        initials: authorInitials(detail.author),
+        size: 42,
+        background: HATheme.Colors.primary.opacity(0.15),
+        foreground: HATheme.Colors.primary
+      )
 
       VStack(alignment: .leading, spacing: 2) {
         Text("Shared by \(detail.author.displayName ?? detail.author.handle)")
@@ -177,6 +186,18 @@ struct AdventureDetailView: View {
         }
         .buttonStyle(.plain)
     }
+  }
+
+  private func authorInitials(_ author: AdventureAuthor) -> String {
+    let source = author.displayName ?? author.handle
+    let letters = source
+      .split(separator: " ")
+      .prefix(2)
+      .compactMap(\.first)
+      .map { String($0).uppercased() }
+      .joined()
+
+    return letters.isEmpty ? "HA" : letters
   }
 
   private func aboutSection(detail: AdventureDetail) -> some View {

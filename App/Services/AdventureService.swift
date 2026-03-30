@@ -2,20 +2,17 @@ import Foundation
 
 protocol AdventureService {
   func listFeed(
-    viewerHandle: String?,
     limit: Int,
     offset: Int
   ) async throws -> FeedResponse
 
   func getAdventure(
-    id: UUID,
-    viewerHandle: String?
+    id: UUID
   ) async throws -> AdventureDetailResponse
 }
 
-struct MockAdventureService: AdventureService {
+struct FixtureAdventureService: AdventureService {
   func listFeed(
-    viewerHandle: String?,
     limit: Int,
     offset: Int
   ) async throws -> FeedResponse {
@@ -27,17 +24,43 @@ struct MockAdventureService: AdventureService {
   }
 
   func getAdventure(
-    id: UUID,
-    viewerHandle: String?
+    id: UUID
   ) async throws -> AdventureDetailResponse {
     if let detail = MockFixtures.adventureDetails[id] {
       return AdventureDetailResponse(item: detail)
     }
 
-    throw MockServiceError.notFound
+    throw FixtureServiceError.notFound
   }
 }
 
-enum MockServiceError: Error {
+struct RemoteAdventureService: AdventureService {
+  let client: APIClient
+
+  func listFeed(
+    limit: Int,
+    offset: Int
+  ) async throws -> FeedResponse {
+    try await client.get(
+      pathComponents: ["feed"],
+      queryItems: [
+        URLQueryItem(name: "limit", value: String(limit)),
+        URLQueryItem(name: "offset", value: String(offset))
+      ],
+      requiresAuth: true
+    )
+  }
+
+  func getAdventure(
+    id: UUID
+  ) async throws -> AdventureDetailResponse {
+    try await client.get(
+      pathComponents: ["adventures", id.uuidString],
+      requiresAuth: true
+    )
+  }
+}
+
+enum FixtureServiceError: Error {
   case notFound
 }

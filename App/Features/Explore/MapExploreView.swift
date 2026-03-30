@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MapExploreView: View {
   let items: [AdventureCard]
+  let runtimeMode: AppRuntimeMode
   let visibilityFilter: VisibilityFilter
   let activeCategory: Category?
   let onVisibilityChange: (VisibilityFilter) -> Void
@@ -12,40 +13,24 @@ struct MapExploreView: View {
   @State private var selectedAdventureID: UUID?
 
   private var selectedAdventure: AdventureCard? {
-    let currentID = selectedAdventureID ?? items.first?.id
+    let currentID = selectedAdventureID ?? defaultSelectedAdventureID
     return items.first { $0.id == currentID }
   }
 
-  private var mapSheetItems: [MapSheetPreview] {
-    [
-      MapSheetPreview(
-        id: "blue-pool",
-        destinationID: MockFixtures.bluePoolID,
-        title: "Blue Pool",
-        distance: "2.4 mi",
-        rating: 4.8,
-        category: "Swimming",
-        imageNames: ["swimming-hole", "hidden-canyon", "hero-mountain"]
-      ),
-      MapSheetPreview(
-        id: "opal-creek-trail",
-        destinationID: MockFixtures.eagleID,
-        title: "Opal Creek Trail",
-        distance: "4.1 mi",
-        rating: 4.9,
-        category: "Trail",
-        imageNames: ["trail-forest", "coastal-path"]
-      ),
-      MapSheetPreview(
-        id: "tom-dick-harry",
-        destinationID: MockFixtures.tomDickID,
-        title: "Tom Dick & Harry",
-        distance: "8.2 mi",
-        rating: 4.7,
-        category: "Viewpoint",
-        imageNames: ["scenic-overlook"]
-      )
-    ]
+  private var mapSheetItems: [MapCardPresentation] {
+    AdventurePresentation.mapCardItems(
+      from: items,
+      runtimeMode: runtimeMode
+    )
+  }
+
+  private var defaultSelectedAdventureID: UUID? {
+    if runtimeMode == .fixturePreview,
+       items.contains(where: { $0.id == MockFixtures.bluePoolID }) {
+      return MockFixtures.bluePoolID
+    }
+
+    return items.first?.id
   }
 
   var body: some View {
@@ -57,8 +42,8 @@ struct MapExploreView: View {
           HAStatusBarSpacer()
 
           visibilityBar
-          .padding(.horizontal, 16)
-          .padding(.top, 4)
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
 
           if let selectedAdventure {
             Spacer()
@@ -73,9 +58,7 @@ struct MapExploreView: View {
         }
       }
       .onAppear {
-        selectedAdventureID = items.contains(where: { $0.id == MockFixtures.bluePoolID })
-          ? MockFixtures.bluePoolID
-          : items.first?.id
+        selectedAdventureID = defaultSelectedAdventureID
       }
     }
   }
@@ -187,10 +170,10 @@ struct MapExploreView: View {
       .stroke(.white.opacity(0.66), style: StrokeStyle(lineWidth: 5, lineCap: .round))
 
       ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-        let point = markerPoint(for: item.id, fallbackIndex: index, in: size)
+        let point = markerPoint(for: item, fallbackIndex: index, in: size)
         MapPinButton(
           adventureID: item.id,
-          isSelected: item.id == (selectedAdventureID ?? items.first?.id),
+          isSelected: item.id == (selectedAdventureID ?? defaultSelectedAdventureID),
           action: { selectedAdventureID = item.id }
         )
         .position(point)
@@ -198,22 +181,58 @@ struct MapExploreView: View {
     }
   }
 
-  private func markerPoint(for id: UUID, fallbackIndex index: Int, in size: CGSize) -> CGPoint {
-    switch id {
-    case MockFixtures.bluePoolID:
-      return CGPoint(x: size.width * 0.45, y: size.height * 0.35)
-    case MockFixtures.eagleID:
-      return CGPoint(x: size.width * 0.65, y: size.height * 0.25)
-    case MockFixtures.tomDickID:
-      return CGPoint(x: size.width * 0.30, y: size.height * 0.50)
-    case MockFixtures.capeID:
-      return CGPoint(x: size.width * 0.70, y: size.height * 0.45)
-    default:
-      let points: [CGPoint] = [
-        CGPoint(x: size.width * 0.55, y: size.height * 0.60),
-        CGPoint(x: size.width * 0.25, y: size.height * 0.30)
-      ]
-      return points[index % points.count]
+  private func markerPoint(for item: AdventureCard, fallbackIndex index: Int, in size: CGSize) -> CGPoint {
+    if runtimeMode == .fixturePreview {
+      switch item.id {
+      case MockFixtures.bluePoolID:
+        return CGPoint(x: size.width * 0.45, y: size.height * 0.35)
+      case MockFixtures.eagleID:
+        return CGPoint(x: size.width * 0.65, y: size.height * 0.25)
+      case MockFixtures.tomDickID:
+        return CGPoint(x: size.width * 0.30, y: size.height * 0.50)
+      case MockFixtures.capeID:
+        return CGPoint(x: size.width * 0.70, y: size.height * 0.45)
+      default:
+        break
+      }
+    }
+
+    if let location = item.location,
+       let bounds = liveLocationBounds {
+      let longitudeSpan = max(bounds.maxLongitude - bounds.minLongitude, 0.0001)
+      let latitudeSpan = max(bounds.maxLatitude - bounds.minLatitude, 0.0001)
+      let normalizedX = (location.longitude - bounds.minLongitude) / longitudeSpan
+      let normalizedY = 1 - ((location.latitude - bounds.minLatitude) / latitudeSpan)
+      return CGPoint(
+        x: size.width * (0.18 + (normalizedX * 0.64)),
+        y: size.height * (0.22 + (normalizedY * 0.44))
+      )
+    }
+
+    let fallbackPoints: [CGPoint] = [
+      CGPoint(x: size.width * 0.55, y: size.height * 0.60),
+      CGPoint(x: size.width * 0.25, y: size.height * 0.30),
+      CGPoint(x: size.width * 0.72, y: size.height * 0.28),
+      CGPoint(x: size.width * 0.34, y: size.height * 0.50)
+    ]
+    return fallbackPoints[index % fallbackPoints.count]
+  }
+
+  private var liveLocationBounds: (minLatitude: Double, maxLatitude: Double, minLongitude: Double, maxLongitude: Double)? {
+    let locations = items.compactMap(\.location)
+    guard let first = locations.first else {
+      return nil
+    }
+
+    return locations.dropFirst().reduce(
+      (first.latitude, first.latitude, first.longitude, first.longitude)
+    ) { partialResult, location in
+      (
+        min(partialResult.0, location.latitude),
+        max(partialResult.1, location.latitude),
+        min(partialResult.2, location.longitude),
+        max(partialResult.3, location.longitude)
+      )
     }
   }
 
@@ -231,7 +250,7 @@ struct MapExploreView: View {
             .font(.system(size: 16, weight: .semibold))
             .foregroundStyle(HATheme.Colors.foreground)
 
-          Text("12 places within 25 miles")
+          Text("\(mapSheetItems.count) places in the current feed")
             .font(.system(size: 14, weight: .regular))
             .foregroundStyle(HATheme.Colors.mutedForeground)
             .accessibilityIdentifier("map.sheet.count")
@@ -263,22 +282,21 @@ struct MapExploreView: View {
         .padding(.horizontal, 20)
         .padding(.bottom, 16)
       }
-
-      HABottomTabBar(selectedTab: .explore, onSelect: onSelectTab)
     }
     .background(HATheme.Colors.card)
     .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
     .shadow(color: HATheme.Colors.shadow, radius: 20, x: 0, y: -4)
   }
 
-  private func mapCard(for adventure: MapSheetPreview) -> some View {
+  private func mapCard(for adventure: MapCardPresentation) -> some View {
     VStack(alignment: .leading, spacing: 0) {
       ZStack(alignment: .topLeading) {
-        HAImageCarousel(
+        HAMediaCarouselOrPlaceholder(
           imageNames: adventure.imageNames,
           aspectRatio: 16 / 9,
           cornerRadius: 16,
-          dotsInside: true
+          dotsInside: true,
+          title: adventure.title
         )
 
         Text(adventure.category)
@@ -299,9 +317,10 @@ struct MapExploreView: View {
           .accessibilityIdentifier("map.card.title.\(adventure.id)")
 
         HStack {
-          Label(adventure.distance, systemImage: "mappin")
+          Label(selectedAdventure?.placeLabel ?? "Hidden location", systemImage: "mappin")
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(HATheme.Colors.mutedForeground)
+            .lineLimit(1)
 
           Spacer()
 
@@ -320,16 +339,6 @@ struct MapExploreView: View {
         .stroke(HATheme.Colors.border.opacity(0.7), lineWidth: 1)
     }
   }
-}
-
-private struct MapSheetPreview: Identifiable {
-  let id: String
-  let destinationID: UUID
-  let title: String
-  let distance: String
-  let rating: Double
-  let category: String
-  let imageNames: [String]
 }
 
 private struct MapPinButton: View {
