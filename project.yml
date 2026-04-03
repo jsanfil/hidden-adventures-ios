@@ -54,8 +54,68 @@ schemes:
         HiddenAdventures: all
     run:
       config: Debug
+      environmentVariables:
+        HA_RUNTIME_MODE: live
+        HA_SERVER_MODE: local_automation
     test:
       config: Debug
+      environmentVariables:
+        HA_RUNTIME_MODE: fixture
+        HA_SERVER_MODE: local_automation
+      targets:
+        - name: HiddenAdventuresUITests
+    archive:
+      config: Release
+  HiddenAdventures-LocalManualQA:
+    build:
+      targets:
+        HiddenAdventures: all
+    run:
+      config: Debug
+      environmentVariables:
+        HA_RUNTIME_MODE: live
+        HA_SERVER_MODE: local_manual_qa
+    test:
+      config: Debug
+      environmentVariables:
+        HA_RUNTIME_MODE: fixture
+        HA_SERVER_MODE: local_manual_qa
+      targets:
+        - name: HiddenAdventuresUITests
+    archive:
+      config: Release
+  HiddenAdventures-LocalAutomation:
+    build:
+      targets:
+        HiddenAdventures: all
+    run:
+      config: Debug
+      environmentVariables:
+        HA_RUNTIME_MODE: live
+        HA_SERVER_MODE: local_automation
+    test:
+      config: Debug
+      environmentVariables:
+        HA_RUNTIME_MODE: fixture
+        HA_SERVER_MODE: local_automation
+      targets:
+        - name: HiddenAdventuresUITests
+    archive:
+      config: Release
+  HiddenAdventures-Production:
+    build:
+      targets:
+        HiddenAdventures: all
+    run:
+      config: Debug
+      environmentVariables:
+        HA_RUNTIME_MODE: live
+        HA_SERVER_MODE: production
+    test:
+      config: Debug
+      environmentVariables:
+        HA_RUNTIME_MODE: fixture
+        HA_SERVER_MODE: production
       targets:
         - name: HiddenAdventuresUITests
     archive:

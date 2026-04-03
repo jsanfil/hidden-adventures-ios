@@ -4,6 +4,7 @@ set -euo pipefail
 DEVICE_NAME="${1:-iPhone 16}"
 SCREENSHOT_DIR="${UITEST_SCREENSHOT_DIR:-/tmp/hidden_adventures_ui_tests}"
 RESULT_BUNDLE="${UITEST_RESULT_BUNDLE:-/tmp/HiddenAdventuresUITests.xcresult}"
+SCHEME="${UITEST_SCHEME:-HiddenAdventures-LocalAutomation}"
 
 xcrun simctl boot "$DEVICE_NAME" >/dev/null 2>&1 || true
 xcrun simctl bootstatus "$DEVICE_NAME" -b
@@ -22,10 +23,11 @@ mkdir -p "$SCREENSHOT_DIR"
 UITEST_SCREENSHOT_DIR="$SCREENSHOT_DIR" \
 xcodebuild \
   -project HiddenAdventures.xcodeproj \
-  -scheme HiddenAdventures \
+  -scheme "$SCHEME" \
   -destination "platform=iOS Simulator,name=$DEVICE_NAME" \
   -resultBundlePath "$RESULT_BUNDLE" \
   test
 
 echo "UI test screenshots saved to: $SCREENSHOT_DIR"
 echo "Result bundle saved to: $RESULT_BUNDLE"
+echo "Scheme used: $SCHEME"

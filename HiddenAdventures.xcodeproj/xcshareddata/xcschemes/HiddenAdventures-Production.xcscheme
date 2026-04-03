@@ -61,7 +61,7 @@
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "HA_SERVER_MODE"
-            value = "local_automation"
+            value = "production"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>
@@ -96,7 +96,7 @@
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "HA_SERVER_MODE"
-            value = "local_automation"
+            value = "production"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>

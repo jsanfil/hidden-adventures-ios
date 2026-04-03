@@ -6,20 +6,33 @@
 2. Use the sibling `hidden-adventures-server` repo for local backend work.
 3. Use live server mode for normal development and reserve fixture-preview mode for the UI harness and deterministic screenshots.
 4. Point the app at the local Slice 1 backend with `HA_API_BASE_URL` when needed. The default is `http://127.0.0.1:3000/api`.
-5. Use `HA_SERVER_MODE=dev_test` for the local-identity workflow or `HA_SERVER_MODE=production` for Cognito-style auth.
-6. Provide `HA_TEST_AUTH_TOKEN` to override the dev/test bearer token, or `HA_AUTH_TOKEN` for production. The local default is `local:connected_viewer`.
-7. Use `HA_TEST_AUTH_TOKEN=local:new_user` when you want to step through bootstrap and handle selection against the seeded local identity.
+5. Use `HiddenAdventures-LocalManualQA` when the sibling server is running `npm run dev:manual-qa`.
+6. Use `HiddenAdventures-LocalAutomation` when the sibling server is running `npm run dev:automation`.
+7. Use `HiddenAdventures-Production` only for production configuration and release validation.
+8. Provide `HA_TEST_AUTH_TOKEN` for automation mode, or `HA_AUTH_TOKEN` for manual QA and production when you need an explicit bearer token.
 
 ## Runtime Modes
 
 - live server mode:
   - default when `UITEST_START_SCREEN` is not present
   - uses the locked Slice 1 routes for auth bootstrap, handle selection, feed, detail, and profile
-  - infers `dev_test` server auth mode automatically for `localhost` and `127.0.0.1`
+  - infers `local_automation` server mode automatically for `localhost` and `127.0.0.1`
 - fixture preview mode:
   - automatic for the UI-gallery and walkthrough harness
   - can be forced with `HA_RUNTIME_MODE=fixture`
   - keeps deterministic viewer identity, map cards, and media for screenshots
+
+## Server Modes
+
+- `local_manual_qa`:
+  - expects the sibling server to use real Cognito plus the `hidden_adventures_qa` database
+  - uses `HA_AUTH_TOKEN` when an explicit token is injected into the app runtime
+- `local_automation`:
+  - expects the sibling server to use deterministic test JWT auth plus the `hidden_adventures_test` database
+  - uses `HA_TEST_AUTH_TOKEN` first, then falls back to `HA_AUTH_TOKEN` if provided explicitly
+- `production`:
+  - expects production base URLs, production Cognito, and production media configuration
+  - never assumes a local default token
 
 ## Current Explicit Fallbacks
 
@@ -31,5 +44,6 @@
 
 - the server should be runnable on the laptop
 - the app should be testable without cloud deploys
-- release slices should be validated locally before staging
+- local manual QA and local automation should be selectable by scheme rather than hand-editing env vars
+- release slices should be validated locally before any cloud smoke flow
 - the UI harness should remain part of the acceptance path while moving from fixtures to real APIs

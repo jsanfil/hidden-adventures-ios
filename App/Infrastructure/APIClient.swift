@@ -125,7 +125,7 @@ enum APIError: LocalizedError {
     case .invalidBaseURL(let value):
       return "The API base URL is invalid: \(value)"
     case .missingAuthToken:
-      return "Set HA_AUTH_TOKEN for production, or use HA_SERVER_MODE=dev_test with HA_TEST_AUTH_TOKEN for local Slice 1 server calls."
+      return "Set HA_AUTH_TOKEN for LocalManualQA or production, or use HA_SERVER_MODE=local_automation with HA_TEST_AUTH_TOKEN for local automation calls."
     case .invalidResponse:
       return "The server returned an invalid response."
     case .server(_, let message):

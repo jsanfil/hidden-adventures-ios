@@ -6,7 +6,8 @@ enum AppRuntimeMode: String {
 }
 
 enum AppServerMode: String {
-  case devTest
+  case localManualQA
+  case localAutomation
   case production
 }
 
@@ -57,8 +58,10 @@ struct AppRuntime {
   ) -> AppServerMode {
     if let rawMode = environment["HA_SERVER_MODE"]?.lowercased() {
       switch rawMode {
-      case "dev", "development", "dev_test", "test", "local", "local_identity":
-        return .devTest
+      case "manual_qa", "local_manual_qa", "local-manual-qa", "qa":
+        return .localManualQA
+      case "automation", "local_automation", "local-automation", "test", "test_core":
+        return .localAutomation
       case "prod", "production", "cognito":
         return .production
       default:
@@ -68,7 +71,7 @@ struct AppRuntime {
 
     if let host = apiBaseURL.host?.lowercased(),
        host == "127.0.0.1" || host == "localhost" {
-      return .devTest
+      return .localAutomation
     }
 
     return .production
@@ -84,10 +87,11 @@ struct AppRuntime {
     }
 
     switch serverMode {
-    case .devTest:
+    case .localManualQA:
+      return environment["HA_AUTH_TOKEN"]?.trimmedToNil
+    case .localAutomation:
       return environment["HA_TEST_AUTH_TOKEN"]?.trimmedToNil
         ?? environment["HA_AUTH_TOKEN"]?.trimmedToNil
-        ?? "local:connected_viewer"
     case .production:
       return environment["HA_AUTH_TOKEN"]?.trimmedToNil
     }
