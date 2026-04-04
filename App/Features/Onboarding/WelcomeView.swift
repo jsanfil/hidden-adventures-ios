@@ -114,3 +114,12 @@ struct WelcomeView: View {
     .toolbar(.hidden, for: .navigationBar)
   }
 }
+
+struct WelcomeView_Previews: PreviewProvider {
+  static var previews: some View {
+    WelcomeView(
+      onGetStarted: {},
+      onSignIn: {}
+    )
+  }
+}

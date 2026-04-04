@@ -197,3 +197,15 @@ struct ProfileView: View {
     }
   }
 }
+
+struct ProfileView_Previews: PreviewProvider {
+  static var previews: some View {
+    ProfileView(
+      handle: MockFixtures.profile.handle,
+      profileService: FixtureProfileService(),
+      runtimeMode: .fixturePreview,
+      onProfileLoaded: { _ in },
+      onOpenDetail: { _ in }
+    )
+  }
+}

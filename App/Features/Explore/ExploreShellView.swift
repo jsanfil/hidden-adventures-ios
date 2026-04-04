@@ -309,3 +309,26 @@ enum VisibilityFilter: CaseIterable, Identifiable {
     }
   }
 }
+
+private struct ExploreShellPreviewWrapper: View {
+  @State private var mode: ExploreMode = .feed
+
+  var body: some View {
+    ExploreShellView(
+      adventureService: FixtureAdventureService(),
+      profileService: FixtureProfileService(),
+      runtimeMode: .fixturePreview,
+      viewerHandle: MockFixtures.profile.handle,
+      viewerDisplayName: MockFixtures.profile.displayName,
+      mode: $mode,
+      onViewerProfileLoaded: { _ in },
+      onOpenDetail: { _ in }
+    )
+  }
+}
+
+struct ExploreShellView_Previews: PreviewProvider {
+  static var previews: some View {
+    ExploreShellPreviewWrapper()
+  }
+}

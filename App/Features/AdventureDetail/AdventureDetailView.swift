@@ -442,3 +442,13 @@ private struct CircleFilledNavigationButton: View {
       .clipShape(Circle())
   }
 }
+
+struct AdventureDetailView_Previews: PreviewProvider {
+  static var previews: some View {
+    AdventureDetailView(
+      adventureID: MockFixtures.eagleID,
+      adventureService: FixtureAdventureService(),
+      runtimeMode: .fixturePreview
+    )
+  }
+}

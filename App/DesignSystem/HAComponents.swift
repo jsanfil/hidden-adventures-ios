@@ -295,3 +295,46 @@ extension HAAppTab {
     }
   }
 }
+
+private struct HAComponentsPreview: View {
+  @State private var selectedMode: ExploreMode = .feed
+  @State private var selectedTab: HAAppTab = .home
+
+  var body: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 24) {
+        HAPrimaryButton(title: "Primary Action") {}
+
+        HStack(spacing: 12) {
+          HAChip(title: "Trails", systemImage: "leaf", isSelected: true) {}
+          HAChip(title: "Water", systemImage: "drop", isSelected: false) {}
+        }
+
+        HASegmentedControl(options: ExploreMode.allCases, selection: $selectedMode)
+
+        HStack(spacing: 16) {
+          HAAvatarView(initials: "HA")
+          HAAvatarView(initials: "JS", size: 64, background: HATheme.Colors.primary.opacity(0.18), foreground: HATheme.Colors.primary)
+        }
+
+        HAImageCarousel(
+          imageNames: ["hero-mountain", "trail-forest", "scenic-overlook"],
+          aspectRatio: 4 / 3,
+          cornerRadius: 18,
+          dotsInside: false
+        )
+
+        HABottomTabBar(selectedTab: selectedTab, onSelect: { selectedTab = $0 })
+          .padding(.horizontal, -20)
+      }
+      .padding(20)
+    }
+    .background(HATheme.Colors.background)
+  }
+}
+
+struct HAComponents_Previews: PreviewProvider {
+  static var previews: some View {
+    HAComponentsPreview()
+  }
+}

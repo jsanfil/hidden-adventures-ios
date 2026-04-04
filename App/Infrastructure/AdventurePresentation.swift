@@ -128,6 +128,30 @@ struct MapCardPresentation: Identifiable {
   let imageNames: [String]
 }
 
+struct HAMediaCarouselOrPlaceholder_Previews: PreviewProvider {
+  static var previews: some View {
+    VStack(spacing: 24) {
+      HAMediaCarouselOrPlaceholder(
+        imageNames: ["hero-mountain", "scenic-overlook", "trail-forest"],
+        aspectRatio: 4 / 3,
+        cornerRadius: 18,
+        dotsInside: true,
+        title: "Eagle Creek Trail"
+      )
+
+      HAMediaCarouselOrPlaceholder(
+        imageNames: [],
+        aspectRatio: 4 / 3,
+        cornerRadius: 18,
+        dotsInside: false,
+        title: "Preview-only fallback"
+      )
+    }
+    .padding(24)
+    .background(HATheme.Colors.background)
+  }
+}
+
 private extension String {
   var mapIdentifier: String {
     lowercased()

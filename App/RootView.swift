@@ -127,3 +127,18 @@ struct RootView: View {
     }
   }
 }
+
+struct RootView_Previews: PreviewProvider {
+  static var previews: some View {
+    RootView(
+      runtime: previewRuntime,
+      adventureService: FixtureAdventureService(),
+      profileService: FixtureProfileService(),
+      authService: nil
+    )
+  }
+
+  private static var previewRuntime: AppRuntime {
+    AppRuntime(environment: ["HA_RUNTIME_MODE": "preview"])
+  }
+}

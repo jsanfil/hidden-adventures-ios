@@ -28,6 +28,16 @@ struct FeedView: View {
   }
 }
 
+struct FeedView_Previews: PreviewProvider {
+  static var previews: some View {
+    FeedView(
+      items: MockFixtures.feedItems,
+      runtimeMode: .fixturePreview,
+      onOpenDetail: { _ in }
+    )
+  }
+}
+
 private struct FeedCardView: View {
   let adventure: AdventureCard
   let runtimeMode: AppRuntimeMode

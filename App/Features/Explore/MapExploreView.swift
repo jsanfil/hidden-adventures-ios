@@ -341,6 +341,21 @@ struct MapExploreView: View {
   }
 }
 
+struct MapExploreView_Previews: PreviewProvider {
+  static var previews: some View {
+    MapExploreView(
+      items: MockFixtures.feedItems,
+      runtimeMode: .fixturePreview,
+      visibilityFilter: .all,
+      activeCategory: nil,
+      onVisibilityChange: { _ in },
+      onCategoryToggle: { _ in },
+      onSelectTab: { _ in },
+      onOpenDetail: { _ in }
+    )
+  }
+}
+
 private struct MapPinButton: View {
   let adventureID: UUID
   let isSelected: Bool
