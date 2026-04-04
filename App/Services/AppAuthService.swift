@@ -1,6 +1,7 @@
+import CryptoKit
 import Foundation
 
-enum WelcomeIntent {
+enum WelcomeIntent: Equatable {
   case onboarding
   case signIn
 }
@@ -94,13 +95,14 @@ struct UserDefaultsAuthTokenStore: AuthTokenStore {
   }
 }
 
-enum PendingAuthChallengeKind: Sendable {
+enum PendingAuthChallengeKind: Equatable, Sendable {
   case signIn
   case signUp
 }
 
-struct PendingAuthChallenge: Sendable {
+struct PendingAuthChallenge: Equatable, Sendable {
   let kind: PendingAuthChallengeKind
+  let cognitoUsername: String
   let email: String
   let deliveryDestination: String
   let session: String?
@@ -114,6 +116,7 @@ enum AuthFlowResult: Sendable {
 protocol AppAuthService {
   func restoreSession() -> AuthTokens?
   func start(email: String, intent: WelcomeIntent) async throws -> AuthFlowResult
+  func resend(challenge: PendingAuthChallenge, intent: WelcomeIntent) async throws -> AuthFlowResult
   func verify(code: String, challenge: PendingAuthChallenge) async throws -> AuthFlowResult
   func logout()
 }
@@ -199,10 +202,12 @@ final class CognitoAppAuthService: AppAuthService {
 
     case .onboarding:
       do {
-        let response = try await signUp(email: normalizedEmail)
+        let cognitoUsername = signUpUsername(for: normalizedEmail)
+        let response = try await signUp(email: normalizedEmail, username: cognitoUsername)
         return .challenge(
           PendingAuthChallenge(
             kind: .signUp,
+            cognitoUsername: cognitoUsername,
             email: normalizedEmail,
             deliveryDestination: response.codeDeliveryDetails?.destination ?? normalizedEmail,
             session: nil
@@ -232,12 +237,39 @@ final class CognitoAppAuthService: AppAuthService {
       )
 
     case .signUp:
-      let response = try await confirmSignUp(email: challenge.email, code: trimmedCode)
+      let response: ConfirmSignUpResponse
+      do {
+        response = try await confirmSignUp(username: challenge.cognitoUsername, code: trimmedCode)
+      } catch let error as AppAuthError {
+        guard case .service(let code, _) = error, code == "AliasExistsException" else {
+          throw error
+        }
+        return try await initiateSignIn(email: challenge.email)
+      }
       if let session = response.session {
         return try await continueAfterConfirmSignUp(email: challenge.email, session: session)
       }
 
       return try await initiateSignIn(email: challenge.email)
+    }
+  }
+
+  func resend(challenge: PendingAuthChallenge, intent: WelcomeIntent) async throws -> AuthFlowResult {
+    switch challenge.kind {
+    case .signIn:
+      return try await start(email: challenge.email, intent: intent)
+
+    case .signUp:
+      let response = try await resendConfirmationCode(username: challenge.cognitoUsername)
+      return .challenge(
+        PendingAuthChallenge(
+          kind: .signUp,
+          cognitoUsername: challenge.cognitoUsername,
+          email: challenge.email,
+          deliveryDestination: response.codeDeliveryDetails?.destination ?? challenge.email,
+          session: nil
+        )
+      )
     }
   }
 
@@ -268,7 +300,9 @@ final class CognitoAppAuthService: AppAuthService {
       body: InitiateAuthRequest(
         authFlow: "USER_AUTH",
         clientId: configuration.clientID,
-        authParameters: nil,
+        authParameters: [
+          "USERNAME": email
+        ],
         session: session
       )
     )
@@ -301,12 +335,12 @@ final class CognitoAppAuthService: AppAuthService {
     return try await authFlowResult(from: response, email: email)
   }
 
-  private func signUp(email: String) async throws -> SignUpResponse {
+  private func signUp(email: String, username: String) async throws -> SignUpResponse {
     try await send(
       target: "SignUp",
       body: SignUpRequest(
         clientId: configuration.clientID,
-        username: email,
+        username: username,
         userAttributes: [
           CognitoAttribute(name: "email", value: email)
         ]
@@ -314,13 +348,23 @@ final class CognitoAppAuthService: AppAuthService {
     )
   }
 
-  private func confirmSignUp(email: String, code: String) async throws -> ConfirmSignUpResponse {
+  private func confirmSignUp(username: String, code: String) async throws -> ConfirmSignUpResponse {
     try await send(
       target: "ConfirmSignUp",
       body: ConfirmSignUpRequest(
         clientId: configuration.clientID,
-        username: email,
+        username: username,
         confirmationCode: code
+      )
+    )
+  }
+
+  private func resendConfirmationCode(username: String) async throws -> ResendConfirmationCodeResponse {
+    try await send(
+      target: "ResendConfirmationCode",
+      body: ResendConfirmationCodeRequest(
+        clientId: configuration.clientID,
+        username: username
       )
     )
   }
@@ -348,6 +392,7 @@ final class CognitoAppAuthService: AppAuthService {
     return .challenge(
       PendingAuthChallenge(
         kind: .signIn,
+        cognitoUsername: email,
         email: email,
         deliveryDestination: response.challengeParameters?["CODE_DELIVERY_DESTINATION"] ?? email,
         session: response.session
@@ -410,6 +455,35 @@ final class CognitoAppAuthService: AppAuthService {
       throw AppAuthError.invalidEmail
     }
     return normalizedEmail
+  }
+
+  private func signUpUsername(for email: String) -> String {
+    let digest = SHA256.hash(data: Data(email.utf8))
+    let hex = digest.map { String(format: "%02x", $0) }.joined()
+    let localPart = email.split(separator: "@").first.map(String.init) ?? "user"
+    let readablePrefix = sanitizedUsernamePrefix(from: localPart)
+    return "\(readablePrefix)_\(hex.prefix(24))"
+  }
+
+  private func sanitizedUsernamePrefix(from localPart: String) -> String {
+    let allowed = localPart.lowercased().map { character -> Character in
+      switch character {
+      case "a"..."z", "0"..."9":
+        return character
+      default:
+        return "_"
+      }
+    }
+
+    let collapsed = String(allowed)
+      .replacingOccurrences(of: "_+", with: "_", options: .regularExpression)
+      .trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+
+    if collapsed.isEmpty {
+      return "user"
+    }
+
+    return String(collapsed.prefix(24))
   }
 
   private func send<Request: Encodable, Response: Decodable>(
@@ -482,6 +556,16 @@ private struct ConfirmSignUpRequest: Encodable {
   }
 }
 
+private struct ResendConfirmationCodeRequest: Encodable {
+  let clientId: String
+  let username: String
+
+  enum CodingKeys: String, CodingKey {
+    case clientId = "ClientId"
+    case username = "Username"
+  }
+}
+
 private struct InitiateAuthRequest: Encodable {
   let authFlow: String
   let clientId: String
@@ -531,6 +615,14 @@ private struct ConfirmSignUpResponse: Decodable {
 
   enum CodingKeys: String, CodingKey {
     case session = "Session"
+  }
+}
+
+private struct ResendConfirmationCodeResponse: Decodable {
+  let codeDeliveryDetails: CodeDeliveryDetails?
+
+  enum CodingKeys: String, CodingKey {
+    case codeDeliveryDetails = "CodeDeliveryDetails"
   }
 }
 

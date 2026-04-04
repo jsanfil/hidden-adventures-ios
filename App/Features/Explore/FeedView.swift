@@ -2,8 +2,13 @@ import SwiftUI
 
 struct FeedView: View {
   let items: [AdventureCard]
+  let adventureService: AdventureService
   let runtimeMode: AppRuntimeMode
   let onOpenDetail: (String) -> Void
+
+  private func accessibilityAdventureID(_ id: String) -> String {
+    runtimeMode == .fixturePreview ? MockFixtures.uiTestAdventureID(for: id) : id
+  }
 
   var body: some View {
     ScrollView {
@@ -14,11 +19,12 @@ struct FeedView: View {
           } label: {
             FeedCardView(
               adventure: adventure,
+              adventureService: adventureService,
               runtimeMode: runtimeMode
             )
           }
           .buttonStyle(.plain)
-          .accessibilityIdentifier("feed.card.\(adventure.id)")
+          .accessibilityIdentifier("feed.card.\(accessibilityAdventureID(adventure.id))")
         }
       }
       .padding(.horizontal, 20)
@@ -32,6 +38,7 @@ struct FeedView_Previews: PreviewProvider {
   static var previews: some View {
     FeedView(
       items: MockFixtures.feedItems,
+      adventureService: FixtureAdventureService(),
       runtimeMode: .fixturePreview,
       onOpenDetail: { _ in }
     )
@@ -40,12 +47,26 @@ struct FeedView_Previews: PreviewProvider {
 
 private struct FeedCardView: View {
   let adventure: AdventureCard
+  let adventureService: AdventureService
   let runtimeMode: AppRuntimeMode
 
-  private var images: [String] {
-    AdventurePresentation.imageNames(
-      for: adventure.id,
-      runtimeMode: runtimeMode
+  private var accessibilityAdventureID: String {
+    runtimeMode == .fixturePreview ? MockFixtures.uiTestAdventureID(for: adventure.id) : adventure.id
+  }
+
+  private var mediaSource: HAMediaSource {
+    if runtimeMode == .fixturePreview {
+      return .fixture(
+        AdventurePresentation.imageNames(
+          for: adventure.id,
+          runtimeMode: runtimeMode
+        )
+      )
+    }
+
+    return .remote(
+      adventure.primaryMedia.map(\.id).map { [$0] } ?? [],
+      adventureService
     )
   }
 
@@ -53,7 +74,7 @@ private struct FeedCardView: View {
     ZStack {
       ZStack(alignment: .bottomLeading) {
         HAMediaCarouselOrPlaceholder(
-          imageNames: images,
+          source: mediaSource,
           aspectRatio: 4 / 3,
           cornerRadius: 16,
           dotsInside: true,
@@ -77,7 +98,7 @@ private struct FeedCardView: View {
             .foregroundStyle(.white)
             .multilineTextAlignment(.leading)
             .lineSpacing(1)
-            .accessibilityIdentifier("feed.card.title.\(adventure.id)")
+            .accessibilityIdentifier("feed.card.title.\(accessibilityAdventureID)")
 
           HStack(alignment: .center) {
             HStack(spacing: 4) {
@@ -88,7 +109,7 @@ private struct FeedCardView: View {
             }
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(.white.opacity(0.82))
-            .accessibilityIdentifier("feed.card.location.\(adventure.id)")
+            .accessibilityIdentifier("feed.card.location.\(accessibilityAdventureID)")
 
             Spacer(minLength: 8)
 
@@ -121,7 +142,7 @@ private struct FeedCardView: View {
               .padding(.vertical, 4)
               .background(.white.opacity(0.92))
               .clipShape(Capsule(style: .continuous))
-              .accessibilityIdentifier("feed.card.category.\(adventure.id)")
+              .accessibilityIdentifier("feed.card.category.\(accessibilityAdventureID)")
           }
 
           Spacer()

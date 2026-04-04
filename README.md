@@ -13,11 +13,12 @@ SwiftUI iOS client for the Hidden Adventures rebuild.
 - the repo contains a native Slice 1 shell for welcome, profile setup, unified explore feed and map, and adventure detail
 - the repo includes a deterministic UI-gallery and walkthrough harness under `UITests`
 - the default app runtime now targets the locked Slice 1 server contracts for auth bootstrap, handle selection, profile write, feed, adventure detail, and profile
+- live feed cards now load a single authenticated image from `primaryMedia.id` through `GET /api/media/:id`
+- live adventure detail now loads ordered media refs from `GET /api/adventures/:id/media` and renders them as a carousel through `GET /api/media/:id`
 - the UI-gallery and walkthrough harness still run in explicit fixture-preview mode so screenshots and acceptance captures remain deterministic
 - the app now has explicit live server modes for `LocalManualQA`, `LocalAutomation`, and `Production`
 - manual QA and production now support a native email-code auth flow backed by Cognito, while local automation still accepts deterministic bearer-token injection
 - remaining temporary fallbacks are explicit in the UI:
-  - live media cards use a documented placeholder until a locked media-delivery route lands
   - map explore in live mode derives cards from the real feed because no locked map endpoint exists yet
 
 ## Local Workflow
@@ -44,6 +45,7 @@ SwiftUI iOS client for the Hidden Adventures rebuild.
 - `HA_TEST_AUTH_TOKEN` supplies a deterministic automation bearer token when `HA_SERVER_MODE=local_automation`.
 - `HA_AUTH_TOKEN` supplies the bearer token for `LocalManualQA` and `Production`.
 - The app no longer injects a default local token. Manual QA should use real Cognito-backed sign-in, or an explicit token override for troubleshooting.
+- S3 bucket keys remain server-internal; the app should treat media IDs as the contract and should never build image URLs from `storageKey`.
 
 ## Acceptance Path
 

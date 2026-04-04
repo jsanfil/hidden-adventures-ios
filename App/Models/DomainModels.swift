@@ -85,6 +85,14 @@ struct MediaReference: Codable, Hashable, Sendable {
   let storageKey: String
 }
 
+struct AdventureMediaItem: Codable, Hashable, Sendable {
+  let id: String
+  let sortOrder: Int
+  let isPrimary: Bool
+  let width: Int?
+  let height: Int?
+}
+
 struct AdventureStats: Codable, Hashable, Sendable {
   let favoriteCount: Int
   let commentCount: Int
@@ -172,6 +180,10 @@ struct FeedResponse: Codable, Sendable {
 
 struct AdventureDetailResponse: Codable, Sendable {
   let item: AdventureDetail
+}
+
+struct AdventureMediaListResponse: Codable, Sendable {
+  let items: [AdventureMediaItem]
 }
 
 struct ProfileResponse: Codable, Sendable {

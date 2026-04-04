@@ -7,12 +7,19 @@ struct AdventureDetailView: View {
 
   @Environment(\.dismiss) private var dismiss
   @State private var detail: AdventureDetail?
+  @State private var mediaItems: [AdventureMediaItem] = []
 
-  private var imageNames: [String] {
-    AdventurePresentation.imageNames(
-      for: adventureID,
-      runtimeMode: runtimeMode
-    )
+  private var mediaSource: HAMediaSource {
+    if runtimeMode == .fixturePreview {
+      return .fixture(
+        AdventurePresentation.imageNames(
+          for: adventureID,
+          runtimeMode: runtimeMode
+        )
+      )
+    }
+
+    return .remote(mediaItems.map(\.id), adventureService)
   }
 
   var body: some View {
@@ -54,14 +61,32 @@ struct AdventureDetailView: View {
     .toolbar(.hidden, for: .navigationBar)
     .task {
       guard detail == nil else { return }
-      detail = try? await adventureService.getAdventure(id: adventureID).item
+
+      do {
+        let loadedDetail = try await adventureService.getAdventure(id: adventureID).item
+        detail = loadedDetail
+
+        guard runtimeMode != .fixturePreview else {
+          return
+        }
+
+        do {
+          mediaItems = try await adventureService.listAdventureMedia(id: adventureID).items
+        } catch {
+          mediaItems = loadedDetail.primaryMedia.map {
+            [AdventureMediaItem(id: $0.id, sortOrder: 0, isPrimary: true, width: nil, height: nil)]
+          } ?? []
+        }
+      } catch {
+        detail = nil
+      }
     }
   }
 
   private func hero(detail: AdventureDetail) -> some View {
     ZStack(alignment: .top) {
       HAMediaCarouselOrPlaceholder(
-        imageNames: imageNames,
+        source: mediaSource,
         aspectRatio: nil,
         cornerRadius: 0,
         dotsInside: true,

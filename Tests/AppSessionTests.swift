@@ -72,6 +72,7 @@ final class AppSessionTests: XCTestCase {
     appAuthService.startResult = .challenge(
       PendingAuthChallenge(
         kind: .signIn,
+        cognitoUsername: "new@example.com",
         email: "new@example.com",
         deliveryDestination: "n•••@example.com",
         session: "session-1"
@@ -101,6 +102,382 @@ final class AppSessionTests: XCTestCase {
 
     XCTAssertEqual(nextStage, .profileSetup)
     XCTAssertEqual(suggestedHandle, "new_user")
+  }
+
+  func testVerifyEmailCodeDerivesFriendlyHandleFromRecoveryEmailWhenSuggestionMissing() async {
+    let backendAuthService = BackendAuthServiceStub()
+    backendAuthService.bootstrapResponse = AuthBootstrapResponse(
+      accountState: .newUserNeedsHandle,
+      user: nil,
+      suggestedHandle: nil,
+      recoveryEmail: "joe.sanfilippo+qa@example.com"
+    )
+
+    let appAuthService = AppAuthServiceStub()
+    appAuthService.startResult = .challenge(
+      PendingAuthChallenge(
+        kind: .signIn,
+        cognitoUsername: "joe_sanfilippo_qa_1234567890abcdef12345678",
+        email: "joe.sanfilippo+qa@example.com",
+        deliveryDestination: "j•••@example.com",
+        session: "session-1"
+      )
+    )
+    appAuthService.verifyResult = .authenticated(.environmentOverride(token: "verified-token"))
+
+    let session = await makeSession(
+      runtime: AppRuntime(
+        environment: [
+          "HA_RUNTIME_MODE": "live",
+          "HA_SERVER_MODE": "local_manual_qa"
+        ]
+      ),
+      backendAuthService: backendAuthService,
+      appAuthService: appAuthService,
+      profileService: ProfileServiceStub(),
+      authState: AuthStateStore()
+    )
+
+    await MainActor.run {
+      session.beginAuth(intent: .onboarding)
+    }
+    _ = await session.requestEmailCode(for: "joe.sanfilippo+qa@example.com")
+    let nextStage = await session.verifyEmailCode("123456")
+    let suggestedHandle = await MainActor.run { session.profileDraft.handle }
+
+    XCTAssertEqual(nextStage, .profileSetup)
+    XCTAssertEqual(suggestedHandle, "joe_sanfilippo_qa")
+  }
+
+  func testVerifyEmailCodeFallsBackToExplorerHandleWhenRecoveryEmailLocalPartIsInvalid() async {
+    let backendAuthService = BackendAuthServiceStub()
+    backendAuthService.bootstrapResponse = AuthBootstrapResponse(
+      accountState: .newUserNeedsHandle,
+      user: nil,
+      suggestedHandle: nil,
+      recoveryEmail: "+++@example.com"
+    )
+
+    let appAuthService = AppAuthServiceStub()
+    appAuthService.startResult = .challenge(
+      PendingAuthChallenge(
+        kind: .signIn,
+        cognitoUsername: "user_1234567890abcdef12345678",
+        email: "+++@example.com",
+        deliveryDestination: "•••@example.com",
+        session: "session-1"
+      )
+    )
+    appAuthService.verifyResult = .authenticated(.environmentOverride(token: "verified-token"))
+
+    let session = await makeSession(
+      runtime: AppRuntime(
+        environment: [
+          "HA_RUNTIME_MODE": "live",
+          "HA_SERVER_MODE": "local_manual_qa"
+        ]
+      ),
+      backendAuthService: backendAuthService,
+      appAuthService: appAuthService,
+      profileService: ProfileServiceStub(),
+      authState: AuthStateStore()
+    )
+
+    await MainActor.run {
+      session.beginAuth(intent: .onboarding)
+    }
+    _ = await session.requestEmailCode(for: "+++@example.com")
+    let nextStage = await session.verifyEmailCode("123456")
+    let suggestedHandle = await MainActor.run { session.profileDraft.handle }
+
+    XCTAssertEqual(nextStage, .profileSetup)
+    XCTAssertEqual(suggestedHandle, "explorer")
+  }
+
+  func testVerifyEmailCodePreservesTokensWhenBootstrapTransportFails() async {
+    let backendAuthService = BackendAuthServiceStub()
+    backendAuthService.bootstrapError = APIError.transport(NSError(domain: NSURLErrorDomain, code: NSURLErrorCannotConnectToHost))
+
+    let appAuthService = AppAuthServiceStub()
+    appAuthService.startResult = .challenge(
+      PendingAuthChallenge(
+        kind: .signIn,
+        cognitoUsername: "linked@example.com",
+        email: "linked@example.com",
+        deliveryDestination: "l•••@example.com",
+        session: "session-1"
+      )
+    )
+    appAuthService.verifyResult = .authenticated(.environmentOverride(token: "verified-token"))
+
+    let authState = AuthStateStore()
+    let session = await makeSession(
+      runtime: AppRuntime(
+        environment: [
+          "HA_RUNTIME_MODE": "live",
+          "HA_SERVER_MODE": "local_manual_qa"
+        ]
+      ),
+      backendAuthService: backendAuthService,
+      appAuthService: appAuthService,
+      profileService: ProfileServiceStub(),
+      authState: authState
+    )
+
+    await MainActor.run {
+      session.beginAuth(intent: .signIn)
+    }
+    _ = await session.requestEmailCode(for: "linked@example.com")
+    let nextStage = await session.verifyEmailCode("123456")
+    let canRetry = await MainActor.run { session.canRetryAuthenticatedBootstrap }
+    let alertMessage = await MainActor.run { session.alertMessage }
+    let pendingChallenge = await MainActor.run { session.pendingAuthChallenge }
+
+    XCTAssertEqual(nextStage, .welcome)
+    XCTAssertEqual(authState.bearerToken, "verified-token")
+    XCTAssertTrue(canRetry)
+    XCTAssertEqual(appAuthService.logoutCallCount, 0)
+    XCTAssertNil(pendingChallenge)
+    XCTAssertTrue(alertMessage?.contains("Your email code worked") == true)
+    XCTAssertTrue(alertMessage?.contains("You do not need a new code.") == true)
+  }
+
+  func testVerifyEmailCodeClearsTokensWhenBootstrapReturnsUnauthorized() async {
+    let backendAuthService = BackendAuthServiceStub()
+    backendAuthService.bootstrapError = APIError.server(statusCode: 401, message: "Unauthorized")
+
+    let appAuthService = AppAuthServiceStub()
+    appAuthService.startResult = .challenge(
+      PendingAuthChallenge(
+        kind: .signIn,
+        cognitoUsername: "linked@example.com",
+        email: "linked@example.com",
+        deliveryDestination: "l•••@example.com",
+        session: "session-1"
+      )
+    )
+    appAuthService.verifyResult = .authenticated(.environmentOverride(token: "verified-token"))
+
+    let authState = AuthStateStore()
+    let session = await makeSession(
+      runtime: AppRuntime(
+        environment: [
+          "HA_RUNTIME_MODE": "live",
+          "HA_SERVER_MODE": "local_manual_qa"
+        ]
+      ),
+      backendAuthService: backendAuthService,
+      appAuthService: appAuthService,
+      profileService: ProfileServiceStub(),
+      authState: authState
+    )
+
+    await MainActor.run {
+      session.beginAuth(intent: .signIn)
+    }
+    _ = await session.requestEmailCode(for: "linked@example.com")
+    let nextStage = await session.verifyEmailCode("123456")
+    let canRetry = await MainActor.run { session.canRetryAuthenticatedBootstrap }
+
+    XCTAssertEqual(nextStage, .welcome)
+    XCTAssertNil(authState.bearerToken)
+    XCTAssertFalse(canRetry)
+    XCTAssertEqual(appAuthService.logoutCallCount, 1)
+  }
+
+  func testResendEmailCodeReplacesPendingChallenge() async {
+    let appAuthService = AppAuthServiceStub()
+    appAuthService.startResult = .challenge(
+      PendingAuthChallenge(
+        kind: .signIn,
+        cognitoUsername: "linked@example.com",
+        email: "linked@example.com",
+        deliveryDestination: "l•••@example.com",
+        session: "session-1"
+      )
+    )
+    appAuthService.resendResult = .challenge(
+      PendingAuthChallenge(
+        kind: .signIn,
+        cognitoUsername: "linked@example.com",
+        email: "linked@example.com",
+        deliveryDestination: "li•••@example.com",
+        session: "session-2"
+      )
+    )
+
+    let session = await makeSession(
+      runtime: AppRuntime(
+        environment: [
+          "HA_RUNTIME_MODE": "live",
+          "HA_SERVER_MODE": "local_manual_qa"
+        ]
+      ),
+      backendAuthService: BackendAuthServiceStub(),
+      appAuthService: appAuthService,
+      profileService: ProfileServiceStub(),
+      authState: AuthStateStore()
+    )
+
+    await MainActor.run {
+      session.beginAuth(intent: .signIn)
+    }
+    _ = await session.requestEmailCode(for: "linked@example.com")
+    let nextStage = await session.resendEmailCode()
+    let pendingChallenge = await MainActor.run { session.pendingAuthChallenge }
+
+    XCTAssertEqual(nextStage, .codeEntry)
+    XCTAssertEqual(appAuthService.startInvocations.count, 1)
+    XCTAssertEqual(appAuthService.resendInvocations.count, 1)
+    XCTAssertEqual(appAuthService.resendInvocations.last?.challenge.email, "linked@example.com")
+    XCTAssertEqual(appAuthService.resendInvocations.last?.intent, .signIn)
+    XCTAssertEqual(pendingChallenge?.session, "session-2")
+    XCTAssertEqual(pendingChallenge?.deliveryDestination, "li•••@example.com")
+  }
+
+  func testResendEmailCodeForSignUpUsesConfirmationResend() async {
+    let appAuthService = AppAuthServiceStub()
+    appAuthService.startResult = .challenge(
+      PendingAuthChallenge(
+        kind: .signUp,
+        cognitoUsername: "email_signup_username",
+        email: "new@example.com",
+        deliveryDestination: "n•••@example.com",
+        session: nil
+      )
+    )
+    appAuthService.resendResult = .challenge(
+      PendingAuthChallenge(
+        kind: .signUp,
+        cognitoUsername: "email_signup_username",
+        email: "new@example.com",
+        deliveryDestination: "ne•••@example.com",
+        session: nil
+      )
+    )
+
+    let session = await makeSession(
+      runtime: AppRuntime(
+        environment: [
+          "HA_RUNTIME_MODE": "live",
+          "HA_SERVER_MODE": "local_manual_qa"
+        ]
+      ),
+      backendAuthService: BackendAuthServiceStub(),
+      appAuthService: appAuthService,
+      profileService: ProfileServiceStub(),
+      authState: AuthStateStore()
+    )
+
+    await MainActor.run {
+      session.beginAuth(intent: .onboarding)
+    }
+    _ = await session.requestEmailCode(for: "new@example.com")
+    let nextStage = await session.resendEmailCode()
+    let pendingChallenge = await MainActor.run { session.pendingAuthChallenge }
+
+    XCTAssertEqual(nextStage, .codeEntry)
+    XCTAssertEqual(appAuthService.resendInvocations.count, 1)
+    XCTAssertEqual(appAuthService.resendInvocations.last?.challenge.kind, .signUp)
+    XCTAssertEqual(appAuthService.resendInvocations.last?.challenge.email, "new@example.com")
+    XCTAssertEqual(appAuthService.resendInvocations.last?.intent, .onboarding)
+    XCTAssertEqual(pendingChallenge?.kind, .signUp)
+    XCTAssertEqual(pendingChallenge?.deliveryDestination, "ne•••@example.com")
+  }
+
+  func testVerifyEmailCodeFallsBackToSignInWhenSignupAliasAlreadyExists() async {
+    let appAuthService = AppAuthServiceStub()
+    appAuthService.startResult = .challenge(
+      PendingAuthChallenge(
+        kind: .signUp,
+        cognitoUsername: "existing_alias_signup",
+        email: "linked@example.com",
+        deliveryDestination: "l•••@example.com",
+        session: nil
+      )
+    )
+    appAuthService.verifyResult = .challenge(
+      PendingAuthChallenge(
+        kind: .signIn,
+        cognitoUsername: "linked@example.com",
+        email: "linked@example.com",
+        deliveryDestination: "l•••@example.com",
+        session: "sign-in-session"
+      )
+    )
+
+    let session = await makeSession(
+      runtime: AppRuntime(
+        environment: [
+          "HA_RUNTIME_MODE": "live",
+          "HA_SERVER_MODE": "local_manual_qa"
+        ]
+      ),
+      backendAuthService: BackendAuthServiceStub(),
+      appAuthService: appAuthService,
+      profileService: ProfileServiceStub(),
+      authState: AuthStateStore()
+    )
+
+    await MainActor.run {
+      session.beginAuth(intent: .onboarding)
+    }
+    _ = await session.requestEmailCode(for: "linked@example.com")
+    let nextStage = await session.verifyEmailCode("123456")
+    let pendingChallenge = await MainActor.run { session.pendingAuthChallenge }
+    let alertMessage = await MainActor.run { session.alertMessage }
+
+    XCTAssertEqual(nextStage, .codeEntry)
+    XCTAssertEqual(appAuthService.verifyInvocations.count, 1)
+    XCTAssertEqual(appAuthService.startInvocations.count, 1)
+    XCTAssertEqual(pendingChallenge?.kind, .signIn)
+    XCTAssertEqual(pendingChallenge?.session, "sign-in-session")
+    XCTAssertNil(alertMessage)
+  }
+
+  func testRestoreAuthenticatedSessionSucceedsAfterRecoverableBootstrapFailure() async {
+    let backendAuthService = BackendAuthServiceStub()
+    backendAuthService.bootstrapError = APIError.transport(NSError(domain: NSURLErrorDomain, code: NSURLErrorCannotConnectToHost))
+
+    let appAuthService = AppAuthServiceStub()
+    appAuthService.startResult = .challenge(
+      PendingAuthChallenge(
+        kind: .signIn,
+        cognitoUsername: "linked@example.com",
+        email: "linked@example.com",
+        deliveryDestination: "l•••@example.com",
+        session: "session-1"
+      )
+    )
+    appAuthService.verifyResult = .authenticated(.environmentOverride(token: "verified-token"))
+
+    let authState = AuthStateStore()
+    let session = await makeSession(
+      runtime: AppRuntime(
+        environment: [
+          "HA_RUNTIME_MODE": "live",
+          "HA_SERVER_MODE": "local_manual_qa"
+        ]
+      ),
+      backendAuthService: backendAuthService,
+      appAuthService: appAuthService,
+      profileService: ProfileServiceStub(),
+      authState: authState
+    )
+
+    await MainActor.run {
+      session.beginAuth(intent: .signIn)
+    }
+    _ = await session.requestEmailCode(for: "linked@example.com")
+    _ = await session.verifyEmailCode("123456")
+
+    backendAuthService.bootstrapError = nil
+    let nextStage = await session.restoreAuthenticatedSession()
+    let canRetry = await MainActor.run { session.canRetryAuthenticatedBootstrap }
+
+    XCTAssertEqual(nextStage, .explore)
+    XCTAssertEqual(authState.bearerToken, "verified-token")
+    XCTAssertFalse(canRetry)
   }
 
   func testLogoutClearsViewerStateAndToken() async {
@@ -225,6 +602,7 @@ final class AppSessionTests: XCTestCase {
 }
 
 private final class BackendAuthServiceStub: AuthService {
+  var bootstrapError: Error?
   var bootstrapResponse = AuthBootstrapResponse(
     accountState: .linked,
     user: AuthBootstrapUser(
@@ -257,7 +635,10 @@ private final class BackendAuthServiceStub: AuthService {
   )
 
   func bootstrap() async throws -> AuthBootstrapResponse {
-    bootstrapResponse
+    if let bootstrapError {
+      throw bootstrapError
+    }
+    return bootstrapResponse
   }
 
   func completeHandleSelection(handle: String) async throws -> AuthBootstrapResponse {
@@ -270,26 +651,49 @@ private final class AppAuthServiceStub: AppAuthService {
   var startResult: AuthFlowResult = .challenge(
     PendingAuthChallenge(
       kind: .signIn,
+      cognitoUsername: "linked@example.com",
       email: "linked@example.com",
       deliveryDestination: "l•••@example.com",
       session: "session"
     )
   )
+  var startResults: [AuthFlowResult] = []
+  var startInvocations: [(email: String, intent: WelcomeIntent)] = []
+  var resendResult: AuthFlowResult?
+  var resendInvocations: [(challenge: PendingAuthChallenge, intent: WelcomeIntent)] = []
   var verifyResult: AuthFlowResult = .authenticated(.environmentOverride(token: "token"))
+  var verifyError: Error?
+  var verifyInvocations: [(code: String, challenge: PendingAuthChallenge)] = []
+  var logoutCallCount = 0
 
   func restoreSession() -> AuthTokens? {
     restoredTokens
   }
 
   func start(email: String, intent: WelcomeIntent) async throws -> AuthFlowResult {
-    startResult
+    startInvocations.append((email, intent))
+    if startResults.isEmpty == false {
+      return startResults.removeFirst()
+    }
+    return startResult
+  }
+
+  func resend(challenge: PendingAuthChallenge, intent: WelcomeIntent) async throws -> AuthFlowResult {
+    resendInvocations.append((challenge, intent))
+    return resendResult ?? startResult
   }
 
   func verify(code: String, challenge: PendingAuthChallenge) async throws -> AuthFlowResult {
-    verifyResult
+    verifyInvocations.append((code, challenge))
+    if let verifyError {
+      throw verifyError
+    }
+    return verifyResult
   }
 
-  func logout() {}
+  func logout() {
+    logoutCallCount += 1
+  }
 }
 
 private final class ProfileServiceStub: ProfileService {

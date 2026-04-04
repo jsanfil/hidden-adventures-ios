@@ -19,6 +19,22 @@ struct APIClient {
     )
   }
 
+  func getData(
+    pathComponents: [String],
+    queryItems: [URLQueryItem] = [],
+    requiresAuth: Bool = false
+  ) async throws -> Data {
+    let (data, _) = try await performRequest(
+      pathComponents: pathComponents,
+      method: "GET",
+      queryItems: queryItems,
+      requiresAuth: requiresAuth,
+      body: Optional<Data>.none
+    )
+
+    return data
+  }
+
   func post<Body: Encodable, Response: Decodable>(
     pathComponents: [String],
     body: Body,
@@ -56,6 +72,28 @@ struct APIClient {
     requiresAuth: Bool,
     body: Data?
   ) async throws -> Response {
+    let (data, _) = try await performRequest(
+      pathComponents: pathComponents,
+      method: method,
+      queryItems: queryItems,
+      requiresAuth: requiresAuth,
+      body: body
+    )
+
+    do {
+      return try JSONDecoder().decode(Response.self, from: data)
+    } catch {
+      throw APIError.decoding(error)
+    }
+  }
+
+  private func performRequest(
+    pathComponents: [String],
+    method: String,
+    queryItems: [URLQueryItem],
+    requiresAuth: Bool,
+    body: Data?
+  ) async throws -> (Data, HTTPURLResponse) {
     let url = try makeURL(pathComponents: pathComponents, queryItems: queryItems)
     var request = URLRequest(url: url)
     request.httpMethod = method
@@ -92,11 +130,7 @@ struct APIClient {
       throw APIError.server(statusCode: httpResponse.statusCode, message: message)
     }
 
-    do {
-      return try JSONDecoder().decode(Response.self, from: data)
-    } catch {
-      throw APIError.decoding(error)
-    }
+    return (data, httpResponse)
   }
 
   private func makeURL(

@@ -16,7 +16,7 @@
 
 - live server mode:
   - default when `UITEST_START_SCREEN` is not present
-  - uses the locked Slice 1 routes for auth bootstrap, handle selection, feed, detail, and profile
+  - uses the locked Slice 1 routes for auth bootstrap, handle selection, feed, detail, profile, detail media, and authenticated media delivery
   - infers `local_automation` server mode automatically for `localhost` and `127.0.0.1`
 - fixture preview mode:
   - automatic for the UI-gallery and walkthrough harness
@@ -38,7 +38,7 @@
 
 ## Current Explicit Fallbacks
 
-- adventure media remains a visible placeholder in live mode until a locked media-delivery route lands
+- feed and detail media fall back to the in-app placeholder only when a media ID is missing or the authenticated media request fails
 - map explore uses feed-derived cards in live mode because no locked map endpoint exists yet
 
 ## Local Development Expectations

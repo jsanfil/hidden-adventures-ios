@@ -29,4 +29,4 @@
 - avoid rebuilding the legacy storyboard or tab structure directly
 - keep repo-local notes here and global program notes in `hidden-adventures-plan`
 - do not silently introduce fallback contract assumptions that are not documented in the program plan
-- do not add `viewerHandle`, map endpoints, or media-delivery behavior that are not part of the locked Slice 1 contract
+- do not add `viewerHandle`, map endpoints, or direct-S3 client behavior that are not part of the locked Slice 1 contract

@@ -1,6 +1,8 @@
 import Foundation
 
 enum MockFixtures {
+  static let uiTestEagleID = "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA"
+  static let uiTestBluePoolID = "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB"
   static let jordanID = "user-jordan"
   static let eagleID = "adventure-eagle-creek"
   static let bluePoolID = "adventure-blue-pool"
@@ -103,6 +105,28 @@ enum MockFixtures {
     capeID: ["coastal-path", "hero-mountain"]
   ]
 
+  static let adventureMedia: [String: [AdventureMediaItem]] = [
+    eagleID: [
+      AdventureMediaItem(id: "media-hero-mountain", sortOrder: 0, isPrimary: true, width: 1600, height: 1200),
+      AdventureMediaItem(id: "media-scenic-overlook", sortOrder: 1, isPrimary: false, width: 1600, height: 1200),
+      AdventureMediaItem(id: "media-trail-forest", sortOrder: 2, isPrimary: false, width: 1600, height: 1200)
+    ],
+    bluePoolID: [
+      AdventureMediaItem(id: "media-swimming-hole", sortOrder: 0, isPrimary: true, width: 1600, height: 1200),
+      AdventureMediaItem(id: "media-hidden-canyon", sortOrder: 1, isPrimary: false, width: 1600, height: 1200),
+      AdventureMediaItem(id: "media-trail-forest", sortOrder: 2, isPrimary: false, width: 1600, height: 1200),
+      AdventureMediaItem(id: "media-hero-mountain", sortOrder: 3, isPrimary: false, width: 1600, height: 1200)
+    ],
+    tomDickID: [
+      AdventureMediaItem(id: "media-scenic-overlook", sortOrder: 0, isPrimary: true, width: 1600, height: 1200),
+      AdventureMediaItem(id: "media-trail-forest", sortOrder: 1, isPrimary: false, width: 1600, height: 1200)
+    ],
+    capeID: [
+      AdventureMediaItem(id: "media-coastal-path", sortOrder: 0, isPrimary: true, width: 1600, height: 1200),
+      AdventureMediaItem(id: "media-hero-mountain", sortOrder: 1, isPrimary: false, width: 1600, height: 1200)
+    ]
+  ]
+
   static let adventureDetails: [String: AdventureDetail] = [
     eagleID: AdventureDetail(
       id: eagleID,
@@ -173,4 +197,26 @@ enum MockFixtures {
       updatedAt: "2026-03-16T08:30:00Z"
     )
   ]
+
+  static func resolvedAdventureID(for id: String) -> String {
+    switch id {
+    case uiTestEagleID:
+      return eagleID
+    case uiTestBluePoolID:
+      return bluePoolID
+    default:
+      return id
+    }
+  }
+
+  static func uiTestAdventureID(for id: String) -> String {
+    switch id {
+    case eagleID:
+      return uiTestEagleID
+    case bluePoolID:
+      return uiTestBluePoolID
+    default:
+      return id
+    }
+  }
 }

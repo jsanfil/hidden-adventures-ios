@@ -16,6 +16,7 @@ final class AppSession: ObservableObject {
   @Published var authIntent: WelcomeIntent = .onboarding
   @Published var isWorking = false
   @Published var alertMessage: String?
+  @Published var canRetryAuthenticatedBootstrap = false
 
   init(
     runtime: AppRuntime,
@@ -62,6 +63,7 @@ final class AppSession: ObservableObject {
   func beginAuth(intent: WelcomeIntent) {
     authIntent = intent
     pendingAuthChallenge = nil
+    canRetryAuthenticatedBootstrap = false
   }
 
   func restoreAuthenticatedSession() async -> AppStage? {
@@ -89,6 +91,18 @@ final class AppSession: ObservableObject {
 
     return await runAuthenticatedAction {
       let result = try await appAuthService.start(email: trimmedEmail, intent: self.authIntent)
+      return await self.advance(after: result)
+    }
+  }
+
+  func resendEmailCode() async -> AppStage? {
+    guard let appAuthService, let pendingAuthChallenge else {
+      alertMessage = "Start over and request a new verification code."
+      return nil
+    }
+
+    return await runAuthenticatedAction {
+      let result = try await appAuthService.resend(challenge: pendingAuthChallenge, intent: self.authIntent)
       return await self.advance(after: result)
     }
   }
@@ -129,6 +143,7 @@ final class AppSession: ObservableObject {
     appAuthService?.logout()
     authState.replace(tokens: runtime.authToken.map(AuthTokens.environmentOverride(token:)))
     pendingAuthChallenge = nil
+    canRetryAuthenticatedBootstrap = false
     viewerHandle = nil
     viewerDisplayName = nil
     profileDraft = runtime.usesFixturePreview ? MockFixtures.bootstrapDraft : .blank
@@ -149,12 +164,28 @@ final class AppSession: ObservableObject {
       return nil
     }
 
-    return await runAuthenticatedAction(clearSessionOnFailure: clearSessionOnFailure) {
+    isWorking = true
+    defer { isWorking = false }
+
+    do {
       let response = try await backendAuthService.bootstrap()
       if response.accountState == .linked, let profile = try? await self.profileService.getMyProfile() {
         self.seedViewerProfile(profile.profile)
       }
+      canRetryAuthenticatedBootstrap = false
       return self.apply(bootstrapResponse: response)
+    } catch {
+      if shouldClearAuthenticatedSession(for: error, clearSessionOnFailure: clearSessionOnFailure) {
+        appAuthService?.logout()
+        authState.replace(tokens: runtime.authToken.map(AuthTokens.environmentOverride(token:)))
+        canRetryAuthenticatedBootstrap = false
+        alertMessage = userFacingMessage(for: error)
+        return .welcome
+      }
+
+      canRetryAuthenticatedBootstrap = true
+      alertMessage = recoverableBootstrapMessage(for: error)
+      return .welcome
     }
   }
 
@@ -162,6 +193,7 @@ final class AppSession: ObservableObject {
     switch result {
     case .challenge(let challenge):
       pendingAuthChallenge = challenge
+      canRetryAuthenticatedBootstrap = false
       if case .signIn = challenge.kind {
         profileDraft = profileDraft.withEmailDerivedInitials(from: challenge.email)
       }
@@ -191,6 +223,41 @@ final class AppSession: ObservableObject {
       alertMessage = userFacingMessage(for: error)
       return nil
     }
+  }
+
+  private func shouldClearAuthenticatedSession(
+    for error: Error,
+    clearSessionOnFailure: Bool
+  ) -> Bool {
+    guard clearSessionOnFailure else {
+      return false
+    }
+
+    guard let apiError = error as? APIError else {
+      return false
+    }
+
+    switch apiError {
+    case .missingAuthToken:
+      return true
+    case .server(let statusCode, _):
+      return statusCode == 401 || statusCode == 403
+    case .invalidBaseURL, .invalidResponse, .transport, .decoding:
+      return false
+    }
+  }
+
+  private func recoverableBootstrapMessage(for error: Error) -> String {
+    let detail = userFacingMessage(for: error)
+    guard detail.isEmpty == false else {
+      return "Your email code worked, but the Hidden Adventures server is unavailable. Start the server and retry. You do not need a new code."
+    }
+
+    return """
+    Your email code worked, but the Hidden Adventures server is unavailable. Start the server and retry. You do not need a new code.
+
+    Details: \(detail)
+    """
   }
 
   private func apply(bootstrapResponse: AuthBootstrapResponse) -> AppStage {
@@ -226,7 +293,10 @@ final class AppSession: ObservableObject {
   }
 
   private func draft(for response: AuthBootstrapResponse) -> ProfileBootstrapDraft {
-    let handle = response.user?.handle ?? response.suggestedHandle ?? ""
+    let handle = response.user?.handle
+      ?? response.suggestedHandle
+      ?? Self.suggestedPublicHandle(from: response.recoveryEmail)
+      ?? ""
     return ProfileBootstrapDraft(
       displayName: "",
       handle: handle,
@@ -255,6 +325,30 @@ final class AppSession: ObservableObject {
       .joined()
 
     return cleaned.isEmpty ? "HA" : cleaned
+  }
+
+  private static func suggestedPublicHandle(from email: String?) -> String? {
+    guard let email else {
+      return nil
+    }
+
+    let localPart = email
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .lowercased()
+      .split(separator: "@")
+      .first
+      .map(String.init) ?? ""
+
+    let sanitized = localPart
+      .replacingOccurrences(of: "[^a-z0-9]+", with: "_", options: .regularExpression)
+      .replacingOccurrences(of: "_+", with: "_", options: .regularExpression)
+      .trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+
+    if sanitized.isEmpty {
+      return "explorer"
+    }
+
+    return String(sanitized.prefix(64))
   }
 }
 

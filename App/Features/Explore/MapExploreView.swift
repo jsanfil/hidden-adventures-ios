@@ -172,7 +172,7 @@ struct MapExploreView: View {
       ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
         let point = markerPoint(for: item, fallbackIndex: index, in: size)
         MapPinButton(
-          adventureID: item.id,
+          adventureID: runtimeMode == .fixturePreview ? MockFixtures.uiTestAdventureID(for: item.id) : item.id,
           isSelected: item.id == (selectedAdventureID ?? defaultSelectedAdventureID),
           action: { selectedAdventureID = item.id }
         )
@@ -292,7 +292,7 @@ struct MapExploreView: View {
     VStack(alignment: .leading, spacing: 0) {
       ZStack(alignment: .topLeading) {
         HAMediaCarouselOrPlaceholder(
-          imageNames: adventure.imageNames,
+          source: .fixture(adventure.imageNames),
           aspectRatio: 16 / 9,
           cornerRadius: 16,
           dotsInside: true,

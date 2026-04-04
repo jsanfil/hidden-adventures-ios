@@ -53,6 +53,7 @@ struct RootView: View {
           VerificationCodeView(
             challenge: session.pendingAuthChallenge,
             onBack: { coordinator.stage = .emailEntry },
+            onResend: resendEmailCode,
             onContinue: verifyEmailCode
           )
 
@@ -128,6 +129,11 @@ struct RootView: View {
         set: { if $0 == false { session.clearAlert() } }
       ),
       actions: {
+        if session.canRetryAuthenticatedBootstrap {
+          Button("Retry") {
+            retryAuthenticatedBootstrap()
+          }
+        }
         Button("OK", role: .cancel) {
           session.clearAlert()
         }
@@ -169,6 +175,24 @@ struct RootView: View {
   private func verifyEmailCode(_ code: String) {
     Task {
       if let nextStage = await session.verifyEmailCode(code) {
+        coordinator.stage = nextStage
+      }
+    }
+  }
+
+  private func resendEmailCode() {
+    Task {
+      if let nextStage = await session.resendEmailCode() {
+        coordinator.stage = nextStage
+      }
+    }
+  }
+
+  private func retryAuthenticatedBootstrap() {
+    session.clearAlert()
+
+    Task {
+      if let nextStage = await session.restoreAuthenticatedSession() {
         coordinator.stage = nextStage
       }
     }

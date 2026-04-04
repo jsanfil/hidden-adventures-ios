@@ -9,7 +9,7 @@ enum AdventurePresentation {
       return []
     }
 
-    return MockFixtures.imageNamesByAdventureID[adventureID] ?? ["hero-mountain"]
+    return MockFixtures.imageNamesByAdventureID[MockFixtures.resolvedAdventureID(for: adventureID)] ?? ["hero-mountain"]
   }
 
   static func mapCardItems(
@@ -59,22 +59,37 @@ enum AdventurePresentation {
 }
 
 struct HAMediaCarouselOrPlaceholder: View {
-  let imageNames: [String]
+  let source: HAMediaSource
   let aspectRatio: CGFloat?
   let cornerRadius: CGFloat
   let dotsInside: Bool
   let title: String
 
   var body: some View {
-    if imageNames.isEmpty {
-      placeholder
-    } else {
-      HAImageCarousel(
-        imageNames: imageNames,
-        aspectRatio: aspectRatio,
-        cornerRadius: cornerRadius,
-        dotsInside: dotsInside
-      )
+    switch source {
+    case .fixture(let imageNames):
+      if imageNames.isEmpty {
+        placeholder
+      } else {
+        HAImageCarousel(
+          imageNames: imageNames,
+          aspectRatio: aspectRatio,
+          cornerRadius: cornerRadius,
+          dotsInside: dotsInside
+        )
+      }
+    case .remote(let mediaIDs, let mediaLoader):
+      if mediaIDs.isEmpty {
+        placeholder
+      } else {
+        HARemoteMediaCarousel(
+          mediaIDs: mediaIDs,
+          mediaLoader: mediaLoader,
+          aspectRatio: aspectRatio,
+          cornerRadius: cornerRadius,
+          dotsInside: dotsInside
+        )
+      }
     }
   }
 
@@ -91,7 +106,7 @@ struct HAMediaCarouselOrPlaceholder: View {
           .font(.system(size: 28, weight: .medium))
           .foregroundStyle(.white.opacity(0.92))
 
-        Text("Media stays in explicit preview fallback until a locked delivery route lands.")
+        Text("Image unavailable right now.")
           .font(.system(size: 12, weight: .medium))
           .foregroundStyle(.white.opacity(0.84))
           .multilineTextAlignment(.center)
@@ -119,6 +134,131 @@ struct HAMediaCarouselOrPlaceholder: View {
   }
 }
 
+enum HAMediaSource {
+  case fixture([String])
+  case remote([String], any AdventureService)
+}
+
+private struct HARemoteMediaCarousel: View {
+  let mediaIDs: [String]
+  let mediaLoader: any AdventureService
+  let aspectRatio: CGFloat?
+  let cornerRadius: CGFloat
+  let dotsInside: Bool
+
+  @State private var selection = 0
+
+  var body: some View {
+    VStack(spacing: dotsInside ? 0 : 8) {
+      ZStack(alignment: dotsInside ? .bottom : .center) {
+        carouselContent
+          .background(HATheme.Colors.muted)
+          .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+
+        if dotsInside && mediaIDs.count > 1 {
+          HADots(count: mediaIDs.count, currentIndex: selection, activeColor: .white, inactiveColor: .white.opacity(0.5))
+            .padding(.bottom, 12)
+        }
+      }
+
+      if !dotsInside && mediaIDs.count > 1 {
+        HADots(
+          count: mediaIDs.count,
+          currentIndex: selection,
+          activeColor: HATheme.Colors.mutedForeground,
+          inactiveColor: HATheme.Colors.mutedForeground.opacity(0.4)
+        )
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var carouselContent: some View {
+    let tabView = TabView(selection: $selection) {
+      ForEach(Array(mediaIDs.enumerated()), id: \.offset) { index, mediaID in
+        HARemoteMediaImage(
+          mediaID: mediaID,
+          mediaLoader: mediaLoader
+        )
+        .tag(index)
+      }
+    }
+    .tabViewStyle(.page(indexDisplayMode: .never))
+
+    if let aspectRatio {
+      tabView
+        .aspectRatio(aspectRatio, contentMode: .fit)
+    } else {
+      tabView
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+  }
+}
+
+private struct HARemoteMediaImage: View {
+  let mediaID: String
+  let mediaLoader: any AdventureService
+
+  @State private var image: UIImage?
+  @State private var didFail = false
+
+  var body: some View {
+    Group {
+      if let image {
+        Image(uiImage: image)
+          .resizable()
+          .scaledToFill()
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .clipped()
+      } else if didFail {
+        placeholder
+      } else {
+        ZStack {
+          LinearGradient(
+            colors: [HATheme.Colors.mapForest, HATheme.Colors.mapBackground],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          )
+          ProgressView()
+            .tint(.white)
+        }
+      }
+    }
+    .task(id: mediaID) {
+      await loadImage()
+    }
+  }
+
+  private var placeholder: some View {
+    ZStack {
+      LinearGradient(
+        colors: [HATheme.Colors.mapForest, HATheme.Colors.mapBackground, HATheme.Colors.secondary],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+      )
+
+      Image(systemName: "photo")
+        .font(.system(size: 24, weight: .medium))
+        .foregroundStyle(.white.opacity(0.88))
+    }
+  }
+
+  @MainActor
+  private func loadImage() async {
+    if image != nil {
+      return
+    }
+
+    do {
+      let data = try await mediaLoader.loadMediaData(id: mediaID)
+      image = UIImage(data: data)
+      didFail = image == nil
+    } catch {
+      didFail = true
+    }
+  }
+}
+
 struct MapCardPresentation: Identifiable {
   let id: String
   let destinationID: String
@@ -132,7 +272,7 @@ struct HAMediaCarouselOrPlaceholder_Previews: PreviewProvider {
   static var previews: some View {
     VStack(spacing: 24) {
       HAMediaCarouselOrPlaceholder(
-        imageNames: ["hero-mountain", "scenic-overlook", "trail-forest"],
+        source: .fixture(["hero-mountain", "scenic-overlook", "trail-forest"]),
         aspectRatio: 4 / 3,
         cornerRadius: 18,
         dotsInside: true,
@@ -140,7 +280,7 @@ struct HAMediaCarouselOrPlaceholder_Previews: PreviewProvider {
       )
 
       HAMediaCarouselOrPlaceholder(
-        imageNames: [],
+        source: .fixture([]),
         aspectRatio: 4 / 3,
         cornerRadius: 18,
         dotsInside: false,

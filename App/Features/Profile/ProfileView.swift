@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
   let handle: String?
+  let adventureService: AdventureService
   let profileService: ProfileService
   let runtimeMode: AppRuntimeMode
   let onProfileLoaded: (ProfileDetail) -> Void
@@ -114,6 +115,7 @@ struct ProfileView: View {
 
       FeedView(
         items: adventures,
+        adventureService: adventureService,
         runtimeMode: runtimeMode,
         onOpenDetail: onOpenDetail
       )
@@ -202,6 +204,7 @@ struct ProfileView_Previews: PreviewProvider {
   static var previews: some View {
     ProfileView(
       handle: MockFixtures.profile.handle,
+      adventureService: FixtureAdventureService(),
       profileService: FixtureProfileService(),
       runtimeMode: .fixturePreview,
       onProfileLoaded: { _ in },

@@ -3,6 +3,7 @@ import SwiftUI
 struct VerificationCodeView: View {
   let challenge: PendingAuthChallenge?
   let onBack: () -> Void
+  let onResend: () -> Void
   let onContinue: (String) -> Void
 
   @State private var code = ""
@@ -58,6 +59,12 @@ struct VerificationCodeView: View {
 
           Spacer()
 
+          Button("Send a new code", action: onResend)
+            .buttonStyle(.plain)
+            .font(HATheme.Typography.body)
+            .foregroundStyle(HATheme.Colors.primary)
+            .accessibilityIdentifier("auth.code.resend")
+
           HAPrimaryButton(title: "Verify") {
             onContinue(code)
           }
@@ -90,11 +97,13 @@ struct VerificationCodeView_Previews: PreviewProvider {
     VerificationCodeView(
       challenge: PendingAuthChallenge(
         kind: .signIn,
+        cognitoUsername: "test@example.com",
         email: "test@example.com",
         deliveryDestination: "t•••@example.com",
         session: "session"
       ),
       onBack: {},
+      onResend: {},
       onContinue: { _ in }
     )
   }

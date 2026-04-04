@@ -84,6 +84,7 @@ struct ExploreShellView: View {
 
       FeedView(
         items: filteredItems,
+        adventureService: adventureService,
         runtimeMode: runtimeMode,
         onOpenDetail: onOpenDetail
       )
@@ -108,6 +109,7 @@ struct ExploreShellView: View {
   private var profileScreen: some View {
     ProfileView(
       handle: viewerHandle,
+      adventureService: adventureService,
       profileService: profileService,
       runtimeMode: runtimeMode,
       onProfileLoaded: onViewerProfileLoaded,
