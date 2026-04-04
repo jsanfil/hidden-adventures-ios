@@ -3,7 +3,6 @@ import SwiftUI
 struct ProfileSetupView: View {
   let initialDraft: ProfileBootstrapDraft
   let showsSkip: Bool
-  let usesHandleOnlyContract: Bool
   let onBack: () -> Void
   let onSkip: () -> Void
   let onContinue: (ProfileBootstrapDraft) -> Void
@@ -13,14 +12,12 @@ struct ProfileSetupView: View {
   init(
     initialDraft: ProfileBootstrapDraft,
     showsSkip: Bool,
-    usesHandleOnlyContract: Bool,
     onBack: @escaping () -> Void,
     onSkip: @escaping () -> Void,
     onContinue: @escaping (ProfileBootstrapDraft) -> Void
   ) {
     self.initialDraft = initialDraft
     self.showsSkip = showsSkip
-    self.usesHandleOnlyContract = usesHandleOnlyContract
     self.onBack = onBack
     self.onSkip = onSkip
     self.onContinue = onContinue
@@ -65,20 +62,9 @@ struct ProfileSetupView: View {
               .font(HATheme.Typography.screenTitle)
               .foregroundStyle(HATheme.Colors.foreground)
 
-            Text("Let other explorers know who you are")
+            Text("Choose your public handle, then share the basics other explorers should see.")
               .font(HATheme.Typography.body)
               .foregroundStyle(HATheme.Colors.mutedForeground)
-          }
-
-          if usesHandleOnlyContract {
-            Text("Slice 1 live setup only reserves your public handle. Display name, home base, and bio stay local until a profile-write contract lands.")
-              .font(.system(size: 13, weight: .medium))
-              .foregroundStyle(HATheme.Colors.mutedForeground)
-              .padding(14)
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .background(HATheme.Colors.secondary)
-              .clipShape(RoundedRectangle(cornerRadius: HATheme.Radius.card, style: .continuous))
-              .accessibilityIdentifier("profile.handleOnlyNote")
           }
 
           VStack(spacing: 24) {
@@ -90,16 +76,16 @@ struct ProfileSetupView: View {
                 foreground: HATheme.Colors.mutedForeground
               )
 
-              Button(action: {}) {
-                Image(systemName: "camera.fill")
-                  .font(.system(size: 14, weight: .semibold))
-                  .foregroundStyle(.white)
-                  .frame(width: 34, height: 34)
-                  .background(HATheme.Colors.primary)
-                  .clipShape(Circle())
-                  .shadow(color: HATheme.Colors.shadow, radius: 6, x: 0, y: 3)
-              }
-              .buttonStyle(.plain)
+              Circle()
+                .fill(HATheme.Colors.primary)
+                .frame(width: 34, height: 34)
+                .overlay {
+                  Image(systemName: "camera.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                }
+                .opacity(0.45)
+                .accessibilityHidden(true)
             }
 
             VStack(alignment: .leading, spacing: 18) {
@@ -108,23 +94,43 @@ struct ProfileSetupView: View {
                   .font(HATheme.Typography.body)
                   .foregroundStyle(HATheme.Colors.foreground)
                   .haFieldStyle()
-                  .disabled(usesHandleOnlyContract)
                   .accessibilityIdentifier("profile.displayName")
               }
 
-              field(title: "Home base") {
+              field(title: "Handle") {
                 HStack(spacing: 12) {
-                  Image(systemName: "mappin")
-                    .font(.system(size: 17, weight: .medium))
+                  Text("@")
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(HATheme.Colors.mutedForeground)
 
-                  TextField("City or region", text: $draft.homeBase)
+                  TextField("public_handle", text: $draft.handle)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled(true)
                     .font(HATheme.Typography.body)
                     .foregroundStyle(HATheme.Colors.foreground)
-                    .disabled(usesHandleOnlyContract)
-                    .accessibilityIdentifier("profile.homeBase")
+                    .accessibilityIdentifier("profile.handle")
                 }
                 .haFieldStyle()
+              }
+
+              HStack(alignment: .top, spacing: 12) {
+                field(title: "City") {
+                  TextField("Portland", text: $draft.homeCity)
+                    .font(HATheme.Typography.body)
+                    .foregroundStyle(HATheme.Colors.foreground)
+                    .haFieldStyle()
+                    .accessibilityIdentifier("profile.homeCity")
+                }
+
+                field(title: "State") {
+                  TextField("OR", text: $draft.homeRegion)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled(true)
+                    .font(HATheme.Typography.body)
+                    .foregroundStyle(HATheme.Colors.foreground)
+                    .haFieldStyle()
+                    .accessibilityIdentifier("profile.homeRegion")
+                }
               }
 
               field(title: "Bio", secondaryTitle: "(optional)") {
@@ -133,7 +139,6 @@ struct ProfileSetupView: View {
                   .foregroundStyle(HATheme.Colors.foreground)
                   .lineLimit(4, reservesSpace: true)
                   .padding(16)
-                  .disabled(usesHandleOnlyContract)
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .background(HATheme.Colors.secondary)
                   .clipShape(RoundedRectangle(cornerRadius: HATheme.Radius.input, style: .continuous))
@@ -145,7 +150,7 @@ struct ProfileSetupView: View {
           Spacer()
 
           HAPrimaryButton(title: "Continue") {
-            onContinue(draft)
+            onContinue(normalizedDraft)
           }
           .accessibilityIdentifier("profile.continue")
         }
@@ -155,6 +160,17 @@ struct ProfileSetupView: View {
       }
     }
     .toolbar(.hidden, for: .navigationBar)
+  }
+
+  private var normalizedDraft: ProfileBootstrapDraft {
+    ProfileBootstrapDraft(
+      displayName: draft.displayName.trimmingCharacters(in: .whitespacesAndNewlines),
+      handle: draft.handle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+      homeCity: draft.homeCity.trimmingCharacters(in: .whitespacesAndNewlines),
+      homeRegion: draft.homeRegion.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(),
+      bio: draft.bio.trimmingCharacters(in: .whitespacesAndNewlines),
+      initials: draft.initials
+    )
   }
 
   @ViewBuilder
@@ -186,7 +202,6 @@ struct ProfileSetupView_Previews: PreviewProvider {
     ProfileSetupView(
       initialDraft: MockFixtures.bootstrapDraft,
       showsSkip: true,
-      usesHandleOnlyContract: false,
       onBack: {},
       onSkip: {},
       onContinue: { _ in }

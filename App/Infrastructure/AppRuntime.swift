@@ -16,6 +16,8 @@ struct AppRuntime {
   let serverMode: AppServerMode
   let apiBaseURL: URL
   let authToken: String?
+  let cognitoRegion: String?
+  let cognitoClientID: String?
 
   init(environment: [String: String] = ProcessInfo.processInfo.environment) {
     mode = Self.resolveMode(from: environment)
@@ -27,10 +29,16 @@ struct AppRuntime {
       runtimeMode: mode,
       serverMode: serverMode
     )
+    cognitoRegion = environment["HA_COGNITO_REGION"]?.trimmedToNil
+    cognitoClientID = environment["HA_COGNITO_CLIENT_ID"]?.trimmedToNil
   }
 
   var usesFixturePreview: Bool {
     mode == .fixturePreview
+  }
+
+  var supportsInteractiveEmailAuth: Bool {
+    mode == .liveServer && serverMode != .localAutomation && authToken == nil
   }
 
   private static func resolveMode(from environment: [String: String]) -> AppRuntimeMode {

@@ -12,11 +12,11 @@ SwiftUI iOS client for the Hidden Adventures rebuild.
 
 - the repo contains a native Slice 1 shell for welcome, profile setup, unified explore feed and map, and adventure detail
 - the repo includes a deterministic UI-gallery and walkthrough harness under `UITests`
-- the default app runtime now targets the locked Slice 1 server contracts for auth bootstrap, handle selection, feed, adventure detail, and profile
+- the default app runtime now targets the locked Slice 1 server contracts for auth bootstrap, handle selection, profile write, feed, adventure detail, and profile
 - the UI-gallery and walkthrough harness still run in explicit fixture-preview mode so screenshots and acceptance captures remain deterministic
 - the app now has explicit live server modes for `LocalManualQA`, `LocalAutomation`, and `Production`
-- temporary fallbacks are explicit in the UI:
-  - live Slice 1 profile setup only reserves the public handle until a profile-write contract lands
+- manual QA and production now support a native email-code auth flow backed by Cognito, while local automation still accepts deterministic bearer-token injection
+- remaining temporary fallbacks are explicit in the UI:
   - live media cards use a documented placeholder until a locked media-delivery route lands
   - map explore in live mode derives cards from the real feed because no locked map endpoint exists yet
 
@@ -39,16 +39,18 @@ SwiftUI iOS client for the Hidden Adventures rebuild.
 - `HA_SERVER_MODE=local_automation` targets the local server in deterministic test-JWT mode. This is inferred automatically for `localhost` and `127.0.0.1` API hosts.
 - `HA_SERVER_MODE=production` expects production-style bearer auth.
 - `HA_API_BASE_URL` overrides the backend base URL. The default is `http://127.0.0.1:3000/api`.
+- `HA_COGNITO_REGION` configures the Cognito region for native email-code auth.
+- `HA_COGNITO_CLIENT_ID` configures the Cognito app client ID for native email-code auth.
 - `HA_TEST_AUTH_TOKEN` supplies a deterministic automation bearer token when `HA_SERVER_MODE=local_automation`.
 - `HA_AUTH_TOKEN` supplies the bearer token for `LocalManualQA` and `Production`.
-- The app no longer injects a default local token. Manual QA should use real Cognito-backed sign-in once the app auth flow is wired for it, or an explicit token override while that work is still in flight.
+- The app no longer injects a default local token. Manual QA should use real Cognito-backed sign-in, or an explicit token override for troubleshooting.
 
 ## Acceptance Path
 
 1. Run the simulator build.
 2. Run `Scripts/run_ui_gallery.sh`.
 3. Validate the local automation happy path against `HiddenAdventures-LocalAutomation`.
-4. Validate the manual QA path against `HiddenAdventures-LocalManualQA` and the sibling server's `local-manual-qa` mode when an explicit bearer token or real Cognito session is available.
+4. Validate the manual QA path against `HiddenAdventures-LocalManualQA` and the sibling server's `local-manual-qa` mode with native email-code auth or an explicit troubleshooting token.
 
 ## Suggested App Structure
 

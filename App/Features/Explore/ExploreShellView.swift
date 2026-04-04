@@ -8,7 +8,8 @@ struct ExploreShellView: View {
   let viewerDisplayName: String?
   @Binding var mode: ExploreMode
   let onViewerProfileLoaded: (ProfileDetail) -> Void
-  let onOpenDetail: (UUID) -> Void
+  let onOpenDetail: (String) -> Void
+  let onLogout: () -> Void
 
   @State private var feedItems: [AdventureCard] = []
   @State private var visibilityFilter: VisibilityFilter = .all
@@ -131,6 +132,13 @@ struct ExploreShellView: View {
       HStack(spacing: 10) {
         CircleIconButton(systemImage: "magnifyingglass", accessibilityID: "header.search")
         CircleIconButton(systemImage: "bell", showsIndicator: true, accessibilityID: "header.notifications")
+        if mode == .profile {
+          CircleIconButton(
+            systemImage: "rectangle.portrait.and.arrow.right",
+            accessibilityID: "header.logout",
+            action: onLogout
+          )
+        }
       }
     }
     .padding(.horizontal, 20)
@@ -240,9 +248,10 @@ private struct CircleIconButton: View {
   let systemImage: String
   var showsIndicator: Bool = false
   let accessibilityID: String
+  var action: () -> Void = {}
 
   var body: some View {
-    Button(action: {}) {
+    Button(action: action) {
       ZStack {
         Circle()
           .fill(HATheme.Colors.secondary)
@@ -322,7 +331,8 @@ private struct ExploreShellPreviewWrapper: View {
       viewerDisplayName: MockFixtures.profile.displayName,
       mode: $mode,
       onViewerProfileLoaded: { _ in },
-      onOpenDetail: { _ in }
+      onOpenDetail: { _ in },
+      onLogout: {}
     )
   }
 }

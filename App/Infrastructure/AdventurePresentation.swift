@@ -2,7 +2,7 @@ import SwiftUI
 
 enum AdventurePresentation {
   static func imageNames(
-    for adventureID: UUID,
+    for adventureID: String,
     runtimeMode: AppRuntimeMode
   ) -> [String] {
     guard runtimeMode == .fixturePreview else {
@@ -121,7 +121,7 @@ struct HAMediaCarouselOrPlaceholder: View {
 
 struct MapCardPresentation: Identifiable {
   let id: String
-  let destinationID: UUID
+  let destinationID: String
   let title: String
   let rating: Double
   let category: String

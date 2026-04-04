@@ -47,6 +47,20 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: com.hiddenadventures.ios.uitests
 
+  HiddenAdventuresTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Tests
+    dependencies:
+      - target: HiddenAdventures
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: true
+        PRODUCT_BUNDLE_IDENTIFIER: com.hiddenadventures.ios.tests
+
 schemes:
   HiddenAdventures:
     build:
@@ -63,6 +77,7 @@ schemes:
         HA_RUNTIME_MODE: fixture
         HA_SERVER_MODE: local_automation
       targets:
+        - name: HiddenAdventuresTests
         - name: HiddenAdventuresUITests
     archive:
       config: Release
@@ -81,6 +96,7 @@ schemes:
         HA_RUNTIME_MODE: fixture
         HA_SERVER_MODE: local_manual_qa
       targets:
+        - name: HiddenAdventuresTests
         - name: HiddenAdventuresUITests
     archive:
       config: Release
@@ -99,6 +115,7 @@ schemes:
         HA_RUNTIME_MODE: fixture
         HA_SERVER_MODE: local_automation
       targets:
+        - name: HiddenAdventuresTests
         - name: HiddenAdventuresUITests
     archive:
       config: Release
@@ -117,6 +134,7 @@ schemes:
         HA_RUNTIME_MODE: fixture
         HA_SERVER_MODE: production
       targets:
+        - name: HiddenAdventuresTests
         - name: HiddenAdventuresUITests
     archive:
       config: Release

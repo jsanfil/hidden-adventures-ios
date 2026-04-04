@@ -243,8 +243,20 @@ final class HiddenAdventuresUITests: XCTestCase {
           screenshotDir: directory
         )
         self.assertExists(
-          app.textFields["profile.homeBase"],
-          name: "profile-home-base",
+          app.textFields["profile.handle"],
+          name: "profile-handle",
+          in: app,
+          screenshotDir: directory
+        )
+        self.assertExists(
+          app.textFields["profile.homeCity"],
+          name: "profile-home-city",
+          in: app,
+          screenshotDir: directory
+        )
+        self.assertExists(
+          app.textFields["profile.homeRegion"],
+          name: "profile-home-region",
           in: app,
           screenshotDir: directory
         )

@@ -5,7 +5,7 @@ struct ProfileView: View {
   let profileService: ProfileService
   let runtimeMode: AppRuntimeMode
   let onProfileLoaded: (ProfileDetail) -> Void
-  let onOpenDetail: (UUID) -> Void
+  let onOpenDetail: (String) -> Void
 
   @State private var response: ProfileResponse?
   @State private var isLoading = true
@@ -89,7 +89,7 @@ struct ProfileView: View {
             .lineSpacing(3)
             .accessibilityIdentifier("profile.bio.readonly")
         } else {
-          Text("Profile writing beyond handle selection is still outside the locked Slice 1 contract.")
+          Text("Add a bio during setup or come back later to tell other explorers what you love to find.")
             .font(HATheme.Typography.body)
             .foregroundStyle(HATheme.Colors.mutedForeground)
         }

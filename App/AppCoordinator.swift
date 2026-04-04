@@ -2,8 +2,10 @@ import Foundation
 import SwiftUI
 import Combine
 
-enum AppStage {
+enum AppStage: Equatable {
   case welcome
+  case emailEntry
+  case codeEntry
   case profileSetup
   case explore
 }
@@ -17,7 +19,7 @@ enum ExploreMode: String, CaseIterable, Identifiable {
 }
 
 enum AppRoute: Hashable {
-  case detail(UUID)
+  case detail(String)
 }
 
 final class AppCoordinator: ObservableObject {
@@ -29,6 +31,12 @@ final class AppCoordinator: ObservableObject {
     path = []
 
     switch environment["UITEST_START_SCREEN"] {
+    case "email":
+      stage = .emailEntry
+      exploreMode = .feed
+    case "code":
+      stage = .codeEntry
+      exploreMode = .feed
     case "profile":
       stage = .profileSetup
       exploreMode = .feed
@@ -41,11 +49,8 @@ final class AppCoordinator: ObservableObject {
     case "detail":
       stage = .explore
       exploreMode = .feed
-      if let rawID = environment["UITEST_DETAIL_ID"], let adventureID = UUID(uuidString: rawID) {
-        path = [.detail(adventureID)]
-      } else {
-        path = [.detail(MockFixtures.bluePoolID)]
-      }
+      let adventureID = environment["UITEST_DETAIL_ID"] ?? MockFixtures.bluePoolID
+      path = [.detail(adventureID)]
     default:
       stage = .welcome
       exploreMode = .feed
@@ -64,5 +69,11 @@ final class AppCoordinator: ObservableObject {
       get: { self.exploreMode },
       set: { self.exploreMode = $0 }
     )
+  }
+
+  func resetToWelcome() {
+    path = []
+    stage = .welcome
+    exploreMode = .feed
   }
 }

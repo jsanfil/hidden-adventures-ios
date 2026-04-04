@@ -18,11 +18,14 @@ enum Category: String, Codable, CaseIterable, Identifiable, Sendable {
   case viewpoints
   case trails
   case waterSpots = "water_spots"
+  case forestWalks = "forest_walks"
+  case desertSpots = "desert_spots"
   case foodDrink = "food_drink"
   case abandonedPlaces = "abandoned_places"
   case caves
   case natureEscapes = "nature_escapes"
   case roadsideStops = "roadside_stops"
+  case other
 
   var id: Self { self }
 
@@ -31,11 +34,14 @@ enum Category: String, Codable, CaseIterable, Identifiable, Sendable {
     case .viewpoints: "Viewpoints"
     case .trails: "Trails"
     case .waterSpots: "Water Spots"
+    case .forestWalks: "Forest Walks"
+    case .desertSpots: "Desert Spots"
     case .foodDrink: "Food & Drink"
     case .abandonedPlaces: "Abandoned Places"
     case .caves: "Caves"
     case .natureEscapes: "Nature Escapes"
     case .roadsideStops: "Roadside Stops"
+    case .other: "Other"
     }
   }
 
@@ -44,11 +50,14 @@ enum Category: String, Codable, CaseIterable, Identifiable, Sendable {
     case .viewpoints: "mountain.2"
     case .trails: "figure.hiking"
     case .waterSpots: "water.waves"
+    case .forestWalks: "tree"
+    case .desertSpots: "sun.max"
     case .foodDrink: "fork.knife"
     case .abandonedPlaces: "building.2"
     case .caves: "sparkle.magnifyingglass"
     case .natureEscapes: "leaf"
     case .roadsideStops: "location.north.line"
+    case .other: "sparkles"
     }
   }
 }
@@ -72,7 +81,7 @@ struct AdventureAuthor: Codable, Hashable, Sendable {
 }
 
 struct MediaReference: Codable, Hashable, Sendable {
-  let id: UUID
+  let id: String
   let storageKey: String
 }
 
@@ -84,7 +93,7 @@ struct AdventureStats: Codable, Hashable, Sendable {
 }
 
 struct AdventureCard: Codable, Identifiable, Hashable, Sendable {
-  let id: UUID
+  let id: String
   let title: String
   let summary: String?
   let body: String?
@@ -101,7 +110,7 @@ struct AdventureCard: Codable, Identifiable, Hashable, Sendable {
 }
 
 struct AdventureDetail: Codable, Identifiable, Hashable, Sendable {
-  let id: UUID
+  let id: String
   let title: String
   let summary: String?
   let body: String?
@@ -119,7 +128,7 @@ struct AdventureDetail: Codable, Identifiable, Hashable, Sendable {
 }
 
 struct ProfileDetail: Codable, Identifiable, Hashable, Sendable {
-  let id: UUID
+  let id: String
   let handle: String
   let displayName: String?
   let bio: String?
@@ -169,4 +178,8 @@ struct ProfileResponse: Codable, Sendable {
   let profile: ProfileDetail
   let adventures: [AdventureCard]
   let paging: Paging
+}
+
+struct MeProfileResponse: Codable, Sendable {
+  let profile: ProfileDetail
 }

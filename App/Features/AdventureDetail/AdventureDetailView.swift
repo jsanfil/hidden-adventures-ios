@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AdventureDetailView: View {
-  let adventureID: UUID
+  let adventureID: String
   let adventureService: AdventureService
   let runtimeMode: AppRuntimeMode
 

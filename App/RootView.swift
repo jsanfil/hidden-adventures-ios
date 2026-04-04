@@ -7,18 +7,29 @@ struct RootView: View {
 
   @StateObject private var coordinator: AppCoordinator
   @StateObject private var session: AppSession
+  @State private var hasAttemptedSessionRestore = false
 
   init(
     runtime: AppRuntime,
     adventureService: AdventureService,
     profileService: ProfileService,
-    authService: AuthService?
+    backendAuthService: AuthService?,
+    appAuthService: AppAuthService?,
+    authState: AuthStateStore
   ) {
     self.runtime = runtime
     self.adventureService = adventureService
     self.profileService = profileService
     _coordinator = StateObject(wrappedValue: AppCoordinator())
-    _session = StateObject(wrappedValue: AppSession(runtime: runtime, authService: authService))
+    _session = StateObject(
+      wrappedValue: AppSession(
+        runtime: runtime,
+        backendAuthService: backendAuthService,
+        appAuthService: appAuthService,
+        profileService: profileService,
+        authState: authState
+      )
+    )
   }
 
   var body: some View {
@@ -27,16 +38,29 @@ struct RootView: View {
         switch coordinator.stage {
         case .welcome:
           WelcomeView(
-            onGetStarted: startWelcomeFlow,
-            onSignIn: startWelcomeFlow
+            onGetStarted: { startWelcomeFlow(intent: .onboarding) },
+            onSignIn: { startWelcomeFlow(intent: .signIn) }
+          )
+
+        case .emailEntry:
+          EmailAuthView(
+            intent: session.authIntent,
+            onBack: { coordinator.stage = .welcome },
+            onContinue: requestEmailCode
+          )
+
+        case .codeEntry:
+          VerificationCodeView(
+            challenge: session.pendingAuthChallenge,
+            onBack: { coordinator.stage = .emailEntry },
+            onContinue: verifyEmailCode
           )
 
         case .profileSetup:
           ProfileSetupView(
             initialDraft: session.profileDraft,
             showsSkip: session.showsProfileSkip,
-            usesHandleOnlyContract: session.requiresHandleOnlySetup,
-            onBack: { coordinator.stage = .welcome },
+            onBack: handleProfileBack,
             onSkip: { coordinator.stage = .explore },
             onContinue: continueProfileSetup
           )
@@ -52,7 +76,8 @@ struct RootView: View {
             onViewerProfileLoaded: session.seedViewerProfile,
             onOpenDetail: { adventureID in
               coordinator.path.append(.detail(adventureID))
-            }
+            },
+            onLogout: logout
           )
         }
       }
@@ -69,6 +94,18 @@ struct RootView: View {
     }
     .tint(HATheme.Colors.primary)
     .preferredColorScheme(.light)
+    .task {
+      guard hasAttemptedSessionRestore == false else { return }
+      hasAttemptedSessionRestore = true
+
+      guard runtime.usesFixturePreview == false, session.shouldRestoreAuthenticatedSession else {
+        return
+      }
+
+      if let nextStage = await session.restoreAuthenticatedSession() {
+        coordinator.stage = nextStage
+      }
+    }
     .overlay {
       if session.isWorking {
         ZStack {
@@ -85,7 +122,7 @@ struct RootView: View {
       }
     }
     .alert(
-      "Slice 1 Sign In",
+      "Hidden Adventures",
       isPresented: Binding(
         get: { session.alertMessage != nil },
         set: { if $0 == false { session.clearAlert() } }
@@ -101,14 +138,37 @@ struct RootView: View {
     )
   }
 
-  private func startWelcomeFlow() {
+  private func startWelcomeFlow(intent: WelcomeIntent) {
+    session.beginAuth(intent: intent)
+
     guard runtime.usesFixturePreview == false else {
       coordinator.stage = .profileSetup
       return
     }
 
+    if session.usesDirectBootstrapFlow {
+      Task {
+        if let nextStage = await session.bootstrapFromWelcome() {
+          coordinator.stage = nextStage
+        }
+      }
+      return
+    }
+
+    coordinator.stage = .emailEntry
+  }
+
+  private func requestEmailCode(_ email: String) {
     Task {
-      if let nextStage = await session.bootstrapFromWelcome() {
+      if let nextStage = await session.requestEmailCode(for: email) {
+        coordinator.stage = nextStage
+      }
+    }
+  }
+
+  private func verifyEmailCode(_ code: String) {
+    Task {
+      if let nextStage = await session.verifyEmailCode(code) {
         coordinator.stage = nextStage
       }
     }
@@ -121,10 +181,19 @@ struct RootView: View {
     }
 
     Task {
-      if let nextStage = await session.completeHandleSelection(using: draft) {
+      if let nextStage = await session.completeProfileSetup(using: draft) {
         coordinator.stage = nextStage
       }
     }
+  }
+
+  private func handleProfileBack() {
+    coordinator.stage = runtime.supportsInteractiveEmailAuth ? .codeEntry : .welcome
+  }
+
+  private func logout() {
+    session.logout()
+    coordinator.resetToWelcome()
   }
 }
 
@@ -134,7 +203,9 @@ struct RootView_Previews: PreviewProvider {
       runtime: previewRuntime,
       adventureService: FixtureAdventureService(),
       profileService: FixtureProfileService(),
-      authService: nil
+      backendAuthService: nil,
+      appAuthService: nil,
+      authState: AuthStateStore()
     )
   }
 

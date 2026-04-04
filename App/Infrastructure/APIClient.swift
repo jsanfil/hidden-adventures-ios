@@ -2,7 +2,7 @@ import Foundation
 
 struct APIClient {
   let baseURL: URL
-  let authToken: String?
+  var authTokenProvider: @Sendable () -> String? = { nil }
   var session: URLSession = .shared
 
   func get<Response: Decodable>(
@@ -34,6 +34,21 @@ struct APIClient {
     )
   }
 
+  func put<Body: Encodable, Response: Decodable>(
+    pathComponents: [String],
+    body: Body,
+    requiresAuth: Bool = false
+  ) async throws -> Response {
+    let bodyData = try JSONEncoder().encode(body)
+    return try await send(
+      pathComponents: pathComponents,
+      method: "PUT",
+      queryItems: [],
+      requiresAuth: requiresAuth,
+      body: bodyData
+    )
+  }
+
   private func send<Response: Decodable>(
     pathComponents: [String],
     method: String,
@@ -51,6 +66,7 @@ struct APIClient {
       request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     }
 
+    let authToken = authTokenProvider()
     if let authToken, authToken.isEmpty == false {
       request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
     } else if requiresAuth {
@@ -125,15 +141,50 @@ enum APIError: LocalizedError {
     case .invalidBaseURL(let value):
       return "The API base URL is invalid: \(value)"
     case .missingAuthToken:
-      return "Set HA_AUTH_TOKEN for LocalManualQA or production, or use HA_SERVER_MODE=local_automation with HA_TEST_AUTH_TOKEN for local automation calls."
+      return "Sign in with email, or provide HA_AUTH_TOKEN / HA_TEST_AUTH_TOKEN for explicit local auth overrides."
     case .invalidResponse:
       return "The server returned an invalid response."
     case .server(_, let message):
       return message
     case .transport(let error):
       return error.localizedDescription
-    case .decoding:
+    case .decoding(let error):
+      return Self.decodingMessage(for: error)
+    }
+  }
+
+  private static func decodingMessage(for error: Error) -> String {
+    guard let decodingError = error as? DecodingError else {
       return "The app could not decode the server response."
     }
+
+    switch decodingError {
+    case .typeMismatch(_, let context):
+      return "The app could not decode the server response at \(codingPath(context.codingPath)): \(context.debugDescription)"
+    case .valueNotFound(_, let context):
+      return "The app expected a value at \(codingPath(context.codingPath)): \(context.debugDescription)"
+    case .keyNotFound(let key, let context):
+      return "The app expected the key '\(key.stringValue)' at \(codingPath(context.codingPath))."
+    case .dataCorrupted(let context):
+      return "The server returned invalid data at \(codingPath(context.codingPath)): \(context.debugDescription)"
+    @unknown default:
+      return "The app could not decode the server response."
+    }
+  }
+
+  private static func codingPath(_ codingPath: [CodingKey]) -> String {
+    guard codingPath.isEmpty == false else {
+      return "the top level"
+    }
+
+    return codingPath
+      .map { key in
+        if let intValue = key.intValue {
+          return "[\(intValue)]"
+        }
+
+        return key.stringValue
+      }
+      .joined(separator: ".")
   }
 }

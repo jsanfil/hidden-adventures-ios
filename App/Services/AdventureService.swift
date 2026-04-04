@@ -7,7 +7,7 @@ protocol AdventureService {
   ) async throws -> FeedResponse
 
   func getAdventure(
-    id: UUID
+    id: String
   ) async throws -> AdventureDetailResponse
 }
 
@@ -24,7 +24,7 @@ struct FixtureAdventureService: AdventureService {
   }
 
   func getAdventure(
-    id: UUID
+    id: String
   ) async throws -> AdventureDetailResponse {
     if let detail = MockFixtures.adventureDetails[id] {
       return AdventureDetailResponse(item: detail)
@@ -52,10 +52,10 @@ struct RemoteAdventureService: AdventureService {
   }
 
   func getAdventure(
-    id: UUID
+    id: String
   ) async throws -> AdventureDetailResponse {
     try await client.get(
-      pathComponents: ["adventures", id.uuidString],
+      pathComponents: ["adventures", id],
       requiresAuth: true
     )
   }

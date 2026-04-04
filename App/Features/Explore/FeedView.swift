@@ -3,7 +3,7 @@ import SwiftUI
 struct FeedView: View {
   let items: [AdventureCard]
   let runtimeMode: AppRuntimeMode
-  let onOpenDetail: (UUID) -> Void
+  let onOpenDetail: (String) -> Void
 
   var body: some View {
     ScrollView {
@@ -18,7 +18,7 @@ struct FeedView: View {
             )
           }
           .buttonStyle(.plain)
-          .accessibilityIdentifier("feed.card.\(adventure.id.uuidString)")
+          .accessibilityIdentifier("feed.card.\(adventure.id)")
         }
       }
       .padding(.horizontal, 20)
@@ -77,7 +77,7 @@ private struct FeedCardView: View {
             .foregroundStyle(.white)
             .multilineTextAlignment(.leading)
             .lineSpacing(1)
-            .accessibilityIdentifier("feed.card.title.\(adventure.id.uuidString)")
+            .accessibilityIdentifier("feed.card.title.\(adventure.id)")
 
           HStack(alignment: .center) {
             HStack(spacing: 4) {
@@ -88,7 +88,7 @@ private struct FeedCardView: View {
             }
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(.white.opacity(0.82))
-            .accessibilityIdentifier("feed.card.location.\(adventure.id.uuidString)")
+            .accessibilityIdentifier("feed.card.location.\(adventure.id)")
 
             Spacer(minLength: 8)
 
@@ -121,7 +121,7 @@ private struct FeedCardView: View {
               .padding(.vertical, 4)
               .background(.white.opacity(0.92))
               .clipShape(Capsule(style: .continuous))
-              .accessibilityIdentifier("feed.card.category.\(adventure.id.uuidString)")
+              .accessibilityIdentifier("feed.card.category.\(adventure.id)")
           }
 
           Spacer()

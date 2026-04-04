@@ -9,7 +9,8 @@
 5. Use `HiddenAdventures-LocalManualQA` when the sibling server is running `npm run dev:manual-qa`.
 6. Use `HiddenAdventures-LocalAutomation` when the sibling server is running `npm run dev:automation`.
 7. Use `HiddenAdventures-Production` only for production configuration and release validation.
-8. Provide `HA_TEST_AUTH_TOKEN` for automation mode, or `HA_AUTH_TOKEN` for manual QA and production when you need an explicit bearer token.
+8. Provide `HA_COGNITO_REGION` and `HA_COGNITO_CLIENT_ID` for native manual-QA and production email-code auth.
+9. Provide `HA_TEST_AUTH_TOKEN` for automation mode, or `HA_AUTH_TOKEN` for manual QA and production when you need an explicit bearer-token override.
 
 ## Runtime Modes
 
@@ -26,7 +27,8 @@
 
 - `local_manual_qa`:
   - expects the sibling server to use real Cognito plus the `hidden_adventures_qa` database
-  - uses `HA_AUTH_TOKEN` when an explicit token is injected into the app runtime
+  - uses native email-code auth when Cognito env vars are present
+  - uses `HA_AUTH_TOKEN` only when an explicit token is injected into the app runtime
 - `local_automation`:
   - expects the sibling server to use deterministic test JWT auth plus the `hidden_adventures_test` database
   - uses `HA_TEST_AUTH_TOKEN` first, then falls back to `HA_AUTH_TOKEN` if provided explicitly
@@ -36,7 +38,6 @@
 
 ## Current Explicit Fallbacks
 
-- profile setup only persists the public handle in live Slice 1 because no broader profile-write contract is locked yet
 - adventure media remains a visible placeholder in live mode until a locked media-delivery route lands
 - map explore uses feed-derived cards in live mode because no locked map endpoint exists yet
 

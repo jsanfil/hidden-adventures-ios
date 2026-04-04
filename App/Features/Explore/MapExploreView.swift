@@ -8,9 +8,9 @@ struct MapExploreView: View {
   let onVisibilityChange: (VisibilityFilter) -> Void
   let onCategoryToggle: (Category) -> Void
   let onSelectTab: (HAAppTab) -> Void
-  let onOpenDetail: (UUID) -> Void
+  let onOpenDetail: (String) -> Void
 
-  @State private var selectedAdventureID: UUID?
+  @State private var selectedAdventureID: String?
 
   private var selectedAdventure: AdventureCard? {
     let currentID = selectedAdventureID ?? defaultSelectedAdventureID
@@ -24,7 +24,7 @@ struct MapExploreView: View {
     )
   }
 
-  private var defaultSelectedAdventureID: UUID? {
+  private var defaultSelectedAdventureID: String? {
     if runtimeMode == .fixturePreview,
        items.contains(where: { $0.id == MockFixtures.bluePoolID }) {
       return MockFixtures.bluePoolID
@@ -357,7 +357,7 @@ struct MapExploreView_Previews: PreviewProvider {
 }
 
 private struct MapPinButton: View {
-  let adventureID: UUID
+  let adventureID: String
   let isSelected: Bool
   let action: () -> Void
 
@@ -370,7 +370,7 @@ private struct MapPinButton: View {
       }
     }
     .buttonStyle(.plain)
-    .accessibilityIdentifier("map.pin.\(adventureID.uuidString)")
+    .accessibilityIdentifier("map.pin.\(adventureID)")
   }
 
   private var selectedMarker: some View {

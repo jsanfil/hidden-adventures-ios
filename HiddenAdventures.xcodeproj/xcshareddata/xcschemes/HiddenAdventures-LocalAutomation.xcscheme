@@ -44,6 +44,17 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "483EE0774C13FB5827CD3D20"
+               BuildableName = "HiddenAdventuresTests.xctest"
+               BlueprintName = "HiddenAdventuresTests"
+               ReferencedContainer = "container:HiddenAdventures.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "2E243C4235B4CFEF9545C046"
                BuildableName = "HiddenAdventuresUITests.xctest"
                BlueprintName = "HiddenAdventuresUITests"

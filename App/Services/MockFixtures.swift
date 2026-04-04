@@ -1,16 +1,17 @@
 import Foundation
 
 enum MockFixtures {
-  static let jordanID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-  static let eagleID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
-  static let bluePoolID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
-  static let tomDickID = UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!
-  static let capeID = UUID(uuidString: "dddddddd-dddd-dddd-dddd-dddddddddddd")!
+  static let jordanID = "user-jordan"
+  static let eagleID = "adventure-eagle-creek"
+  static let bluePoolID = "adventure-blue-pool"
+  static let tomDickID = "adventure-tom-dick-harry"
+  static let capeID = "adventure-cape-kiwanda"
 
   static let bootstrapDraft = ProfileBootstrapDraft(
     displayName: "Jordan",
     handle: "jordan",
-    homeBase: "Portland, OR",
+    homeCity: "Portland",
+    homeRegion: "OR",
     bio: "Weekend warrior exploring the PNW. Always searching for secret swimming spots and sunrise hikes.",
     initials: "JD"
   )
@@ -42,7 +43,7 @@ enum MockFixtures {
       location: AdventureLocation(latitude: 45.6401, longitude: -121.9196),
       placeLabel: "Columbia River Gorge, OR",
       author: AdventureAuthor(handle: "jordan", displayName: "Jordan", homeCity: "Portland", homeRegion: "OR"),
-      primaryMedia: MediaReference(id: UUID(), storageKey: "hero-mountain"),
+      primaryMedia: MediaReference(id: "media-hero-mountain", storageKey: "hero-mountain"),
       stats: AdventureStats(favoriteCount: 2847, commentCount: 118, ratingCount: 847, averageRating: 4.9)
     ),
     AdventureCard(
@@ -58,7 +59,7 @@ enum MockFixtures {
       location: AdventureLocation(latitude: 44.3956, longitude: -122.0099),
       placeLabel: "Willamette National Forest, OR",
       author: AdventureAuthor(handle: "sarahk", displayName: "Sarah K.", homeCity: "Bend", homeRegion: "OR"),
-      primaryMedia: MediaReference(id: UUID(), storageKey: "swimming-hole"),
+      primaryMedia: MediaReference(id: "media-swimming-hole", storageKey: "swimming-hole"),
       stats: AdventureStats(favoriteCount: 1523, commentCount: 64, ratingCount: 847, averageRating: 4.8)
     ),
     AdventureCard(
@@ -74,7 +75,7 @@ enum MockFixtures {
       location: AdventureLocation(latitude: 45.3739, longitude: -121.7162),
       placeLabel: "Mt. Hood, OR",
       author: AdventureAuthor(handle: "mikej", displayName: "Mike J.", homeCity: "Hood River", homeRegion: "OR"),
-      primaryMedia: MediaReference(id: UUID(), storageKey: "scenic-overlook"),
+      primaryMedia: MediaReference(id: "media-scenic-overlook", storageKey: "scenic-overlook"),
       stats: AdventureStats(favoriteCount: 982, commentCount: 24, ratingCount: 126, averageRating: 4.7)
     ),
     AdventureCard(
@@ -90,19 +91,19 @@ enum MockFixtures {
       location: AdventureLocation(latitude: 45.2157, longitude: -123.9636),
       placeLabel: "Pacific City, OR",
       author: AdventureAuthor(handle: "amy", displayName: "Amy L.", homeCity: "Salem", homeRegion: "OR"),
-      primaryMedia: MediaReference(id: UUID(), storageKey: "coastal-path"),
+      primaryMedia: MediaReference(id: "media-coastal-path", storageKey: "coastal-path"),
       stats: AdventureStats(favoriteCount: 892, commentCount: 16, ratingCount: 84, averageRating: 4.7)
     )
   ]
 
-  static let imageNamesByAdventureID: [UUID: [String]] = [
+  static let imageNamesByAdventureID: [String: [String]] = [
     eagleID: ["hero-mountain", "scenic-overlook", "trail-forest"],
     bluePoolID: ["swimming-hole", "hidden-canyon", "trail-forest", "hero-mountain"],
     tomDickID: ["scenic-overlook", "trail-forest"],
     capeID: ["coastal-path", "hero-mountain"]
   ]
 
-  static let adventureDetails: [UUID: AdventureDetail] = [
+  static let adventureDetails: [String: AdventureDetail] = [
     eagleID: AdventureDetail(
       id: eagleID,
       title: feedItems[0].title,
