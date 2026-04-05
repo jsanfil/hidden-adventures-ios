@@ -45,6 +45,8 @@ SwiftUI iOS client for the Hidden Adventures rebuild.
 - `HA_TEST_AUTH_TOKEN` supplies a deterministic automation bearer token when `HA_SERVER_MODE=local_automation`.
 - `HA_AUTH_TOKEN` supplies the bearer token for `LocalManualQA` and `Production`.
 - The app no longer injects a default local token. Manual QA should use real Cognito-backed sign-in, or an explicit token override for troubleshooting.
+- Cognito manual-QA sign-up has a known delivery constraint in the current non-prod pool: once a specific email address has already been used for sign-up confirmation testing, deleting and recreating the Cognito user may still fail to send a new confirmation email to that same address. For reliable `Get Started` QA, use a brand-new email address that has not previously been used in this pool.
+- Gmail delivery can also block confirmation codes from the Cognito sender address `no-reply@verificationemail.com`, so a missing code in Gmail does not necessarily mean Cognito failed to send it.
 - S3 bucket keys remain server-internal; the app should treat media IDs as the contract and should never build image URLs from `storageKey`.
 
 ## Acceptance Path
@@ -53,6 +55,7 @@ SwiftUI iOS client for the Hidden Adventures rebuild.
 2. Run `Scripts/run_ui_gallery.sh`.
 3. Validate the local automation happy path against `HiddenAdventures-LocalAutomation`.
 4. Validate the manual QA path against `HiddenAdventures-LocalManualQA` and the sibling server's `local-manual-qa` mode with native email-code auth or an explicit troubleshooting token.
+5. For manual QA of `Get Started`, prefer a fresh email address that has never been used in the non-prod Cognito pool if confirmation delivery does not arrive after recreating a deleted user.
 
 ## Suggested App Structure
 

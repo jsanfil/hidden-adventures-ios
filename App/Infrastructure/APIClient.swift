@@ -1,6 +1,9 @@
 import Foundation
+import OSLog
 
 struct APIClient {
+  private static let logger = AppLogger.logger(category: "network.api")
+
   let baseURL: URL
   var authTokenProvider: @Sendable () -> String? = { nil }
   var session: URLSession = .shared
@@ -72,7 +75,7 @@ struct APIClient {
     requiresAuth: Bool,
     body: Data?
   ) async throws -> Response {
-    let (data, _) = try await performRequest(
+    let (data, response) = try await performRequest(
       pathComponents: pathComponents,
       method: method,
       queryItems: queryItems,
@@ -81,8 +84,11 @@ struct APIClient {
     )
 
     do {
-      return try JSONDecoder().decode(Response.self, from: data)
+      let decoded = try JSONDecoder().decode(Response.self, from: data)
+      Self.logger.debug("API response decoded successfully for \(self.requestLabel(method: method, pathComponents: pathComponents), privacy: .public) status=\(response.statusCode, privacy: .public)")
+      return decoded
     } catch {
+      Self.logger.error("API response decode failed for \(self.requestLabel(method: method, pathComponents: pathComponents), privacy: .public) status=\(response.statusCode, privacy: .public): \(self.redactedErrorMessage(error), privacy: .public)")
       throw APIError.decoding(error)
     }
   }
@@ -94,7 +100,17 @@ struct APIClient {
     requiresAuth: Bool,
     body: Data?
   ) async throws -> (Data, HTTPURLResponse) {
-    let url = try makeURL(pathComponents: pathComponents, queryItems: queryItems)
+    let requestLabel = self.requestLabel(method: method, pathComponents: pathComponents)
+    Self.logger.debug("API request started for \(requestLabel, privacy: .public)")
+
+    let url: URL
+    do {
+      url = try makeURL(pathComponents: pathComponents, queryItems: queryItems)
+    } catch {
+      Self.logger.error("API request URL construction failed for \(requestLabel, privacy: .public): \(self.redactedErrorMessage(error), privacy: .public)")
+      throw error
+    }
+
     var request = URLRequest(url: url)
     request.httpMethod = method
     request.httpBody = body
@@ -108,6 +124,7 @@ struct APIClient {
     if let authToken, authToken.isEmpty == false {
       request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
     } else if requiresAuth {
+      Self.logger.error("API request missing auth token for \(requestLabel, privacy: .public)")
       throw APIError.missingAuthToken
     }
 
@@ -117,19 +134,23 @@ struct APIClient {
     do {
       (data, response) = try await session.data(for: request)
     } catch {
+      Self.logger.error("API request transport failed for \(requestLabel, privacy: .public): \(self.redactedErrorMessage(error), privacy: .public)")
       throw APIError.transport(error)
     }
 
     guard let httpResponse = response as? HTTPURLResponse else {
+      Self.logger.error("API request returned a non-HTTP response for \(requestLabel, privacy: .public)")
       throw APIError.invalidResponse
     }
 
     guard (200..<300).contains(httpResponse.statusCode) else {
       let message = (try? JSONDecoder().decode(APIErrorResponse.self, from: data).error)
         ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+      Self.logger.error("API request failed for \(requestLabel, privacy: .public) status=\(httpResponse.statusCode, privacy: .public): \(message, privacy: .public)")
       throw APIError.server(statusCode: httpResponse.statusCode, message: message)
     }
 
+    Self.logger.info("API request succeeded for \(requestLabel, privacy: .public) status=\(httpResponse.statusCode, privacy: .public)")
     return (data, httpResponse)
   }
 
@@ -155,6 +176,19 @@ struct APIClient {
     }
 
     return resolvedURL
+  }
+
+  private func requestLabel(method: String, pathComponents: [String]) -> String {
+    let path = "/" + pathComponents.joined(separator: "/")
+    return "\(method) \(path)"
+  }
+
+  private func redactedErrorMessage(_ error: Error) -> String {
+    if let apiError = error as? APIError {
+      return apiError.errorDescription ?? String(describing: apiError)
+    }
+
+    return error.localizedDescription
   }
 }
 

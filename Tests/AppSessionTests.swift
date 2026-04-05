@@ -71,11 +71,11 @@ final class AppSessionTests: XCTestCase {
     let appAuthService = AppAuthServiceStub()
     appAuthService.startResult = .challenge(
       PendingAuthChallenge(
-        kind: .signIn,
-        cognitoUsername: "new@example.com",
+        kind: .signUp,
+        cognitoUsername: "new_1853b7412ac94d75cb23e033",
         email: "new@example.com",
         deliveryDestination: "n•••@example.com",
-        session: "session-1"
+        session: nil
       )
     )
     appAuthService.verifyResult = .authenticated(.environmentOverride(token: "verified-token"))
@@ -116,11 +116,11 @@ final class AppSessionTests: XCTestCase {
     let appAuthService = AppAuthServiceStub()
     appAuthService.startResult = .challenge(
       PendingAuthChallenge(
-        kind: .signIn,
+        kind: .signUp,
         cognitoUsername: "joe_sanfilippo_qa_1234567890abcdef12345678",
         email: "joe.sanfilippo+qa@example.com",
         deliveryDestination: "j•••@example.com",
-        session: "session-1"
+        session: nil
       )
     )
     appAuthService.verifyResult = .authenticated(.environmentOverride(token: "verified-token"))
@@ -161,11 +161,11 @@ final class AppSessionTests: XCTestCase {
     let appAuthService = AppAuthServiceStub()
     appAuthService.startResult = .challenge(
       PendingAuthChallenge(
-        kind: .signIn,
+        kind: .signUp,
         cognitoUsername: "user_1234567890abcdef12345678",
         email: "+++@example.com",
         deliveryDestination: "•••@example.com",
-        session: "session-1"
+        session: nil
       )
     )
     appAuthService.verifyResult = .authenticated(.environmentOverride(token: "verified-token"))
@@ -385,7 +385,7 @@ final class AppSessionTests: XCTestCase {
     XCTAssertEqual(pendingChallenge?.deliveryDestination, "ne•••@example.com")
   }
 
-  func testVerifyEmailCodeFallsBackToSignInWhenSignupAliasAlreadyExists() async {
+  func testVerifyEmailCodeShowsErrorWhenSignupAliasAlreadyExists() async {
     let appAuthService = AppAuthServiceStub()
     appAuthService.startResult = .challenge(
       PendingAuthChallenge(
@@ -396,14 +396,9 @@ final class AppSessionTests: XCTestCase {
         session: nil
       )
     )
-    appAuthService.verifyResult = .challenge(
-      PendingAuthChallenge(
-        kind: .signIn,
-        cognitoUsername: "linked@example.com",
-        email: "linked@example.com",
-        deliveryDestination: "l•••@example.com",
-        session: "sign-in-session"
-      )
+    appAuthService.verifyError = AppAuthError.service(
+      code: "AliasExistsException",
+      message: "Alias already exists"
     )
 
     let session = await makeSession(
@@ -427,12 +422,12 @@ final class AppSessionTests: XCTestCase {
     let pendingChallenge = await MainActor.run { session.pendingAuthChallenge }
     let alertMessage = await MainActor.run { session.alertMessage }
 
-    XCTAssertEqual(nextStage, .codeEntry)
+    XCTAssertNil(nextStage)
     XCTAssertEqual(appAuthService.verifyInvocations.count, 1)
     XCTAssertEqual(appAuthService.startInvocations.count, 1)
-    XCTAssertEqual(pendingChallenge?.kind, .signIn)
-    XCTAssertEqual(pendingChallenge?.session, "sign-in-session")
-    XCTAssertNil(alertMessage)
+    XCTAssertEqual(pendingChallenge?.kind, .signUp)
+    XCTAssertNil(pendingChallenge?.session)
+    XCTAssertEqual(alertMessage, "That email already has an account. Use Sign In.")
   }
 
   func testRestoreAuthenticatedSessionSucceedsAfterRecoverableBootstrapFailure() async {

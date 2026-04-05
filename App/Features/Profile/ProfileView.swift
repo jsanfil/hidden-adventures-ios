@@ -7,6 +7,7 @@ struct ProfileView: View {
   let runtimeMode: AppRuntimeMode
   let onProfileLoaded: (ProfileDetail) -> Void
   let onOpenDetail: (String) -> Void
+  let onLogout: () -> Void
 
   @State private var response: ProfileResponse?
   @State private var isLoading = true
@@ -50,6 +51,20 @@ struct ProfileView: View {
         .frame(height: 220)
         .overlay(alignment: .top) {
           HAStatusBarSpacer()
+        }
+        .overlay(alignment: .topTrailing) {
+          Button(action: onLogout) {
+            Image(systemName: "rectangle.portrait.and.arrow.right")
+              .font(.system(size: 16, weight: .semibold))
+              .foregroundStyle(.white)
+              .frame(width: 40, height: 40)
+              .background(.white.opacity(0.18))
+              .clipShape(Circle())
+          }
+          .buttonStyle(.plain)
+          .accessibilityIdentifier("profile.logout")
+          .padding(.top, 12)
+          .padding(.trailing, 16)
         }
 
         VStack(alignment: .leading, spacing: 14) {
@@ -208,7 +223,8 @@ struct ProfileView_Previews: PreviewProvider {
       profileService: FixtureProfileService(),
       runtimeMode: .fixturePreview,
       onProfileLoaded: { _ in },
-      onOpenDetail: { _ in }
+      onOpenDetail: { _ in },
+      onLogout: {}
     )
   }
 }

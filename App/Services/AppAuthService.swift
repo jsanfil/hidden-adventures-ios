@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import OSLog
 
 enum WelcomeIntent: Equatable {
   case onboarding
@@ -151,7 +152,18 @@ enum AppAuthError: LocalizedError {
       case "UserNotFoundException":
         return "We couldn't find an account for that email."
       case "UsernameExistsException":
-        return "That email already has an account. Try signing in instead."
+        return "That email already has an account. Use Sign In."
+      case "AliasExistsException":
+        return "That email already has an account. Use Sign In."
+      case "MissingSessionAfterConfirmSignUp":
+        return "Your email was confirmed, but Hidden Adventures couldn't finish account setup automatically. Please try again."
+      case "PasswordResetRequiredException":
+        return "This Cognito account is in a password-reset state, but it does not have a verified email or phone number. Recreate the account or verify a contact method in Cognito before trying again."
+      case "InvalidParameterException":
+        if message.contains("no registered/verified email or phone_number") {
+          return "This Cognito account does not have a verified email or phone number, so password recovery cannot run. Recreate the account or verify a contact method in Cognito before trying again."
+        }
+        return message
       case "CodeMismatchException":
         return "That code didn't match. Double-check the email and try again."
       case "ExpiredCodeException":
@@ -166,6 +178,8 @@ enum AppAuthError: LocalizedError {
 }
 
 final class CognitoAppAuthService: AppAuthService {
+  private static let logger = AppLogger.logger(category: "auth.cognito")
+
   private let configuration: CognitoConfiguration
   private let session: URLSession
   private let tokenStore: AuthTokenStore
@@ -195,14 +209,17 @@ final class CognitoAppAuthService: AppAuthService {
 
   func start(email: String, intent: WelcomeIntent) async throws -> AuthFlowResult {
     let normalizedEmail = try normalized(email: email)
+    Self.logger.info("Cognito auth start for intent=\(String(describing: intent), privacy: .public)")
 
     switch intent {
     case .signIn:
+      Self.logger.debug("Cognito auth flow selected sign-in challenge")
       return try await initiateSignIn(email: normalizedEmail)
 
     case .onboarding:
       do {
         let cognitoUsername = signUpUsername(for: normalizedEmail)
+        Self.logger.debug("Cognito auth flow selected sign-up challenge")
         let response = try await signUp(email: normalizedEmail, username: cognitoUsername)
         return .challenge(
           PendingAuthChallenge(
@@ -214,10 +231,8 @@ final class CognitoAppAuthService: AppAuthService {
           )
         )
       } catch let error as AppAuthError {
-        guard case .service(let code, _) = error, code == "UsernameExistsException" else {
-          throw error
-        }
-        return try await initiateSignIn(email: normalizedEmail)
+        Self.logger.error("Cognito auth sign-up failed: \(self.redactedErrorMessage(error), privacy: .public)")
+        throw error
       }
     }
   }
@@ -228,8 +243,11 @@ final class CognitoAppAuthService: AppAuthService {
       throw AppAuthError.invalidCode
     }
 
+    Self.logger.info("Cognito auth verify started for challenge=\(String(describing: challenge.kind), privacy: .public)")
+
     switch challenge.kind {
     case .signIn:
+      Self.logger.debug("Cognito auth verifying email OTP challenge")
       return try await respondToEmailOTP(
         email: challenge.email,
         code: trimmedCode,
@@ -237,24 +255,29 @@ final class CognitoAppAuthService: AppAuthService {
       )
 
     case .signUp:
+      Self.logger.debug("Cognito auth verifying sign-up confirmation challenge")
       let response: ConfirmSignUpResponse
       do {
         response = try await confirmSignUp(username: challenge.cognitoUsername, code: trimmedCode)
       } catch let error as AppAuthError {
-        guard case .service(let code, _) = error, code == "AliasExistsException" else {
-          throw error
-        }
-        return try await initiateSignIn(email: challenge.email)
+        Self.logger.error("Cognito auth confirm sign-up failed: \(self.redactedErrorMessage(error), privacy: .public)")
+        throw error
       }
       if let session = response.session {
+        Self.logger.info("Cognito auth confirm sign-up returned follow-up session")
         return try await continueAfterConfirmSignUp(email: challenge.email, session: session)
       }
 
-      return try await initiateSignIn(email: challenge.email)
+      Self.logger.error("Cognito auth confirm sign-up succeeded without a follow-up session")
+      throw AppAuthError.service(
+        code: "MissingSessionAfterConfirmSignUp",
+        message: "The auth service confirmed the email but did not return a follow-up session."
+      )
     }
   }
 
   func resend(challenge: PendingAuthChallenge, intent: WelcomeIntent) async throws -> AuthFlowResult {
+    Self.logger.info("Cognito auth resend requested for challenge=\(String(describing: challenge.kind), privacy: .public)")
     switch challenge.kind {
     case .signIn:
       return try await start(email: challenge.email, intent: intent)
@@ -336,7 +359,7 @@ final class CognitoAppAuthService: AppAuthService {
   }
 
   private func signUp(email: String, username: String) async throws -> SignUpResponse {
-    try await send(
+    let response: SignUpResponse = try await send(
       target: "SignUp",
       body: SignUpRequest(
         clientId: configuration.clientID,
@@ -346,10 +369,12 @@ final class CognitoAppAuthService: AppAuthService {
         ]
       )
     )
+
+    return response
   }
 
   private func confirmSignUp(username: String, code: String) async throws -> ConfirmSignUpResponse {
-    try await send(
+    let response: ConfirmSignUpResponse = try await send(
       target: "ConfirmSignUp",
       body: ConfirmSignUpRequest(
         clientId: configuration.clientID,
@@ -357,16 +382,20 @@ final class CognitoAppAuthService: AppAuthService {
         confirmationCode: code
       )
     )
+
+    return response
   }
 
   private func resendConfirmationCode(username: String) async throws -> ResendConfirmationCodeResponse {
-    try await send(
+    let response: ResendConfirmationCodeResponse = try await send(
       target: "ResendConfirmationCode",
       body: ResendConfirmationCodeRequest(
         clientId: configuration.clientID,
         username: username
       )
     )
+
+    return response
   }
 
   private func authFlowResult(from response: CognitoAuthResponse, email: String) async throws -> AuthFlowResult {
@@ -378,17 +407,21 @@ final class CognitoAppAuthService: AppAuthService {
         expiresAt: Date().addingTimeInterval(TimeInterval(authenticationResult.expiresIn))
       )
       tokenStore.save(tokens)
+      Self.logger.info("Cognito auth flow authenticated successfully")
       return .authenticated(tokens)
     }
 
     if response.challengeName == "SELECT_CHALLENGE" {
+      Self.logger.info("Cognito auth flow returned SELECT_CHALLENGE")
       return try await respondToSelectChallenge(email: email, response: response)
     }
 
     guard response.challengeName == "EMAIL_OTP" else {
+      Self.logger.error("Cognito auth flow returned unsupported challenge \(response.challengeName ?? "none", privacy: .public)")
       throw AppAuthError.unsupportedChallenge(response.challengeName ?? "none")
     }
 
+    Self.logger.info("Cognito auth flow returned EMAIL_OTP challenge")
     return .challenge(
       PendingAuthChallenge(
         kind: .signIn,
@@ -411,9 +444,11 @@ final class CognitoAppAuthService: AppAuthService {
     let availableChallenges = parseAvailableChallenges(from: response.challengeParameters)
     guard availableChallenges.isEmpty || availableChallenges.contains("EMAIL_OTP") else {
       let options = availableChallenges.joined(separator: ", ")
+      Self.logger.error("Cognito auth flow returned unsupported SELECT_CHALLENGE options: \(options, privacy: .public)")
       throw AppAuthError.unsupportedChallenge("SELECT_CHALLENGE (\(options))")
     }
 
+    Self.logger.debug("Cognito auth responding to SELECT_CHALLENGE with EMAIL_OTP")
     let followUp: CognitoAuthResponse = try await send(
       target: "RespondToAuthChallenge",
       body: RespondToAuthChallengeRequest(
@@ -491,6 +526,7 @@ final class CognitoAppAuthService: AppAuthService {
     body: Request
   ) async throws -> Response {
     let url = URL(string: "https://cognito-idp.\(configuration.region).amazonaws.com/")!
+    Self.logger.info("Cognito request \(target, privacy: .public) started")
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.setValue("application/x-amz-json-1.1", forHTTPHeaderField: "Content-Type")
@@ -503,22 +539,42 @@ final class CognitoAppAuthService: AppAuthService {
     do {
       (data, response) = try await session.data(for: request)
     } catch {
+      Self.logger.error("Cognito request \(target, privacy: .public) transport failed: \(self.redactedErrorMessage(error), privacy: .public)")
       throw AppAuthError.service(code: "TransportError", message: error.localizedDescription)
     }
 
     guard let httpResponse = response as? HTTPURLResponse else {
+      Self.logger.error("Cognito request \(target, privacy: .public) returned a non-HTTP response")
       throw AppAuthError.service(code: "InvalidResponse", message: "The auth service returned an invalid response.")
     }
 
     guard (200..<300).contains(httpResponse.statusCode) else {
       let payload = (try? JSONDecoder().decode(CognitoErrorResponse.self, from: data))
+      let message = payload?.message ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+      let code = payload?.normalizedCode ?? "HTTP\(httpResponse.statusCode)"
+      Self.logger.error("Cognito request \(target, privacy: .public) failed status=\(httpResponse.statusCode, privacy: .public) code=\(code, privacy: .public): \(message, privacy: .public)")
       throw AppAuthError.service(
-        code: payload?.normalizedCode ?? "HTTP\(httpResponse.statusCode)",
-        message: payload?.message ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+        code: code,
+        message: message
       )
     }
 
-    return try JSONDecoder().decode(Response.self, from: data)
+    do {
+      let decoded = try JSONDecoder().decode(Response.self, from: data)
+      Self.logger.info("Cognito request \(target, privacy: .public) succeeded status=\(httpResponse.statusCode, privacy: .public)")
+      return decoded
+    } catch {
+      Self.logger.error("Cognito request \(target, privacy: .public) decode failed: \(self.redactedErrorMessage(error), privacy: .public)")
+      throw AppAuthError.service(code: "DecodingError", message: error.localizedDescription)
+    }
+  }
+
+  private func redactedErrorMessage(_ error: Error) -> String {
+    if let authError = error as? AppAuthError {
+      return authError.errorDescription ?? String(describing: authError)
+    }
+
+    return error.localizedDescription
   }
 }
 

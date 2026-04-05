@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0ACE0DF246E6C9113117D9D2 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54CD3A506F4844D6ADED50F /* APIClientTests.swift */; };
 		14D0ACE06F9A6B84A86D42E8 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C53BE638AC1AEE1B0EF53F /* AppRuntime.swift */; };
 		1A9F0B5216EB828C06527DD6 /* AppCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF0D6EAEC5DC0568832CF9E0 /* AppCoordinator.swift */; };
 		297C277C6A85B02B7C78DFB3 /* ProfileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85DEB3130C9F6520644EA13B /* ProfileService.swift */; };
@@ -23,10 +24,12 @@
 		71B6DE7A2A03523127BDDA8C /* AdventurePresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04ED8E7C985A6D2822EB21E0 /* AdventurePresentation.swift */; };
 		7AEC3634F2409B8FE515F6FA /* AppSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC6E797CF0BA0AEC6CD09C5 /* AppSessionTests.swift */; };
 		7C1BD75A72A2384DDDF4B5E5 /* MapExploreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9C204CDC9CECCE3B5C52BB /* MapExploreView.swift */; };
+		847A62A8477527C62F54C9EA /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44C2C944F4B8A9D7340E147E /* AppLogger.swift */; };
 		85AF54B80AFA8B5ECA6E7E46 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E511B17A0ECDFA6F1AB77E8 /* APIClient.swift */; };
 		8CDF375376256283378E729E /* AppAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6457D56B398A66AA58579E9B /* AppAuthService.swift */; };
 		9850F8D83B318009FF879E7D /* EmailAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54906CF98DFC7DC399031293 /* EmailAuthView.swift */; };
 		9ADA44B142A6FA2CA40C4B42 /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88AEF072A39B651C9DDE2C67 /* DomainModels.swift */; };
+		9E6D7FE6A5B6C4039C4BF53C /* AppAuthServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DD20342AFA48F59E803B89 /* AppAuthServiceTests.swift */; };
 		A8C4B0E9F16AC84BEC0B95E9 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEBD234077F99604B20D3700 /* FeedView.swift */; };
 		AF5F56F417AC628A475C211F /* HATheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C28907C1C2F454066D9FD614 /* HATheme.swift */; };
 		B6D4E78A2B750DF065BCF686 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43A73CAE79695A47AF0A128 /* ProfileView.swift */; };
@@ -58,7 +61,9 @@
 		0AC6E797CF0BA0AEC6CD09C5 /* AppSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSessionTests.swift; sourceTree = "<group>"; };
 		0E40A4A859110E763484291F /* HAComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HAComponents.swift; sourceTree = "<group>"; };
 		2B33EC6D97B65EF29FDCB70C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
-		3E56BC51D3E8E025063FCD2E /* HiddenAdventuresTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HiddenAdventuresTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3E56BC51D3E8E025063FCD2E /* HiddenAdventuresTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = HiddenAdventuresTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		40DD20342AFA48F59E803B89 /* AppAuthServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAuthServiceTests.swift; sourceTree = "<group>"; };
+		44C2C944F4B8A9D7340E147E /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		47EFC8F76ECB832AC0562E1F /* HiddenAdventuresUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiddenAdventuresUITests.swift; sourceTree = "<group>"; };
 		4E511B17A0ECDFA6F1AB77E8 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		51AEB6FD9CC9D30EC2CC883E /* AdventureDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdventureDetailView.swift; sourceTree = "<group>"; };
@@ -68,11 +73,12 @@
 		7152BCD3FCE7EB6F6DF3D607 /* AppSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSession.swift; sourceTree = "<group>"; };
 		742712AC53B2228B513E2B06 /* ExploreShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreShellView.swift; sourceTree = "<group>"; };
 		7B9C204CDC9CECCE3B5C52BB /* MapExploreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapExploreView.swift; sourceTree = "<group>"; };
-		808A87D5F1BF4CFE8454A0FB /* HiddenAdventuresUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HiddenAdventuresUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		808A87D5F1BF4CFE8454A0FB /* HiddenAdventuresUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = HiddenAdventuresUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		85DEB3130C9F6520644EA13B /* ProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileService.swift; sourceTree = "<group>"; };
 		8853742130D14660B95AFB3A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		88AEF072A39B651C9DDE2C67 /* DomainModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainModels.swift; sourceTree = "<group>"; };
 		A2A8856125A0CA6BB1A9B602 /* ProfileSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSetupView.swift; sourceTree = "<group>"; };
+		A54CD3A506F4844D6ADED50F /* APIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientTests.swift; sourceTree = "<group>"; };
 		A85B19635A8492F38A602880 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		C28907C1C2F454066D9FD614 /* HATheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HATheme.swift; sourceTree = "<group>"; };
 		D4C53BE638AC1AEE1B0EF53F /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
@@ -80,7 +86,7 @@
 		DEBD234077F99604B20D3700 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		DF0D6EAEC5DC0568832CF9E0 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
 		E6A53E432DA9DAF9850E1E7D /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
-		EB87F70F720779779FE45065 /* HiddenAdventures.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiddenAdventures.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EB87F70F720779779FE45065 /* HiddenAdventures.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HiddenAdventures.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F43A73CAE79695A47AF0A128 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		F7ACE178766C7775048192A0 /* AdventureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdventureService.swift; sourceTree = "<group>"; };
 		FF981AA58002EB9F259A6D6A /* HiddenAdventuresApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiddenAdventuresApp.swift; sourceTree = "<group>"; };
@@ -118,6 +124,7 @@
 			children = (
 				04ED8E7C985A6D2822EB21E0 /* AdventurePresentation.swift */,
 				4E511B17A0ECDFA6F1AB77E8 /* APIClient.swift */,
+				44C2C944F4B8A9D7340E147E /* AppLogger.swift */,
 				D4C53BE638AC1AEE1B0EF53F /* AppRuntime.swift */,
 				7152BCD3FCE7EB6F6DF3D607 /* AppSession.swift */,
 			);
@@ -172,6 +179,8 @@
 		87BD4C84611E9C3B3B317DCE /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				A54CD3A506F4844D6ADED50F /* APIClientTests.swift */,
+				40DD20342AFA48F59E803B89 /* AppAuthServiceTests.swift */,
 				0AC6E797CF0BA0AEC6CD09C5 /* AppSessionTests.swift */,
 			);
 			path = Tests;
@@ -307,7 +316,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2630;
+				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					2E243C4235B4CFEF9545C046 = {
 						ProvisioningStyle = Automatic;
@@ -366,6 +375,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0ACE0DF246E6C9113117D9D2 /* APIClientTests.swift in Sources */,
+				9E6D7FE6A5B6C4039C4BF53C /* AppAuthServiceTests.swift in Sources */,
 				7AEC3634F2409B8FE515F6FA /* AppSessionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -380,6 +391,7 @@
 				F00FAC9FEA692263063DE968 /* AdventureService.swift in Sources */,
 				8CDF375376256283378E729E /* AppAuthService.swift in Sources */,
 				1A9F0B5216EB828C06527DD6 /* AppCoordinator.swift in Sources */,
+				847A62A8477527C62F54C9EA /* AppLogger.swift in Sources */,
 				14D0ACE06F9A6B84A86D42E8 /* AppRuntime.swift in Sources */,
 				2D938DD14B8A27E3D0D7DE5F /* AppSession.swift in Sources */,
 				70EE2C3E969A2DE0BA5DC8D5 /* AuthService.swift in Sources */,

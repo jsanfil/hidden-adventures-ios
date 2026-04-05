@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct HiddenAdventuresApp: App {
+  private static let logger = AppLogger.logger(category: "app.startup")
   private let runtime = AppRuntime()
   private let authState: AuthStateStore
 
@@ -11,6 +12,12 @@ struct HiddenAdventuresApp: App {
     } else {
       authState = AuthStateStore()
     }
+
+    let runtimeMode = runtime.mode
+    let serverMode = runtime.serverMode
+    let startupMessage = "App launch started mode=\(runtimeMode.rawValue) serverMode=\(serverMode.rawValue)"
+
+    Self.logger.info("\(startupMessage, privacy: .public)")
   }
 
   private var apiClient: APIClient {

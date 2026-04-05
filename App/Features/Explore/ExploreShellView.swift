@@ -113,7 +113,8 @@ struct ExploreShellView: View {
       profileService: profileService,
       runtimeMode: runtimeMode,
       onProfileLoaded: onViewerProfileLoaded,
-      onOpenDetail: onOpenDetail
+      onOpenDetail: onOpenDetail,
+      onLogout: onLogout
     )
   }
 
