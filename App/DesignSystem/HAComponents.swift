@@ -201,45 +201,68 @@ struct HABottomTabBar: View {
   let onSelect: (HAAppTab) -> Void
 
   var body: some View {
-    HStack(alignment: .bottom, spacing: 0) {
+    Group {
+      if #available(iOS 26.0, *) {
+        glassBody
+      } else {
+        fallbackBody
+      }
+    }
+    .padding(.horizontal, 16)
+    .padding(.top, 8)
+    .padding(.bottom, 12)
+  }
+
+  @available(iOS 26.0, *)
+  private var glassBody: some View {
+    GlassEffectContainer(spacing: 12) {
+      tabBarContent
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .glassEffect(
+          .regular.tint(HATheme.Colors.card.opacity(0.12)),
+          in: .capsule
+        )
+        .overlay {
+          Capsule(style: .continuous)
+            .strokeBorder(.white.opacity(0.38), lineWidth: 1)
+        }
+        .shadow(color: HATheme.Colors.shadow.opacity(0.14), radius: 16, x: 0, y: 8)
+    }
+  }
+
+  @ViewBuilder
+  private var fallbackBody: some View {
+    tabBarContent
+      .padding(.horizontal, 10)
+      .padding(.vertical, 6)
+      .background {
+        Capsule(style: .continuous)
+          .fill(
+            LinearGradient(
+              colors: [
+                HATheme.Colors.card.opacity(0.94),
+                HATheme.Colors.card.opacity(0.88)
+              ],
+              startPoint: .top,
+              endPoint: .bottom
+            )
+          )
+          .overlay {
+            Capsule(style: .continuous)
+              .strokeBorder(HATheme.Colors.border.opacity(0.82), lineWidth: 1)
+          }
+      }
+      .shadow(color: HATheme.Colors.shadow.opacity(0.16), radius: 16, x: 0, y: 8)
+  }
+
+  private var tabBarContent: some View {
+    HStack(alignment: .bottom, spacing: 8) {
       tabItem(title: "Home", tab: .home)
       tabItem(title: "Explore", tab: .explore)
-
-      VStack(spacing: 1) {
-        Button(action: { onSelect(.post) }) {
-          ZStack {
-            Circle()
-              .fill(HATheme.Colors.primary)
-              .frame(width: 52, height: 52)
-              .shadow(color: HATheme.Colors.shadow.opacity(0.18), radius: 14, x: 0, y: 6)
-
-            Image(systemName: "plus")
-              .font(.system(size: 23, weight: .bold))
-              .foregroundStyle(.white)
-          }
-        }
-        .buttonStyle(.plain)
-        .offset(y: -16)
-        .accessibilityIdentifier("tab.post")
-
-        Text("Post")
-          .font(.system(size: 10, weight: .medium))
-          .foregroundStyle(HATheme.Colors.mutedForeground)
-          .offset(y: -7)
-      }
-      .frame(maxWidth: .infinity)
-
+      postItem
       tabItem(title: "Saved", tab: .saved)
       tabItem(title: "Profile", tab: .profile)
-    }
-    .padding(.horizontal, 10)
-    .padding(.top, 6)
-    .padding(.bottom, 22)
-    .background(HATheme.Colors.card)
-    .overlay(alignment: .top) {
-      Rectangle()
-        .fill(HATheme.Colors.border.opacity(0.85))
-        .frame(height: 1)
     }
   }
 
@@ -247,21 +270,29 @@ struct HABottomTabBar: View {
     Button(action: { onSelect(tab) }) {
       VStack(spacing: 1.5) {
         Image(systemName: symbolName(for: tab))
-          .font(.system(size: 24, weight: selectedTab == tab ? .medium : .regular))
+          .font(.system(size: 22, weight: selectedTab == tab ? .semibold : .regular))
           .foregroundStyle(color(for: tab))
           .frame(height: 24)
 
         Text(title)
-          .font(.system(size: 10, weight: .medium))
+          .font(.system(size: 10, weight: selectedTab == tab ? .semibold : .medium))
           .foregroundStyle(color(for: tab))
       }
       .frame(maxWidth: .infinity)
-      .padding(.horizontal, 12)
-      .padding(.vertical, 5)
+      .frame(minHeight: 42)
+      .padding(.horizontal, 6)
+      .padding(.vertical, 3)
+      .background(tabItemBackground(for: tab))
     }
     .buttonStyle(.plain)
     .accessibilityIdentifier("tab.\(tab.accessibilityID)")
     .accessibilityValue(selectedTab == tab ? "selected" : "unselected")
+  }
+
+  @ViewBuilder
+  private func tabItemBackground(for tab: HAAppTab) -> some View {
+    Capsule(style: .continuous)
+      .fill(selectedTab == tab ? HATheme.Colors.primary.opacity(0.14) : .clear)
   }
 
   private func symbolName(for tab: HAAppTab) -> String {
@@ -277,6 +308,29 @@ struct HABottomTabBar: View {
     case .profile:
       return "person"
     }
+  }
+
+  private var postItem: some View {
+    Button(action: { onSelect(.post) }) {
+      ZStack {
+        ZStack {
+          Circle()
+            .fill(HATheme.Colors.primary)
+            .frame(width: 38, height: 38)
+
+          Image(systemName: "plus")
+            .font(.system(size: 18, weight: .bold))
+            .foregroundStyle(.white)
+        }
+        .frame(width: 38, height: 38)
+      }
+      .frame(maxWidth: .infinity)
+      .frame(minHeight: 42)
+      .padding(.horizontal, 6)
+      .padding(.vertical, 3)
+    }
+    .buttonStyle(.plain)
+    .accessibilityIdentifier("tab.post")
   }
 
   private func color(for tab: HAAppTab) -> Color {

@@ -46,7 +46,7 @@ struct ExploreShellView: View {
         }
       }
     }
-    .safeAreaInset(edge: .bottom, spacing: 0) {
+    .safeAreaInset(edge: .bottom, spacing: 8) {
       HABottomTabBar(
         selectedTab: selectedTab,
         onSelect: handleTabSelection
