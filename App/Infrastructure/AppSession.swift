@@ -70,6 +70,28 @@ final class AppSession: ObservableObject {
     await bootstrapAuthenticatedSession(clearSessionOnFailure: true)
   }
 
+  @discardableResult
+  func refreshAuthenticatedSessionIfNeeded() async -> Bool {
+    guard runtime.usesFixturePreview == false else {
+      return false
+    }
+
+    guard let appAuthService, let tokens = authState.currentTokens, tokens.isExpired else {
+      return false
+    }
+
+    do {
+      guard let refreshedTokens = try await appAuthService.refresh(tokens: tokens) else {
+        return false
+      }
+
+      authState.replace(tokens: refreshedTokens)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   func bootstrapFromWelcome() async -> AppStage? {
     await bootstrapAuthenticatedSession(clearSessionOnFailure: false)
   }

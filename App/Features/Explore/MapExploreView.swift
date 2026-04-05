@@ -64,19 +64,21 @@ struct MapExploreView: View {
   }
 
   private var visibilityBar: some View {
-    HStack(spacing: 6) {
+    HStack(spacing: 4) {
       ForEach(VisibilityFilter.allCases) { filter in
         Button {
           onVisibilityChange(filter)
         } label: {
-          HStack(spacing: 5) {
+          HStack(spacing: 3) {
             if let symbol = filter.symbolName {
               Image(systemName: symbol)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
             }
 
             Text(filter.title)
-              .font(.system(size: 12, weight: .semibold))
+              .font(.system(size: 11, weight: .semibold))
+              .lineLimit(1)
+              .minimumScaleFactor(0.85)
           }
           .foregroundStyle(visibilityFilter == filter ? .white : HATheme.Colors.mutedForeground)
           .frame(maxWidth: .infinity)

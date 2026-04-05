@@ -96,15 +96,74 @@ final class APIClientTests: XCTestCase {
     }
   }
 
-  private func makeClient() -> APIClient {
-    let configuration = URLSessionConfiguration.ephemeral
-    configuration.protocolClasses = [MockURLProtocol.self]
+  func testGetRetriesAfterUnauthorizedWhenTokenRefreshSucceeds() async throws {
+    final class TokenBox {
+      var value = "expired-token"
+    }
 
-    return APIClient(
+    final class CounterBox {
+      var value = 0
+    }
+
+    let tokenBox = TokenBox()
+    let counterBox = CounterBox()
+
+    MockURLProtocol.requestHandler = { request in
+      defer { counterBox.value += 1 }
+
+      if counterBox.value == 0 {
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer expired-token")
+
+        let response = HTTPURLResponse(
+          url: request.url!,
+          statusCode: 401,
+          httpVersion: nil,
+          headerFields: ["Content-Type": "application/json"]
+        )!
+
+        return (response, Data(#"{"error":"Invalid authentication token."}"#.utf8))
+      }
+
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer refreshed-token")
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 200,
+        httpVersion: nil,
+        headerFields: ["Content-Type": "application/json"]
+      )!
+
+      return (response, Data(#"{"value":"ok"}"#.utf8))
+    }
+
+    let client = APIClient(
+      baseURL: URL(string: "https://example.com/api")!,
+      authTokenProvider: { tokenBox.value },
+      authTokenRefresher: {
+        tokenBox.value = "refreshed-token"
+        return true
+      },
+      session: URLSession(configuration: makeConfiguration())
+    )
+
+    let response: TestResponse = try await client.get(pathComponents: ["feed"], requiresAuth: true)
+
+    XCTAssertEqual(response, TestResponse(value: "ok"))
+    XCTAssertEqual(counterBox.value, 2)
+  }
+
+  private func makeClient() -> APIClient {
+    APIClient(
       baseURL: URL(string: "https://example.com/api")!,
       authTokenProvider: { "token" },
-      session: URLSession(configuration: configuration)
+      session: URLSession(configuration: makeConfiguration())
     )
+  }
+
+  private func makeConfiguration() -> URLSessionConfiguration {
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [MockURLProtocol.self]
+    return configuration
   }
 }
 

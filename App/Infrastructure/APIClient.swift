@@ -6,6 +6,7 @@ struct APIClient {
 
   let baseURL: URL
   var authTokenProvider: @Sendable () -> String? = { nil }
+  var authTokenRefresher: @Sendable () async -> Bool = { false }
   var session: URLSession = .shared
 
   func get<Response: Decodable>(
@@ -98,7 +99,8 @@ struct APIClient {
     method: String,
     queryItems: [URLQueryItem],
     requiresAuth: Bool,
-    body: Data?
+    body: Data?,
+    allowsAuthRetry: Bool = true
   ) async throws -> (Data, HTTPURLResponse) {
     let requestLabel = self.requestLabel(method: method, pathComponents: pathComponents)
     Self.logger.debug("API request started for \(requestLabel, privacy: .public)")
@@ -146,6 +148,24 @@ struct APIClient {
     guard (200..<300).contains(httpResponse.statusCode) else {
       let message = (try? JSONDecoder().decode(APIErrorResponse.self, from: data).error)
         ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+
+      if allowsAuthRetry,
+         requiresAuth,
+         httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+        Self.logger.info("API request received auth failure for \(requestLabel, privacy: .public); attempting token refresh")
+        if await authTokenRefresher() {
+          Self.logger.info("API request retrying after token refresh for \(requestLabel, privacy: .public)")
+          return try await performRequest(
+            pathComponents: pathComponents,
+            method: method,
+            queryItems: queryItems,
+            requiresAuth: requiresAuth,
+            body: body,
+            allowsAuthRetry: false
+          )
+        }
+      }
+
       Self.logger.error("API request failed for \(requestLabel, privacy: .public) status=\(httpResponse.statusCode, privacy: .public): \(message, privacy: .public)")
       throw APIError.server(statusCode: httpResponse.statusCode, message: message)
     }

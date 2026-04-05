@@ -235,6 +235,37 @@ final class AppAuthServiceTests: XCTestCase {
     XCTAssertEqual(challenge.session, "session-1")
   }
 
+  func testRefreshUsesRefreshTokenGrantAndPersistsNewTokens() async throws {
+    CognitoMockURLProtocol.requestHandler = { request in
+      XCTAssertEqual(request.value(forHTTPHeaderField: "X-Amz-Target"), "AWSCognitoIdentityProviderService.InitiateAuth")
+
+      let payload = try XCTUnwrap(Self.jsonPayload(from: request))
+      XCTAssertEqual(payload["AuthFlow"] as? String, "REFRESH_TOKEN_AUTH")
+
+      let parameters = payload["AuthParameters"] as? [String: String]
+      XCTAssertEqual(parameters?["REFRESH_TOKEN"], "refresh-token")
+
+      return Self.successResponse(
+        request: request,
+        body: #"{"AuthenticationResult":{"IdToken":"new-id-token","AccessToken":"new-access-token","ExpiresIn":3600}}"#
+      )
+    }
+
+    let service = makeService()
+    let refreshedTokens = try await service.refresh(
+      tokens: AuthTokens(
+        idToken: "old-id-token",
+        accessToken: "old-access-token",
+        refreshToken: "refresh-token",
+        expiresAt: Date(timeIntervalSince1970: 1)
+      )
+    )
+
+    XCTAssertEqual(refreshedTokens?.idToken, "new-id-token")
+    XCTAssertEqual(refreshedTokens?.accessToken, "new-access-token")
+    XCTAssertEqual(refreshedTokens?.refreshToken, "refresh-token")
+  }
+
   func testSignInMissingAccountShowsNoAccountError() async {
     CognitoMockURLProtocol.requestHandler = { request in
       XCTAssertEqual(request.value(forHTTPHeaderField: "X-Amz-Target"), "AWSCognitoIdentityProviderService.InitiateAuth")

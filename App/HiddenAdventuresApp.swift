@@ -22,9 +22,28 @@ struct HiddenAdventuresApp: App {
 
   private var apiClient: APIClient {
     let authState = authState
+    let appAuthService = appAuthService
+    let logger = Self.logger
     return APIClient(
       baseURL: runtime.apiBaseURL,
-      authTokenProvider: { authState.bearerToken }
+      authTokenProvider: { authState.bearerToken },
+      authTokenRefresher: {
+        guard let appAuthService, let tokens = authState.currentTokens else {
+          return false
+        }
+
+        do {
+          guard let refreshedTokens = try await appAuthService.refresh(tokens: tokens) else {
+            return false
+          }
+
+          authState.replace(tokens: refreshedTokens)
+          return true
+        } catch {
+          logger.error("Auth token refresh failed: \(error.localizedDescription, privacy: .public)")
+          return false
+        }
+      }
     )
   }
 

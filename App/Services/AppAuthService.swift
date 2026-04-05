@@ -43,16 +43,14 @@ final class AuthStateStore {
     lock.lock()
     defer { lock.unlock() }
 
-    guard let tokens else {
-      return nil
-    }
+    return tokens?.bearerToken
+  }
 
-    if tokens.isExpired {
-      self.tokens = nil
-      return nil
-    }
+  var currentTokens: AuthTokens? {
+    lock.lock()
+    defer { lock.unlock() }
 
-    return tokens.bearerToken
+    return tokens
   }
 
   func replace(tokens: AuthTokens?) {
@@ -119,6 +117,7 @@ protocol AppAuthService {
   func start(email: String, intent: WelcomeIntent) async throws -> AuthFlowResult
   func resend(challenge: PendingAuthChallenge, intent: WelcomeIntent) async throws -> AuthFlowResult
   func verify(code: String, challenge: PendingAuthChallenge) async throws -> AuthFlowResult
+  func refresh(tokens: AuthTokens) async throws -> AuthTokens?
   func logout()
 }
 
@@ -196,11 +195,6 @@ final class CognitoAppAuthService: AppAuthService {
 
   func restoreSession() -> AuthTokens? {
     guard let tokens = tokenStore.load() else {
-      return nil
-    }
-
-    guard tokens.isExpired == false else {
-      tokenStore.save(nil)
       return nil
     }
 
@@ -298,6 +292,42 @@ final class CognitoAppAuthService: AppAuthService {
 
   func logout() {
     tokenStore.save(nil)
+  }
+
+  func refresh(tokens: AuthTokens) async throws -> AuthTokens? {
+    guard let refreshToken = tokens.refreshToken, refreshToken.isEmpty == false else {
+      Self.logger.debug("Cognito auth refresh skipped because no refresh token was available")
+      return nil
+    }
+
+    Self.logger.info("Cognito auth refresh started")
+
+    let response: CognitoAuthResponse = try await send(
+      target: "InitiateAuth",
+      body: InitiateAuthRequest(
+        authFlow: "REFRESH_TOKEN_AUTH",
+        clientId: configuration.clientID,
+        authParameters: [
+          "REFRESH_TOKEN": refreshToken
+        ],
+        session: nil
+      )
+    )
+
+    guard let authenticationResult = response.authenticationResult else {
+      Self.logger.error("Cognito auth refresh completed without authentication result")
+      return nil
+    }
+
+    let refreshedTokens = AuthTokens(
+      idToken: authenticationResult.idToken,
+      accessToken: authenticationResult.accessToken,
+      refreshToken: authenticationResult.refreshToken ?? refreshToken,
+      expiresAt: Date().addingTimeInterval(TimeInterval(authenticationResult.expiresIn))
+    )
+    tokenStore.save(refreshedTokens)
+    Self.logger.info("Cognito auth refresh completed successfully")
+    return refreshedTokens
   }
 
   private func initiateSignIn(email: String) async throws -> AuthFlowResult {

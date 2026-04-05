@@ -1,10 +1,12 @@
 import SwiftUI
 
 struct RootView: View {
+  private static let logger = AppLogger.logger(category: "app.rootview")
   private let runtime: AppRuntime
   private let adventureService: AdventureService
   private let profileService: ProfileService
 
+  @Environment(\.scenePhase) private var scenePhase
   @StateObject private var coordinator: AppCoordinator
   @StateObject private var session: AppSession
   @State private var hasAttemptedSessionRestore = false
@@ -107,6 +109,13 @@ struct RootView: View {
         coordinator.stage = nextStage
       }
     }
+    .onChange(of: scenePhase) { _, newPhase in
+      guard newPhase == .active else { return }
+
+      Task {
+        _ = await session.refreshAuthenticatedSessionIfNeeded()
+      }
+    }
     .overlay {
       if session.isWorking {
         ZStack {
@@ -120,6 +129,7 @@ struct RootView: View {
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .tint(HATheme.Colors.primary)
         }
+        .allowsHitTesting(false)
       }
     }
     .alert(
@@ -145,6 +155,7 @@ struct RootView: View {
   }
 
   private func startWelcomeFlow(intent: WelcomeIntent) {
+    Self.logger.info("Welcome action tapped intent=\(String(describing: intent), privacy: .public)")
     session.beginAuth(intent: intent)
 
     guard runtime.usesFixturePreview == false else {
@@ -152,15 +163,7 @@ struct RootView: View {
       return
     }
 
-    if session.usesDirectBootstrapFlow {
-      Task {
-        if let nextStage = await session.bootstrapFromWelcome() {
-          coordinator.stage = nextStage
-        }
-      }
-      return
-    }
-
+    Self.logger.info("Welcome flow moving to email entry intent=\(String(describing: intent), privacy: .public)")
     coordinator.stage = .emailEntry
   }
 

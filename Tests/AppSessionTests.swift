@@ -21,6 +21,29 @@ final class AppSessionTests: XCTestCase {
     XCTAssertNil(nextStage)
   }
 
+  func testForegroundRefreshDoesNothingWithoutToken() async {
+    let appAuthService = AppAuthServiceStub()
+    let authState = AuthStateStore()
+    let session = await makeSession(
+      runtime: AppRuntime(
+        environment: [
+          "HA_RUNTIME_MODE": "live",
+          "HA_SERVER_MODE": "local_manual_qa"
+        ]
+      ),
+      backendAuthService: BackendAuthServiceStub(),
+      appAuthService: appAuthService,
+      profileService: ProfileServiceStub(),
+      authState: authState
+    )
+
+    let didRefresh = await session.refreshAuthenticatedSessionIfNeeded()
+
+    XCTAssertFalse(didRefresh)
+    XCTAssertTrue(appAuthService.refreshInvocations.isEmpty)
+    XCTAssertNil(authState.bearerToken)
+  }
+
   func testRestoreAuthenticatedSessionRoutesLinkedUserToExplore() async {
     let backendAuthService = BackendAuthServiceStub()
     backendAuthService.bootstrapResponse = AuthBootstrapResponse(
@@ -57,6 +80,45 @@ final class AppSessionTests: XCTestCase {
 
     XCTAssertEqual(nextStage, .explore)
     XCTAssertEqual(viewerHandle, "linked_user")
+  }
+
+  func testForegroundRefreshUpdatesExpiredTokens() async {
+    let appAuthService = AppAuthServiceStub()
+    appAuthService.refreshResult = AuthTokens(
+      idToken: "refreshed-id-token",
+      accessToken: "refreshed-access-token",
+      refreshToken: "refresh-token",
+      expiresAt: Date.distantFuture
+    )
+
+    let expiredTokens = AuthTokens(
+      idToken: "expired-id-token",
+      accessToken: "expired-access-token",
+      refreshToken: "refresh-token",
+      expiresAt: Date(timeIntervalSince1970: 1)
+    )
+    let authState = AuthStateStore(initialTokens: expiredTokens)
+    let session = await makeSession(
+      runtime: AppRuntime(
+        environment: [
+          "HA_RUNTIME_MODE": "live",
+          "HA_SERVER_MODE": "local_manual_qa"
+        ]
+      ),
+      backendAuthService: BackendAuthServiceStub(),
+      appAuthService: appAuthService,
+      profileService: ProfileServiceStub(),
+      authState: authState
+    )
+
+    let didRefresh = await session.refreshAuthenticatedSessionIfNeeded()
+    let currentTokens = authState.currentTokens
+
+    XCTAssertTrue(didRefresh)
+    XCTAssertEqual(appAuthService.refreshInvocations.count, 1)
+    XCTAssertEqual(appAuthService.refreshInvocations.first?.idToken, "expired-id-token")
+    XCTAssertEqual(currentTokens?.idToken, "refreshed-id-token")
+    XCTAssertEqual(currentTokens?.accessToken, "refreshed-access-token")
   }
 
   func testVerifyEmailCodeRoutesNewUserToProfileSetup() async {
@@ -659,6 +721,8 @@ private final class AppAuthServiceStub: AppAuthService {
   var verifyResult: AuthFlowResult = .authenticated(.environmentOverride(token: "token"))
   var verifyError: Error?
   var verifyInvocations: [(code: String, challenge: PendingAuthChallenge)] = []
+  var refreshResult: AuthTokens?
+  var refreshInvocations: [AuthTokens] = []
   var logoutCallCount = 0
 
   func restoreSession() -> AuthTokens? {
@@ -684,6 +748,11 @@ private final class AppAuthServiceStub: AppAuthService {
       throw verifyError
     }
     return verifyResult
+  }
+
+  func refresh(tokens: AuthTokens) async throws -> AuthTokens? {
+    refreshInvocations.append(tokens)
+    return refreshResult
   }
 
   func logout() {
