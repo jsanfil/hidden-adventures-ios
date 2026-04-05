@@ -191,6 +191,7 @@ struct ExploreShellView: View {
           ) {
             activeCategory = activeCategory == category ? nil : category
           }
+          .accessibilityIdentifier("explore.category.\(category.rawValue)")
         }
       }
       .padding(.horizontal, 1)

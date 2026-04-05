@@ -336,6 +336,10 @@ final class HiddenAdventuresUITests: XCTestCase {
           in: app,
           screenshotDir: directory
         )
+        let categoryChips = app.buttons.matching(
+          NSPredicate(format: "identifier BEGINSWITH %@", "explore.category.")
+        )
+        XCTAssertEqual(categoryChips.count, 8, "Expected exactly 8 category chips in Explore.")
         self.drag(
           in: app.scrollViews["feed.scroll"],
           from: CGVector(dx: 0.5, dy: 0.76),
