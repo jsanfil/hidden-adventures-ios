@@ -90,6 +90,7 @@ struct RootView: View {
           AdventureDetailView(
             adventureID: adventureID,
             adventureService: adventureService,
+            profileService: profileService,
             runtimeMode: runtime.mode
           )
         }

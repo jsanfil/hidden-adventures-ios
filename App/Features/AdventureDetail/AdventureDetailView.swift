@@ -10,6 +10,7 @@ struct AdventureDetailView: View {
 
   let adventureID: String
   let adventureService: AdventureService
+  let profileService: ProfileService
   let runtimeMode: AppRuntimeMode
   let fixtureVariantOverride: AdventureDetailFixtureVariant?
 
@@ -27,11 +28,13 @@ struct AdventureDetailView: View {
   init(
     adventureID: String,
     adventureService: AdventureService,
+    profileService: ProfileService,
     runtimeMode: AppRuntimeMode,
     fixtureVariantOverride: AdventureDetailFixtureVariant? = nil
   ) {
     self.adventureID = adventureID
     self.adventureService = adventureService
+    self.profileService = profileService
     self.runtimeMode = runtimeMode
     self.fixtureVariantOverride = fixtureVariantOverride
   }
@@ -53,8 +56,16 @@ struct AdventureDetailView: View {
     return .remote(mediaIDs, adventureService)
   }
 
+  private var usesFixturePreview: Bool {
+    runtimeMode == .fixturePreview
+  }
+
   private var visibleComments: [AdventureDetailScreenModel.Comment] {
     guard let screenModel else { return [] }
+    if usesFixturePreview == false {
+      return screenModel.comments
+    }
+
     if screenModel.comments.isEmpty {
       return [
         AdventureDetailScreenModel.Comment(
@@ -166,12 +177,16 @@ struct AdventureDetailView: View {
           NavigationCircleButton(systemImage: "square.and.arrow.up")
         }
         .buttonStyle(.plain)
+        .disabled(usesFixturePreview == false)
+        .opacity(usesFixturePreview ? 1 : 0.7)
         .accessibilityIdentifier("detail.share")
 
         Button(action: { isFavorited.toggle() }) {
           FavoriteNavigationButton(isFavorited: isFavorited)
         }
         .buttonStyle(.plain)
+        .disabled(usesFixturePreview == false)
+        .opacity(usesFixturePreview ? 1 : 0.7)
         .accessibilityIdentifier("detail.favorite")
       }
     }
@@ -226,11 +241,10 @@ struct AdventureDetailView: View {
 
   private func authorSection(_ screenModel: AdventureDetailScreenModel) -> some View {
     HStack(spacing: 12) {
-      HAAvatarView(
+      AuthorAvatarView(
         initials: screenModel.author.initials,
-        size: 42,
-        background: HATheme.Colors.primary,
-        foreground: .white
+        mediaID: screenModel.author.avatarMediaID,
+        mediaLoader: adventureService
       )
 
       VStack(alignment: .leading, spacing: 2) {
@@ -257,6 +271,8 @@ struct AdventureDetailView: View {
         }
         .clipShape(Capsule(style: .continuous))
         .buttonStyle(.plain)
+        .disabled(usesFixturePreview == false)
+        .opacity(usesFixturePreview ? 1 : 0.7)
         .accessibilityIdentifier("detail.follow")
     }
     .padding(.vertical, 18)
@@ -309,6 +325,8 @@ struct AdventureDetailView: View {
           .foregroundStyle(HATheme.Colors.primary)
         }
         .buttonStyle(.plain)
+        .disabled(screenModel.directions == nil)
+        .opacity(screenModel.directions == nil ? 0.55 : 1)
         .accessibilityIdentifier("detail.directions")
       }
 
@@ -336,6 +354,7 @@ struct AdventureDetailView: View {
               .frame(width: 36, height: 36)
           }
           .buttonStyle(.plain)
+          .disabled(usesFixturePreview == false)
         }
 
         if let feedback = ratingFeedback {
@@ -346,18 +365,26 @@ struct AdventureDetailView: View {
         }
       }
       .accessibilityIdentifier("detail.ratingStars")
+
+      if usesFixturePreview == false {
+        Text("Rating submission is not part of the Slice 1 server contract yet.")
+          .font(.system(size: 13, weight: .medium))
+          .foregroundStyle(HATheme.Colors.mutedForeground)
+      }
     }
     .padding(.top, 28)
   }
 
   private func commentsSection(_ screenModel: AdventureDetailScreenModel) -> some View {
-    VStack(alignment: .leading, spacing: 16) {
+    let commentsCount = screenModel.commentsHeaderCount
+
+    return VStack(alignment: .leading, spacing: 16) {
       HStack {
         HStack(spacing: 8) {
           Image(systemName: "message")
             .font(.system(size: 18, weight: .medium))
             .foregroundStyle(HATheme.Colors.mutedForeground)
-          Text("\(visibleComments.count) \(visibleComments.count == 1 ? "Comment" : "Comments")")
+          Text("\(commentsCount) \(commentsCount == 1 ? "Comment" : "Comments")")
             .font(.system(size: 16, weight: .semibold))
             .foregroundStyle(HATheme.Colors.foreground)
         }
@@ -371,11 +398,22 @@ struct AdventureDetailView: View {
             .frame(width: 30, height: 30)
         }
         .buttonStyle(.plain)
+        .disabled(usesFixturePreview == false)
+        .opacity(usesFixturePreview ? 1 : 0.7)
       }
 
-      VStack(spacing: 14) {
-        ForEach(visibleComments) { comment in
-          CommentBubble(comment: comment)
+      if visibleComments.isEmpty {
+        UnsupportedSectionCard(
+          systemImage: "ellipsis.message",
+          message: commentsCount == 0
+            ? "Comments will show up here once this API is available in a later slice."
+            : "This adventure has comments, but the Slice 1 API does not expose the thread yet."
+        )
+      } else {
+        VStack(spacing: 14) {
+          ForEach(visibleComments) { comment in
+            CommentBubble(comment: comment)
+          }
         }
       }
     }
@@ -393,7 +431,11 @@ struct AdventureDetailView: View {
         foreground: .white
       )
 
-      TextField("Add a comment...", text: $commentText, axis: .vertical)
+      TextField(
+        usesFixturePreview ? "Add a comment..." : "Commenting is coming in a later slice",
+        text: $commentText,
+        axis: .vertical
+      )
         .font(.system(size: 15, weight: .regular))
         .foregroundStyle(HATheme.Colors.foreground)
         .lineLimit(1...4)
@@ -403,6 +445,7 @@ struct AdventureDetailView: View {
         .padding(.vertical, 11)
         .background(HATheme.Colors.muted)
         .clipShape(Capsule(style: .continuous))
+        .disabled(usesFixturePreview == false)
         .accessibilityIdentifier("detail.composer")
 
       Button(action: sendComment) {
@@ -414,7 +457,7 @@ struct AdventureDetailView: View {
           .clipShape(Circle())
       }
       .buttonStyle(.plain)
-      .disabled(commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+      .disabled(usesFixturePreview == false || commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       .accessibilityIdentifier("detail.send")
     }
     .padding(.horizontal, 16)
@@ -481,11 +524,11 @@ struct AdventureDetailView: View {
 
     do {
       let detail = try await adventureService.getAdventure(id: adventureID).item
-      do {
-        mediaIDs = try await adventureService.listAdventureMedia(id: adventureID).items.map(\.id)
-      } catch {
-        mediaIDs = detail.primaryMedia.map { [$0.id] } ?? []
-      }
+      async let authorProfileTask: ProfileDetail? = loadAuthorProfile(handle: detail.author.handle)
+      async let mediaTask: [String] = loadMediaIDs(for: detail)
+
+      let authorProfile = await authorProfileTask
+      mediaIDs = await mediaTask
       let heroImageNames = AdventurePresentation.imageNames(
         for: adventureID,
         runtimeMode: runtimeMode
@@ -493,7 +536,8 @@ struct AdventureDetailView: View {
       screenModel = AdventureDetailScreenModel(
         detail: detail,
         heroImageNames: heroImageNames,
-        comments: []
+        comments: [],
+        authorProfile: authorProfile
       )
     } catch {
       didFailToLoad = true
@@ -512,11 +556,31 @@ struct AdventureDetailView: View {
   }
 
   private func sendComment() {
+    guard usesFixturePreview else {
+      return
+    }
+
     guard commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
       return
     }
 
     commentText = ""
+  }
+
+  private func loadMediaIDs(for detail: AdventureDetail) async -> [String] {
+    do {
+      return try await adventureService.listAdventureMedia(id: adventureID).items.map(\.id)
+    } catch {
+      return detail.primaryMedia.map { [$0.id] } ?? []
+    }
+  }
+
+  private func loadAuthorProfile(handle: String) async -> ProfileDetail? {
+    do {
+      return try await profileService.getProfile(handle: handle, limit: 1, offset: 0).profile
+    } catch {
+      return nil
+    }
   }
 }
 
@@ -545,6 +609,29 @@ private struct FavoriteNavigationButton: View {
       .background(isFavorited ? HATheme.Colors.primary : .white.opacity(0.92))
       .clipShape(Circle())
       .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+  }
+}
+
+private struct AuthorAvatarView: View {
+  let initials: String
+  let mediaID: String?
+  let mediaLoader: any AdventureService
+
+  var body: some View {
+    if let mediaID {
+      HARemoteAvatarImage(
+        mediaID: mediaID,
+        mediaLoader: mediaLoader,
+        initials: initials
+      )
+    } else {
+      HAAvatarView(
+        initials: initials,
+        size: 42,
+        background: HATheme.Colors.primary,
+        foreground: .white
+      )
+    }
   }
 }
 
@@ -646,6 +733,89 @@ private struct CommentBubble: View {
   }
 }
 
+private struct UnsupportedSectionCard: View {
+  let systemImage: String
+  let message: String
+
+  var body: some View {
+    HStack(alignment: .top, spacing: 12) {
+      Image(systemName: systemImage)
+        .font(.system(size: 18, weight: .medium))
+        .foregroundStyle(HATheme.Colors.primary)
+        .frame(width: 24)
+
+      Text(message)
+        .font(.system(size: 14, weight: .medium))
+        .foregroundStyle(HATheme.Colors.mutedForeground)
+        .fixedSize(horizontal: false, vertical: true)
+
+      Spacer(minLength: 0)
+    }
+    .padding(14)
+    .background(HATheme.Colors.muted)
+    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+  }
+}
+
+private struct HARemoteAvatarImage: View {
+  let mediaID: String
+  let mediaLoader: any AdventureService
+  let initials: String
+
+  @State private var image: UIImage?
+  @State private var didFail = false
+
+  var body: some View {
+    Group {
+      if let image {
+        Image(uiImage: image)
+          .resizable()
+          .scaledToFill()
+      } else if didFail {
+        fallback
+      } else {
+        ZStack {
+          Circle()
+            .fill(HATheme.Colors.primary)
+
+          ProgressView()
+            .tint(.white)
+            .scaleEffect(0.75)
+        }
+      }
+    }
+    .frame(width: 42, height: 42)
+    .clipShape(Circle())
+    .task(id: mediaID) {
+      await loadImage()
+    }
+  }
+
+  private var fallback: some View {
+    HAAvatarView(
+      initials: initials,
+      size: 42,
+      background: HATheme.Colors.primary,
+      foreground: .white
+    )
+  }
+
+  @MainActor
+  private func loadImage() async {
+    if image != nil {
+      return
+    }
+
+    do {
+      let data = try await mediaLoader.loadMediaData(id: mediaID)
+      image = UIImage(data: data)
+      didFail = image == nil
+    } catch {
+      didFail = true
+    }
+  }
+}
+
 struct AdventureDetailView_Previews: PreviewProvider {
   static var previews: some View {
     Group {
@@ -668,6 +838,7 @@ private struct AdventureDetailPreviewContainer: View {
     AdventureDetailView(
       adventureID: MockFixtures.bluePoolID,
       adventureService: FixtureAdventureService(),
+      profileService: FixtureProfileService(),
       runtimeMode: .fixturePreview,
       fixtureVariantOverride: variant
     )

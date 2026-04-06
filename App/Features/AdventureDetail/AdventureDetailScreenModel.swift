@@ -2,9 +2,11 @@ import Foundation
 
 struct AdventureDetailScreenModel: Identifiable, Equatable, Sendable {
   struct Author: Equatable, Sendable {
+    let handle: String
     let displayName: String
     let subtitle: String
     let initials: String
+    let avatarMediaID: String?
   }
 
   struct Comment: Identifiable, Equatable, Sendable {
@@ -50,13 +52,19 @@ enum AdventureDetailFixtureVariant: String, CaseIterable, Sendable {
 }
 
 extension AdventureDetailScreenModel {
-  init(detail: AdventureDetail, heroImageNames: [String], comments: [Comment]) {
-    let displayName = detail.author.displayName ?? detail.author.handle
-    let locationSubtitle = [detail.author.homeCity, detail.author.homeRegion]
+  init(
+    detail: AdventureDetail,
+    heroImageNames: [String],
+    comments: [Comment],
+    authorProfile: ProfileDetail? = nil
+  ) {
+    let authorHandle = authorProfile?.handle ?? detail.author.handle
+    let displayName = authorProfile?.displayName ?? detail.author.displayName ?? authorHandle
+    let locationSubtitle = [authorProfile?.homeCity ?? detail.author.homeCity, authorProfile?.homeRegion ?? detail.author.homeRegion]
       .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
       .filter { !$0.isEmpty }
-      .joined(separator: ", ")
-    let subtitlePrefix = locationSubtitle.isEmpty ? "Hidden Adventures" : locationSubtitle
+    let subtitleSegments = [locationSubtitle.joined(separator: ", "), "@\(authorHandle)"]
+      .filter { !$0.isEmpty }
     let aboutLines = [detail.summary, detail.body]
       .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
       .filter { !$0.isEmpty }
@@ -70,9 +78,11 @@ extension AdventureDetailScreenModel {
     self.averageRating = detail.stats.averageRating
     self.ratingCount = detail.stats.ratingCount
     self.author = Author(
+      handle: authorHandle,
       displayName: displayName,
-      subtitle: "\(subtitlePrefix) · 48 adventures",
-      initials: Self.initials(for: displayName)
+      subtitle: subtitleSegments.isEmpty ? "Hidden Adventures" : subtitleSegments.joined(separator: " · "),
+      initials: Self.initials(for: displayName),
+      avatarMediaID: authorProfile?.avatar?.id
     )
     if let location = detail.location {
       self.directions = Directions(
@@ -82,7 +92,7 @@ extension AdventureDetailScreenModel {
     } else {
       self.directions = nil
     }
-    self.commentsHeaderCount = comments.count
+    self.commentsHeaderCount = comments.isEmpty ? detail.stats.commentCount : comments.count
     self.comments = comments
   }
 
