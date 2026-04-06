@@ -198,6 +198,128 @@ enum MockFixtures {
     )
   ]
 
+  static let detailCommentsByAdventureID: [String: [AdventureDetailScreenModel.Comment]] = [
+    bluePoolID: [
+      AdventureDetailScreenModel.Comment(
+        id: "comment-blue-pool-1",
+        authorDisplayName: "megan",
+        authorInitials: "ME",
+        relativeTimestamp: "7 years ago",
+        body: "Absolutely magical! Got there early and had it all to ourselves."
+      ),
+      AdventureDetailScreenModel.Comment(
+        id: "comment-blue-pool-2",
+        authorDisplayName: "megan",
+        authorInitials: "ME",
+        relativeTimestamp: "7 years ago",
+        body: "Takes thirty minutes on the trail before you reach the pool but totally worth every step."
+      ),
+      AdventureDetailScreenModel.Comment(
+        id: "comment-blue-pool-3",
+        authorDisplayName: "jack",
+        authorInitials: "JA",
+        relativeTimestamp: "3 weeks ago",
+        body: "Went at sunrise and the color was unreal. The trail was mellow, but the cold coming off the water was no joke."
+      ),
+      AdventureDetailScreenModel.Comment(
+        id: "comment-blue-pool-4",
+        authorDisplayName: "sarah",
+        authorInitials: "SA",
+        relativeTimestamp: "1 month ago",
+        body: "Worth bringing snacks and taking your time on the return. The overlook just before the pool ended up being my favorite photo stop."
+      )
+    ],
+    eagleID: [
+      AdventureDetailScreenModel.Comment(
+        id: "comment-eagle-1",
+        authorDisplayName: "amy",
+        authorInitials: "AM",
+        relativeTimestamp: "2 days ago",
+        body: "The tunnel section feels unreal after the rain. Bring a shell and expect to get misted."
+      ),
+      AdventureDetailScreenModel.Comment(
+        id: "comment-eagle-2",
+        authorDisplayName: "mike",
+        authorInitials: "MI",
+        relativeTimestamp: "5 days ago",
+        body: "Busy trail by late morning, but the falls absolutely delivered. Starting early made the whole thing feel calmer."
+      )
+    ]
+  ]
+
+  static func adventureDetailScreenModel(
+    for id: String,
+    variant: AdventureDetailFixtureVariant = .happy
+  ) -> AdventureDetailScreenModel {
+    let resolvedID = resolvedAdventureID(for: id)
+    let detail = adventureDetails[resolvedID] ?? adventureDetails[bluePoolID]!
+    let comments = detailCommentsByAdventureID[resolvedID] ?? detailCommentsByAdventureID[bluePoolID] ?? []
+    let imageNames = imageNamesByAdventureID[resolvedID] ?? imageNamesByAdventureID[bluePoolID] ?? ["hero-mountain"]
+
+    var model = AdventureDetailScreenModel(
+      detail: detail,
+      heroImageNames: imageNames,
+      comments: comments
+    )
+
+    switch variant {
+    case .happy:
+      return model
+    case .longText:
+      model = AdventureDetailScreenModel(
+        id: model.id,
+        title: model.title,
+        categoryLabel: model.categoryLabel,
+        placeLabel: model.placeLabel,
+        aboutLines: [
+          "One of Oregon's most stunning natural wonders hidden deep in the McKenzie River Trail.",
+          "The pool's striking blue color comes from the McKenzie River emerging from underground lava flows, creating an otherworldly turquoise that has to be seen to be believed. Best visited early morning before crowds arrive.",
+          "Stay on the main trail, pack layers for the shaded canyon, and plan for a slow return hike once the crowds build. The water looks inviting but remains dangerously cold year-round."
+        ],
+        heroImageNames: model.heroImageNames,
+        averageRating: model.averageRating,
+        ratingCount: model.ratingCount,
+        author: model.author,
+        directions: model.directions,
+        commentsHeaderCount: model.commentsHeaderCount,
+        comments: model.comments
+      )
+      return model
+    case .singleImage:
+      model = AdventureDetailScreenModel(
+        id: model.id,
+        title: model.title,
+        categoryLabel: model.categoryLabel,
+        placeLabel: model.placeLabel,
+        aboutLines: model.aboutLines,
+        heroImageNames: Array(model.heroImageNames.prefix(1)),
+        averageRating: model.averageRating,
+        ratingCount: model.ratingCount,
+        author: model.author,
+        directions: model.directions,
+        commentsHeaderCount: model.commentsHeaderCount,
+        comments: model.comments
+      )
+      return model
+    case .noComments:
+      model = AdventureDetailScreenModel(
+        id: model.id,
+        title: model.title,
+        categoryLabel: model.categoryLabel,
+        placeLabel: model.placeLabel,
+        aboutLines: model.aboutLines,
+        heroImageNames: model.heroImageNames,
+        averageRating: model.averageRating,
+        ratingCount: model.ratingCount,
+        author: model.author,
+        directions: model.directions,
+        commentsHeaderCount: 0,
+        comments: []
+      )
+      return model
+    }
+  }
+
   static func resolvedAdventureID(for id: String) -> String {
     switch id {
     case uiTestEagleID:

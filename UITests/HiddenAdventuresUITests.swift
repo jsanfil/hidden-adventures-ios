@@ -452,8 +452,8 @@ final class HiddenAdventuresUITests: XCTestCase {
           screenshotDir: directory
         )
         self.assertExists(
-          app.buttons["detail.startCTA"],
-          name: "detail-start-cta",
+          app.staticTexts.matching(identifier: "detail.comments").firstMatch,
+          name: "detail-comments",
           in: app,
           screenshotDir: directory
         )
@@ -464,8 +464,14 @@ final class HiddenAdventuresUITests: XCTestCase {
           screenshotDir: directory
         )
         self.assertExists(
-          app.staticTexts["detail.savedCount"],
-          name: "detail-saved-count",
+          app.textFields["detail.composer"],
+          name: "detail-composer",
+          in: app,
+          screenshotDir: directory
+        )
+        self.assertExists(
+          app.buttons["detail.send"],
+          name: "detail-send",
           in: app,
           screenshotDir: directory
         )
@@ -482,8 +488,8 @@ final class HiddenAdventuresUITests: XCTestCase {
     app.launch()
 
     assertExists(
-      app.buttons["detail.startCTA"],
-      name: "detail-start-cta",
+      app.textFields["detail.composer"],
+      name: "detail-composer",
       in: app,
       screenshotDir: screenshotDir
     )
@@ -495,14 +501,14 @@ final class HiddenAdventuresUITests: XCTestCase {
     )
     assertFrameAbove(
       app.staticTexts["detail.aboutBody"],
-      other: app.buttons["detail.startCTA"],
-      name: "detail-about-body-above-cta",
+      other: app.textFields["detail.composer"],
+      name: "detail-about-body-above-composer",
       in: app,
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.staticTexts["detail.savedCount"],
-      name: "detail-saved-count",
+      app.staticTexts.matching(identifier: "detail.comments").firstMatch,
+      name: "detail-comments",
       in: app,
       screenshotDir: screenshotDir
     )
@@ -517,8 +523,8 @@ final class HiddenAdventuresUITests: XCTestCase {
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.buttons["detail.startCTA"],
-      name: "detail-start-cta-after-scroll",
+      app.textFields["detail.composer"],
+      name: "detail-composer-after-scroll",
       in: app,
       screenshotDir: screenshotDir
     )

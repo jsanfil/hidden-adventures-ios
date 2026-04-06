@@ -1,166 +1,222 @@
 import SwiftUI
 
 struct AdventureDetailView: View {
+  private enum Layout {
+    static let heroHeight: CGFloat = 318
+    static let sheetOverlap: CGFloat = 24
+    static let sheetCornerRadius: CGFloat = 28
+    static let horizontalPadding: CGFloat = 20
+  }
+
   let adventureID: String
   let adventureService: AdventureService
   let runtimeMode: AppRuntimeMode
+  let fixtureVariantOverride: AdventureDetailFixtureVariant?
 
   @Environment(\.dismiss) private var dismiss
-  @State private var detail: AdventureDetail?
-  @State private var mediaItems: [AdventureMediaItem] = []
+  @Environment(\.openURL) private var openURL
+
+  @State private var screenModel: AdventureDetailScreenModel?
+  @State private var mediaIDs: [String] = []
+  @State private var isLoading = false
+  @State private var didFailToLoad = false
+  @State private var isFavorited = false
+  @State private var userRating = 0
+  @State private var commentText = ""
+
+  init(
+    adventureID: String,
+    adventureService: AdventureService,
+    runtimeMode: AppRuntimeMode,
+    fixtureVariantOverride: AdventureDetailFixtureVariant? = nil
+  ) {
+    self.adventureID = adventureID
+    self.adventureService = adventureService
+    self.runtimeMode = runtimeMode
+    self.fixtureVariantOverride = fixtureVariantOverride
+  }
+
+  private var fixtureVariant: AdventureDetailFixtureVariant {
+    fixtureVariantOverride ?? AdventureDetailFixtureVariant.resolve()
+  }
 
   private var mediaSource: HAMediaSource {
     if runtimeMode == .fixturePreview {
-      return .fixture(
-        AdventurePresentation.imageNames(
+      let imageNames = screenModel?.heroImageNames
+        ?? MockFixtures.adventureDetailScreenModel(
           for: adventureID,
-          runtimeMode: runtimeMode
-        )
-      )
+          variant: fixtureVariant
+        ).heroImageNames
+      return .fixture(imageNames)
     }
 
-    return .remote(mediaItems.map(\.id), adventureService)
+    return .remote(mediaIDs, adventureService)
+  }
+
+  private var visibleComments: [AdventureDetailScreenModel.Comment] {
+    guard let screenModel else { return [] }
+    if screenModel.comments.isEmpty {
+      return [
+        AdventureDetailScreenModel.Comment(
+          id: "placeholder-comment-1",
+          authorDisplayName: "alex",
+          authorInitials: "AL",
+          relativeTimestamp: "2 days ago",
+          body: "This is a solid layout check comment. The bubble spacing feels good, and the pinned composer still leaves enough room to read the thread."
+        ),
+        AdventureDetailScreenModel.Comment(
+          id: "placeholder-comment-2",
+          authorDisplayName: "maya",
+          authorInitials: "MA",
+          relativeTimestamp: "1 week ago",
+          body: "Second placeholder comment for visual QA. Long enough to wrap onto another line so we can judge the notched bubble shape and timestamp alignment."
+        )
+      ]
+    }
+
+    return screenModel.comments
   }
 
   var body: some View {
-    VStack(spacing: 0) {
-      if let detail {
-        ScrollView {
-          VStack(spacing: 0) {
-            hero(detail: detail)
+    ZStack(alignment: .top) {
+      hero
 
-            VStack(alignment: .leading, spacing: 20) {
-              header(detail: detail)
-              statRow
-              authorRow(detail: detail)
-              aboutSection(detail: detail)
-              locationPreview(detail: detail)
-              activityPreview
-            }
-            .padding(20)
-            .padding(.bottom, 36)
-            .background(HATheme.Colors.background)
-            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-            .offset(y: -18)
-            .padding(.bottom, -18)
-          }
-        }
-
-        bottomCTA(detail: detail)
-      } else {
-        ZStack {
-          HATheme.Colors.background
-            .ignoresSafeArea()
-
-          ProgressView()
-            .tint(HATheme.Colors.primary)
-        }
-      }
+      content
     }
     .background(HATheme.Colors.background.ignoresSafeArea())
+    .overlay(alignment: .top) {
+      floatingNavigation
+    }
+    .safeAreaInset(edge: .bottom, spacing: 0) {
+      commentComposerBar
+    }
     .toolbar(.hidden, for: .navigationBar)
     .task {
-      guard detail == nil else { return }
-
-      do {
-        let loadedDetail = try await adventureService.getAdventure(id: adventureID).item
-        detail = loadedDetail
-
-        guard runtimeMode != .fixturePreview else {
-          return
-        }
-
-        do {
-          mediaItems = try await adventureService.listAdventureMedia(id: adventureID).items
-        } catch {
-          mediaItems = loadedDetail.primaryMedia.map {
-            [AdventureMediaItem(id: $0.id, sortOrder: 0, isPrimary: true, width: nil, height: nil)]
-          } ?? []
-        }
-      } catch {
-        detail = nil
-      }
+      guard screenModel == nil, isLoading == false else { return }
+      await loadScreen()
     }
   }
 
-  private func hero(detail: AdventureDetail) -> some View {
-    ZStack(alignment: .top) {
-      HAMediaCarouselOrPlaceholder(
-        source: mediaSource,
-        aspectRatio: nil,
-        cornerRadius: 0,
-        dotsInside: true,
-        title: detail.title
+  private var hero: some View {
+    HAMediaCarouselOrPlaceholder(
+      source: mediaSource,
+      aspectRatio: nil,
+      cornerRadius: 0,
+      dotsInside: true,
+      title: screenModel?.title ?? "Adventure"
+    )
+    .frame(height: Layout.heroHeight)
+    .overlay {
+      LinearGradient(
+        colors: [.black.opacity(0.28), .clear, .clear],
+        startPoint: .top,
+        endPoint: .bottom
       )
-      .frame(height: 304)
-      .overlay {
-        LinearGradient(
-          colors: [.black.opacity(0.30), .clear, .clear],
-          startPoint: .top,
-          endPoint: .bottom
-        )
-      }
+    }
+    .accessibilityIdentifier("detail.carousel")
+  }
 
-      HStack {
-        Button(action: { dismiss() }) {
-          CircleIconNavigationButton(systemImage: "chevron.left")
+  @ViewBuilder
+  private var content: some View {
+    if let screenModel {
+      ScrollView(showsIndicators: false) {
+        VStack(spacing: 0) {
+          Color.clear
+            .frame(height: Layout.heroHeight - Layout.sheetOverlap)
+
+          VStack(alignment: .leading, spacing: 0) {
+            headerSection(screenModel)
+            authorSection(screenModel)
+            aboutSection(screenModel)
+            locationSection(screenModel)
+            ratingSection
+            commentsSection(screenModel)
+          }
+          .padding(.horizontal, Layout.horizontalPadding)
+          .padding(.top, 18)
+          .padding(.bottom, 20)
+          .background(HATheme.Colors.background)
+          .clipShape(
+            UnevenRoundedRectangle(
+              topLeadingRadius: Layout.sheetCornerRadius,
+              topTrailingRadius: Layout.sheetCornerRadius
+            )
+          )
+        }
+      }
+    } else if didFailToLoad {
+      failureState
+    } else {
+      loadingState
+    }
+  }
+
+  private var floatingNavigation: some View {
+    HStack {
+      Button(action: { dismiss() }) {
+        NavigationCircleButton(systemImage: "chevron.left")
+      }
+      .buttonStyle(.plain)
+      .accessibilityIdentifier("detail.back")
+
+      Spacer()
+
+      HStack(spacing: 10) {
+        Button(action: {}) {
+          NavigationCircleButton(systemImage: "square.and.arrow.up")
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("detail.back")
+        .accessibilityIdentifier("detail.share")
 
-        Spacer()
-
-        HStack(spacing: 10) {
-          Button(action: {}) {
-            CircleIconNavigationButton(systemImage: "square.and.arrow.up")
-          }
-          .buttonStyle(.plain)
-
-          Button(action: {}) {
-            CircleFilledNavigationButton(systemImage: "bookmark.fill")
-          }
-          .buttonStyle(.plain)
+        Button(action: { isFavorited.toggle() }) {
+          FavoriteNavigationButton(isFavorited: isFavorited)
         }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("detail.favorite")
       }
-      .padding(.horizontal, 20)
-      .padding(.top, 14)
     }
+    .padding(.horizontal, 16)
+    .padding(.top, 14)
   }
 
-  private func header(detail: AdventureDetail) -> some View {
+  private func headerSection(_ screenModel: AdventureDetailScreenModel) -> some View {
     VStack(alignment: .leading, spacing: 14) {
-      HStack {
-        if let categoryTitle = detail.categoryLabel ?? detail.categorySlug?.displayTitle {
-          Text(categoryTitle)
+      HStack(alignment: .top, spacing: 12) {
+        if let categoryLabel = screenModel.categoryLabel {
+          Text(categoryLabel)
             .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(HATheme.Colors.foreground)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .foregroundStyle(HATheme.Colors.mutedForeground)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
             .background(HATheme.Colors.secondary)
             .clipShape(Capsule(style: .continuous))
+            .fixedSize(horizontal: true, vertical: false)
             .accessibilityIdentifier("detail.category")
         }
 
-        Spacer()
+        Spacer(minLength: 0)
 
         HStack(spacing: 4) {
           Image(systemName: "star.fill")
-          Text(String(format: "%.1f", detail.stats.averageRating))
-          Text("(\(detail.stats.ratingCount))")
+          Text(String(format: "%.1f", screenModel.averageRating))
+          Text("(\(screenModel.ratingCount))")
             .foregroundStyle(HATheme.Colors.mutedForeground)
         }
         .font(.system(size: 14, weight: .semibold))
-        .foregroundStyle(.orange)
+        .foregroundStyle(Color(red: 0.88, green: 0.62, blue: 0.12))
+        .fixedSize(horizontal: true, vertical: false)
+        .frame(maxWidth: .infinity, alignment: .trailing)
         .accessibilityIdentifier("detail.ratingSummary")
       }
+      .frame(maxWidth: .infinity)
 
       VStack(alignment: .leading, spacing: 8) {
-        Text(detail.title)
-          .font(.system(size: 28, weight: .semibold))
+        Text(screenModel.title)
+          .font(.system(size: 25, weight: .semibold))
           .foregroundStyle(HATheme.Colors.foreground)
           .accessibilityIdentifier("detail.title")
 
-        Label(detail.placeLabel ?? "Hidden location", systemImage: "mappin.and.ellipse")
+        Label(screenModel.placeLabel, systemImage: "mappin.and.ellipse")
           .font(.system(size: 15, weight: .medium))
           .foregroundStyle(HATheme.Colors.mutedForeground)
           .accessibilityIdentifier("detail.location")
@@ -168,86 +224,73 @@ struct AdventureDetailView: View {
     }
   }
 
-  private var statRow: some View {
-    HStack(spacing: 18) {
-      DetailStatItem(title: "Duration", value: "2-3 hrs", systemImage: "clock")
-      DetailStatItem(title: "Difficulty", value: "Moderate", systemImage: "chart.line.uptrend.xyaxis")
-      DetailStatItem(title: "Distance", value: "4.2 mi", systemImage: "location.north.line")
-    }
-    .padding(.vertical, 14)
-    .overlay(alignment: .top) { Divider().overlay(HATheme.Colors.border) }
-    .overlay(alignment: .bottom) { Divider().overlay(HATheme.Colors.border) }
-  }
-
-  private func authorRow(detail: AdventureDetail) -> some View {
+  private func authorSection(_ screenModel: AdventureDetailScreenModel) -> some View {
     HStack(spacing: 12) {
       HAAvatarView(
-        initials: authorInitials(detail.author),
+        initials: screenModel.author.initials,
         size: 42,
-        background: HATheme.Colors.primary.opacity(0.15),
-        foreground: HATheme.Colors.primary
+        background: HATheme.Colors.primary,
+        foreground: .white
       )
 
       VStack(alignment: .leading, spacing: 2) {
-        Text("Shared by \(detail.author.displayName ?? detail.author.handle)")
+        Text("Shared by \(screenModel.author.displayName)")
           .font(.system(size: 15, weight: .medium))
           .foregroundStyle(HATheme.Colors.foreground)
 
-        Text("Local Explorer · 48 adventures")
+        Text(screenModel.author.subtitle)
           .font(.system(size: 13, weight: .regular))
           .foregroundStyle(HATheme.Colors.mutedForeground)
       }
 
-      Spacer()
+      Spacer(minLength: 12)
 
       Button("Follow", action: {})
         .font(.system(size: 13, weight: .semibold))
         .foregroundStyle(HATheme.Colors.foreground)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 9)
+        .background(.white.opacity(0.9))
         .overlay {
           Capsule(style: .continuous)
             .stroke(HATheme.Colors.border, lineWidth: 1)
         }
+        .clipShape(Capsule(style: .continuous))
         .buttonStyle(.plain)
+        .accessibilityIdentifier("detail.follow")
     }
+    .padding(.vertical, 18)
+    .overlay(alignment: .top) {
+      Divider()
+        .overlay(HATheme.Colors.border)
+    }
+    .overlay(alignment: .bottom) {
+      Divider()
+        .overlay(HATheme.Colors.border)
+    }
+    .accessibilityIdentifier("detail.author")
   }
 
-  private func authorInitials(_ author: AdventureAuthor) -> String {
-    let source = author.displayName ?? author.handle
-    let letters = source
-      .split(separator: " ")
-      .prefix(2)
-      .compactMap(\.first)
-      .map { String($0).uppercased() }
-      .joined()
-
-    return letters.isEmpty ? "HA" : letters
-  }
-
-  private func aboutSection(detail: AdventureDetail) -> some View {
-    VStack(alignment: .leading, spacing: 10) {
+  private func aboutSection(_ screenModel: AdventureDetailScreenModel) -> some View {
+    VStack(alignment: .leading, spacing: 14) {
       Text("About this place")
         .font(HATheme.Typography.sectionTitle)
         .foregroundStyle(HATheme.Colors.foreground)
-        .accessibilityIdentifier("detail.aboutTitle")
 
-      Text(detail.body ?? detail.summary ?? "No description yet.")
-        .font(HATheme.Typography.body)
-        .foregroundStyle(HATheme.Colors.mutedForeground)
-        .lineSpacing(4)
-        .lineLimit(4)
-        .accessibilityIdentifier("detail.aboutBody")
-
-      Button("Read more", action: {})
-        .font(.system(size: 14, weight: .semibold))
-        .foregroundStyle(HATheme.Colors.primary)
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("detail.readMore")
+      VStack(alignment: .leading, spacing: 10) {
+        ForEach(Array(screenModel.aboutLines.enumerated()), id: \.offset) { index, line in
+          Text(line)
+            .font(.system(size: 15, weight: .regular))
+            .foregroundStyle(HATheme.Colors.mutedForeground)
+            .lineSpacing(4)
+            .accessibilityIdentifier(index == 0 ? "detail.aboutBody" : "detail.aboutBody.\(index)")
+        }
+      }
     }
+    .padding(.top, 20)
   }
 
-  private func locationPreview(detail: AdventureDetail) -> some View {
+  private func locationSection(_ screenModel: AdventureDetailScreenModel) -> some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack {
         Text("Location")
@@ -257,7 +300,7 @@ struct AdventureDetailView: View {
 
         Spacer()
 
-        Button(action: {}) {
+        Button(action: openDirections) {
           HStack(spacing: 4) {
             Text("Get Directions")
             Image(systemName: "chevron.right")
@@ -266,183 +309,218 @@ struct AdventureDetailView: View {
           .foregroundStyle(HATheme.Colors.primary)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("detail.directions")
       }
 
-      ZStack {
-        LinearGradient(
-          colors: [HATheme.Colors.mapForest, HATheme.Colors.mapBackground],
-          startPoint: .topLeading,
-          endPoint: .bottomTrailing
-        )
-
-        Path { path in
-          path.move(to: CGPoint(x: 0, y: 72))
-          path.addCurve(
-            to: CGPoint(x: 320, y: 56),
-            control1: CGPoint(x: 84, y: 44),
-            control2: CGPoint(x: 220, y: 86)
-          )
-        }
-        .stroke(.white.opacity(0.75), style: StrokeStyle(lineWidth: 4, lineCap: .round))
-
-        Ellipse()
-          .fill(HATheme.Colors.accent.opacity(0.72))
-          .frame(width: 76, height: 44)
-
-        ZStack {
-          Circle()
-            .fill(HATheme.Colors.primary)
-            .frame(width: 34, height: 34)
-          Image(systemName: "mappin")
-            .foregroundStyle(.white)
-            .font(.system(size: 15, weight: .semibold))
-        }
-      }
-      .frame(height: 150)
-      .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+      StylizedMapCard()
     }
+    .padding(.top, 28)
   }
 
-  private var activityPreview: some View {
+  private var ratingSection: some View {
     VStack(alignment: .leading, spacing: 14) {
+      Text("Rate this adventure")
+        .font(HATheme.Typography.sectionTitle)
+        .foregroundStyle(HATheme.Colors.foreground)
+
+      HStack(spacing: 2) {
+        ForEach(1...5, id: \.self) { rating in
+          Button(action: { userRating = rating }) {
+            Image(systemName: rating <= userRating ? "star.fill" : "star")
+              .font(.system(size: 28, weight: .regular))
+              .foregroundStyle(
+                rating <= userRating
+                  ? Color(red: 0.88, green: 0.62, blue: 0.12)
+                  : HATheme.Colors.mutedForeground.opacity(0.35)
+              )
+              .frame(width: 36, height: 36)
+          }
+          .buttonStyle(.plain)
+        }
+
+        if let feedback = ratingFeedback {
+          Text(feedback)
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(HATheme.Colors.mutedForeground)
+            .padding(.leading, 8)
+        }
+      }
+      .accessibilityIdentifier("detail.ratingStars")
+    }
+    .padding(.top, 28)
+  }
+
+  private func commentsSection(_ screenModel: AdventureDetailScreenModel) -> some View {
+    VStack(alignment: .leading, spacing: 16) {
       HStack {
-        Text("Recent Activity")
-          .font(HATheme.Typography.sectionTitle)
-          .foregroundStyle(HATheme.Colors.foreground)
+        HStack(spacing: 8) {
+          Image(systemName: "message")
+            .font(.system(size: 18, weight: .medium))
+            .foregroundStyle(HATheme.Colors.mutedForeground)
+          Text("\(visibleComments.count) \(visibleComments.count == 1 ? "Comment" : "Comments")")
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(HATheme.Colors.foreground)
+        }
 
         Spacer()
 
-        Button("See all", action: {})
-          .font(.system(size: 14, weight: .semibold))
-          .foregroundStyle(HATheme.Colors.primary)
-          .buttonStyle(.plain)
-      }
-
-      VStack(spacing: 12) {
-        ActivityCard(
-          initials: "MJ",
-          headline: "Mike J. visited this spot",
-          message: "Absolutely magical! Got there early and had it all to ourselves.",
-          metrics: "24 likes · 3 comments · 2 days ago",
-          accent: HATheme.Colors.accent
-        )
-
-        ActivityCard(
-          initials: "AL",
-          headline: "Amy L. saved this adventure",
-          message: nil,
-          metrics: "8 likes · 5 days ago",
-          accent: HATheme.Colors.primary.opacity(0.2)
-        )
-      }
-    }
-  }
-
-  private func bottomCTA(detail: AdventureDetail) -> some View {
-    VStack(spacing: 6) {
-      Divider()
-        .overlay(HATheme.Colors.border)
-
-      HStack(spacing: 14) {
-        Text("\(detail.stats.favoriteCount.formatted()) people saved this")
-          .font(.system(size: 12, weight: .regular))
-          .foregroundStyle(HATheme.Colors.mutedForeground)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .accessibilityIdentifier("detail.savedCount")
-
         Button(action: {}) {
-          HStack(spacing: 8) {
-            Image(systemName: "location.north.fill")
-              .font(.system(size: 16, weight: .semibold))
-            Text("Start Adventure")
-              .font(.system(size: 17, weight: .semibold))
-          }
-          .foregroundStyle(.white)
-          .frame(width: 184, height: 48)
-          .background(HATheme.Colors.primary)
-          .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+          Image(systemName: "ellipsis")
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundStyle(HATheme.Colors.mutedForeground)
+            .frame(width: 30, height: 30)
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("detail.startCTA")
-      }
-      .padding(.horizontal, 20)
-      .padding(.top, 8)
-      .padding(.bottom, 10)
-    }
-    .background(.white.opacity(0.95))
-  }
-}
-
-private struct DetailStatItem: View {
-  let title: String
-  let value: String
-  let systemImage: String
-
-  var body: some View {
-    HStack(spacing: 10) {
-      ZStack {
-        Circle()
-          .fill(HATheme.Colors.secondary)
-          .frame(width: 38, height: 38)
-        Image(systemName: systemImage)
-          .font(.system(size: 15, weight: .semibold))
-          .foregroundStyle(HATheme.Colors.mutedForeground)
       }
 
-      VStack(alignment: .leading, spacing: 2) {
-        Text(title)
-          .font(.system(size: 11, weight: .regular))
-          .foregroundStyle(HATheme.Colors.mutedForeground)
-        Text(value)
-          .font(.system(size: 13, weight: .semibold))
-          .foregroundStyle(HATheme.Colors.foreground)
+      VStack(spacing: 14) {
+        ForEach(visibleComments) { comment in
+          CommentBubble(comment: comment)
+        }
       }
     }
+    .padding(.top, 28)
+    .padding(.bottom, 12)
+    .accessibilityIdentifier("detail.comments")
   }
-}
 
-private struct ActivityCard: View {
-  let initials: String
-  let headline: String
-  let message: String?
-  let metrics: String
-  let accent: Color
-
-  var body: some View {
-    HStack(alignment: .top, spacing: 12) {
+  private var commentComposerBar: some View {
+    HStack(alignment: .bottom, spacing: 12) {
       HAAvatarView(
-        initials: initials,
-        size: 38,
-        background: accent.opacity(0.9),
+        initials: "ME",
+        size: 34,
+        background: HATheme.Colors.primary,
         foreground: .white
       )
 
-      VStack(alignment: .leading, spacing: 6) {
-        Text(headline)
-          .font(.system(size: 14, weight: .medium))
-          .foregroundStyle(HATheme.Colors.foreground)
+      TextField("Add a comment...", text: $commentText, axis: .vertical)
+        .font(.system(size: 15, weight: .regular))
+        .foregroundStyle(HATheme.Colors.foreground)
+        .lineLimit(1...4)
+        .submitLabel(.send)
+        .onSubmit(sendComment)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 11)
+        .background(HATheme.Colors.muted)
+        .clipShape(Capsule(style: .continuous))
+        .accessibilityIdentifier("detail.composer")
 
-        if let message {
-          Text(message)
-            .font(.system(size: 13, weight: .regular))
-            .foregroundStyle(HATheme.Colors.mutedForeground)
-            .lineSpacing(2)
-        }
-
-        Text(metrics)
-          .font(.system(size: 12, weight: .regular))
-          .foregroundStyle(HATheme.Colors.mutedForeground)
+      Button(action: sendComment) {
+        Image(systemName: "paperplane")
+          .font(.system(size: 16, weight: .semibold))
+          .foregroundStyle(.white)
+          .frame(width: 38, height: 38)
+          .background(HATheme.Colors.accent.opacity(commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1))
+          .clipShape(Circle())
       }
-
-      Spacer()
+      .buttonStyle(.plain)
+      .disabled(commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+      .accessibilityIdentifier("detail.send")
     }
-    .padding(14)
-    .background(HATheme.Colors.secondary.opacity(0.55))
-    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .padding(.horizontal, 16)
+    .padding(.top, 10)
+    .padding(.bottom, 12)
+    .background(.ultraThinMaterial)
+    .overlay(alignment: .top) {
+      Divider()
+        .overlay(HATheme.Colors.border)
+    }
+    .accessibilityIdentifier("detail.composer")
+  }
+
+  private var loadingState: some View {
+    ProgressView()
+      .tint(HATheme.Colors.primary)
+      .padding(.top, Layout.heroHeight + 80)
+  }
+
+  private var failureState: some View {
+    VStack(spacing: 12) {
+      Text("Unable to load this adventure.")
+        .font(.system(size: 17, weight: .semibold))
+        .foregroundStyle(HATheme.Colors.foreground)
+
+      Button("Try Again") {
+        Task { await loadScreen(force: true) }
+      }
+      .buttonStyle(.plain)
+      .foregroundStyle(HATheme.Colors.primary)
+    }
+    .padding(.top, Layout.heroHeight + 80)
+  }
+
+  private var ratingFeedback: String? {
+    switch userRating {
+    case 5: return "Amazing!"
+    case 4: return "Great"
+    case 3: return "Good"
+    case 2: return "Fair"
+    case 1: return "Poor"
+    default: return nil
+    }
+  }
+
+  @MainActor
+  private func loadScreen(force: Bool = false) async {
+    if isLoading && force == false {
+      return
+    }
+
+    isLoading = true
+    didFailToLoad = false
+
+    defer { isLoading = false }
+
+    if runtimeMode == .fixturePreview {
+      screenModel = MockFixtures.adventureDetailScreenModel(
+        for: adventureID,
+        variant: fixtureVariant
+      )
+      return
+    }
+
+    do {
+      let detail = try await adventureService.getAdventure(id: adventureID).item
+      do {
+        mediaIDs = try await adventureService.listAdventureMedia(id: adventureID).items.map(\.id)
+      } catch {
+        mediaIDs = detail.primaryMedia.map { [$0.id] } ?? []
+      }
+      let heroImageNames = AdventurePresentation.imageNames(
+        for: adventureID,
+        runtimeMode: runtimeMode
+      )
+      screenModel = AdventureDetailScreenModel(
+        detail: detail,
+        heroImageNames: heroImageNames,
+        comments: []
+      )
+    } catch {
+      didFailToLoad = true
+    }
+  }
+
+  private func openDirections() {
+    guard
+      let directions = screenModel?.directions,
+      let url = URL(string: "https://maps.apple.com/?q=\(directions.latitude),\(directions.longitude)")
+    else {
+      return
+    }
+
+    openURL(url)
+  }
+
+  private func sendComment() {
+    guard commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+      return
+    }
+
+    commentText = ""
   }
 }
 
-private struct CircleIconNavigationButton: View {
+private struct NavigationCircleButton: View {
   let systemImage: String
 
   var body: some View {
@@ -452,28 +530,146 @@ private struct CircleIconNavigationButton: View {
       .frame(width: 40, height: 40)
       .background(.white.opacity(0.92))
       .clipShape(Circle())
+      .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
   }
 }
 
-private struct CircleFilledNavigationButton: View {
-  let systemImage: String
+private struct FavoriteNavigationButton: View {
+  let isFavorited: Bool
 
   var body: some View {
-    Image(systemName: systemImage)
+    Image(systemName: "bookmark.fill")
       .font(.system(size: 16, weight: .semibold))
-      .foregroundStyle(.white)
+      .foregroundStyle(isFavorited ? .white : HATheme.Colors.foreground)
       .frame(width: 40, height: 40)
-      .background(HATheme.Colors.primary)
+      .background(isFavorited ? HATheme.Colors.primary : .white.opacity(0.92))
       .clipShape(Circle())
+      .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+  }
+}
+
+private struct StylizedMapCard: View {
+  var body: some View {
+    ZStack {
+      RoundedRectangle(cornerRadius: 20, style: .continuous)
+        .fill(
+          LinearGradient(
+            colors: [
+              Color(red: 0.86, green: 0.90, blue: 0.82),
+              Color(red: 0.88, green: 0.91, blue: 0.84)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          )
+        )
+
+      Canvas { context, size in
+        var primaryRoad = Path()
+        primaryRoad.move(to: CGPoint(x: 0, y: size.height * 0.50))
+        primaryRoad.addCurve(
+          to: CGPoint(x: size.width, y: size.height * 0.42),
+          control1: CGPoint(x: size.width * 0.22, y: size.height * 0.28),
+          control2: CGPoint(x: size.width * 0.66, y: size.height * 0.60)
+        )
+
+        var secondaryRoad = Path()
+        secondaryRoad.move(to: CGPoint(x: 0, y: size.height * 0.60))
+        secondaryRoad.addCurve(
+          to: CGPoint(x: size.width, y: size.height * 0.54),
+          control1: CGPoint(x: size.width * 0.26, y: size.height * 0.40),
+          control2: CGPoint(x: size.width * 0.72, y: size.height * 0.72)
+        )
+
+        context.stroke(primaryRoad, with: .color(.white.opacity(0.74)), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+        context.stroke(secondaryRoad, with: .color(.white.opacity(0.32)), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+        context.fill(
+          Path(ellipseIn: CGRect(x: size.width * 0.39, y: size.height * 0.28, width: size.width * 0.22, height: size.height * 0.28)),
+          with: .color(HATheme.Colors.accent.opacity(0.25))
+        )
+      }
+
+      ZStack {
+        Circle()
+          .fill(HATheme.Colors.primary)
+          .frame(width: 40, height: 40)
+        Image(systemName: "mappin.and.ellipse")
+          .font(.system(size: 15, weight: .semibold))
+          .foregroundStyle(.white)
+      }
+    }
+    .frame(height: 138)
+    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+  }
+}
+
+private struct CommentBubble: View {
+  let comment: AdventureDetailScreenModel.Comment
+
+  var body: some View {
+    HStack(alignment: .top, spacing: 12) {
+      HAAvatarView(
+        initials: comment.authorInitials,
+        size: 36,
+        background: HATheme.Colors.accent.opacity(0.95),
+        foreground: .white
+      )
+
+      VStack(alignment: .leading, spacing: 6) {
+        HStack(alignment: .firstTextBaseline) {
+          Text(comment.authorDisplayName)
+            .font(.system(size: 15, weight: .medium))
+            .foregroundStyle(HATheme.Colors.foreground)
+
+          Spacer(minLength: 8)
+
+          Text(comment.relativeTimestamp)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(HATheme.Colors.mutedForeground)
+        }
+
+        Text(comment.body)
+          .font(.system(size: 15, weight: .regular))
+          .foregroundStyle(HATheme.Colors.mutedForeground)
+          .lineSpacing(4)
+      }
+    }
+    .padding(14)
+    .background(HATheme.Colors.muted)
+    .clipShape(
+      UnevenRoundedRectangle(
+        topLeadingRadius: 10,
+        bottomLeadingRadius: 20,
+        bottomTrailingRadius: 20,
+        topTrailingRadius: 20
+      )
+    )
   }
 }
 
 struct AdventureDetailView_Previews: PreviewProvider {
   static var previews: some View {
+    Group {
+      AdventureDetailPreviewContainer(variant: .happy)
+        .previewDisplayName("Happy Path")
+      AdventureDetailPreviewContainer(variant: .longText)
+        .previewDisplayName("Long Text")
+      AdventureDetailPreviewContainer(variant: .singleImage)
+        .previewDisplayName("Single Image")
+      AdventureDetailPreviewContainer(variant: .noComments)
+        .previewDisplayName("No Comments")
+    }
+  }
+}
+
+private struct AdventureDetailPreviewContainer: View {
+  let variant: AdventureDetailFixtureVariant
+
+  var body: some View {
     AdventureDetailView(
-      adventureID: MockFixtures.eagleID,
+      adventureID: MockFixtures.bluePoolID,
       adventureService: FixtureAdventureService(),
-      runtimeMode: .fixturePreview
+      runtimeMode: .fixturePreview,
+      fixtureVariantOverride: variant
     )
   }
 }
