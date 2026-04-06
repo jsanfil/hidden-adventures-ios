@@ -32,6 +32,12 @@ SwiftUI iOS client for the Hidden Adventures rebuild.
    - `HiddenAdventures-Production` for production configuration
 5. Keep the UI harness green while integrating real network clients.
 
+## Screen Porting Workflow
+
+- Use [`Docs/v0-screen-porting-workflow.md`](/Users/josephsanfilippo/Documents/projects/hidden-adventures-rebuild/hidden-adventures-ios/Docs/v0-screen-porting-workflow.md) as the default repeatable process for porting the remaining screens from `v0-hidden-adventures-ui`.
+- For every screen, gather the React screen, any supporting React components, the matching screenshot references under `docs/screenhots`, and the matching UX spec before starting SwiftUI implementation.
+- Build each screen mock-first against a native screen model, preserve fixture/gallery coverage, and only hook live data up after visual parity is approved.
+
 ## Runtime Configuration
 
 - `HA_RUNTIME_MODE=live` runs the app against the server-backed Slice 1 clients. This is the default outside UI tests.
