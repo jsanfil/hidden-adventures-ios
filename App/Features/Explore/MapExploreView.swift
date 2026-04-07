@@ -319,7 +319,7 @@ struct MapExploreView: View {
           .accessibilityIdentifier("map.card.title.\(adventure.id)")
 
         HStack {
-          Label(selectedAdventure?.placeLabel ?? "Hidden location", systemImage: "mappin")
+          Label(resolvedPlaceLabel(for: adventure.destinationID), systemImage: "mappin")
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(HATheme.Colors.mutedForeground)
             .lineLimit(1)
@@ -340,6 +340,10 @@ struct MapExploreView: View {
       RoundedRectangle(cornerRadius: 16, style: .continuous)
         .stroke(HATheme.Colors.border.opacity(0.7), lineWidth: 1)
     }
+  }
+
+  private func resolvedPlaceLabel(for destinationID: String) -> String {
+    items.first(where: { $0.id == destinationID })?.placeLabel ?? "Hidden location"
   }
 }
 

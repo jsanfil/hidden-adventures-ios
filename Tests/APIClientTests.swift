@@ -152,6 +152,56 @@ final class APIClientTests: XCTestCase {
     XCTAssertEqual(counterBox.value, 2)
   }
 
+  func testFeedResponseDecodesPlaceLabelFromServerPayload() throws {
+    let payload = Data(
+      #"""
+      {
+        "items": [
+          {
+            "id": "adventure-1",
+            "title": "Hidden Falls",
+            "description": "Bring water and wear good shoes.",
+            "categorySlug": "water_spots",
+            "visibility": "public",
+            "createdAt": "2026-03-01T00:00:00.000Z",
+            "publishedAt": "2026-03-02T00:00:00.000Z",
+            "location": {
+              "latitude": 34.12,
+              "longitude": -118.45
+            },
+            "placeLabel": "Hidden Falls Trailhead",
+            "author": {
+              "handle": "jacksanfil",
+              "displayName": "Jack",
+              "homeCity": "Los Angeles",
+              "homeRegion": "CA"
+            },
+            "primaryMedia": {
+              "id": "media-1",
+              "storageKey": "adventures/media-1.jpg"
+            },
+            "stats": {
+              "favoriteCount": 8,
+              "commentCount": 3,
+              "ratingCount": 2,
+              "averageRating": 4.5
+            }
+          }
+        ],
+        "paging": {
+          "limit": 20,
+          "offset": 0,
+          "returned": 1
+        }
+      }
+      """#.utf8
+    )
+
+    let response = try JSONDecoder().decode(FeedResponse.self, from: payload)
+
+    XCTAssertEqual(response.items.first?.placeLabel, "Hidden Falls Trailhead")
+  }
+
   private func makeClient() -> APIClient {
     APIClient(
       baseURL: URL(string: "https://example.com/api")!,
