@@ -94,8 +94,7 @@ struct AdventureStats: Codable, Hashable, Sendable {
 struct AdventureCard: Codable, Identifiable, Hashable, Sendable {
   let id: String
   let title: String
-  let summary: String?
-  let body: String?
+  let description: String?
   let categorySlug: Category?
   let categoryLabel: String?
   let visibility: Visibility
@@ -111,8 +110,7 @@ struct AdventureCard: Codable, Identifiable, Hashable, Sendable {
 struct AdventureDetail: Codable, Identifiable, Hashable, Sendable {
   let id: String
   let title: String
-  let summary: String?
-  let body: String?
+  let description: String?
   let categorySlug: Category?
   let categoryLabel: String?
   let visibility: Visibility

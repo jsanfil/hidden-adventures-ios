@@ -35,8 +35,7 @@ enum MockFixtures {
     AdventureCard(
       id: eagleID,
       title: "Eagle Creek Trail to Tunnel Falls",
-      summary: "A lush waterfall hike through cliffside bridges and basalt walls.",
-      body: "One of the most cinematic hikes in the gorge, with tunnels, spray, and big payoff views.",
+      description: "One of the most cinematic hikes in the gorge, with tunnels, spray, and big payoff views.",
       categorySlug: .trails,
       categoryLabel: "Waterfall Hike",
       visibility: .public,
@@ -51,8 +50,7 @@ enum MockFixtures {
     AdventureCard(
       id: bluePoolID,
       title: "Blue Pool at Terwilliger Hot Springs",
-      summary: "Electric blue water tucked into lava stone and cedar forest.",
-      body: "The spring-fed pool feels unreal in person. Go early, pack layers, and expect the water to be freezing.",
+      description: "The spring-fed pool feels unreal in person. Go early, pack layers, and expect the water to be freezing.",
       categorySlug: .waterSpots,
       categoryLabel: "Hidden Gem",
       visibility: .connections,
@@ -67,8 +65,7 @@ enum MockFixtures {
     AdventureCard(
       id: tomDickID,
       title: "Tom Dick & Harry Mountain",
-      summary: "A ridge hike with wide-open views of Hood and Mirror Lake below.",
-      body: "A reliable sunset mission with enough elevation to feel earned, but still approachable for a half day.",
+      description: "A reliable sunset mission with enough elevation to feel earned, but still approachable for a half day.",
       categorySlug: .viewpoints,
       categoryLabel: "Scenic View",
       visibility: .public,
@@ -83,8 +80,7 @@ enum MockFixtures {
     AdventureCard(
       id: capeID,
       title: "Sunset Cliffs at Cape Kiwanda",
-      summary: "Windy coastal dunes with dramatic headlands and golden-hour light.",
-      body: "An easy stop with huge reward. Climb the dune carefully and watch for changing weather off the Pacific.",
+      description: "An easy stop with huge reward. Climb the dune carefully and watch for changing weather off the Pacific.",
       categorySlug: .roadsideStops,
       categoryLabel: "Coastal Walk",
       visibility: .public,
@@ -131,8 +127,7 @@ enum MockFixtures {
     eagleID: AdventureDetail(
       id: eagleID,
       title: feedItems[0].title,
-      summary: feedItems[0].summary,
-      body: feedItems[0].body,
+      description: feedItems[0].description,
       categorySlug: feedItems[0].categorySlug,
       categoryLabel: feedItems[0].categoryLabel,
       visibility: feedItems[0].visibility,
@@ -148,8 +143,7 @@ enum MockFixtures {
     bluePoolID: AdventureDetail(
       id: bluePoolID,
       title: "Blue Pool at Tamolitch Falls",
-      summary: "Blue Pool is one of Oregon's most stunning natural wonders.",
-      body: "Blue Pool is one of Oregon's most stunning natural wonders. The pool's striking blue color comes from the McKenzie River emerging from underground lava flows, creating an otherworldly turquoise that has to be seen to be believed.",
+      description: "Blue Pool is one of Oregon's most stunning natural wonders. The pool's striking blue color comes from the McKenzie River emerging from underground lava flows, creating an otherworldly turquoise that has to be seen to be believed.",
       categorySlug: feedItems[1].categorySlug,
       categoryLabel: feedItems[1].categoryLabel,
       visibility: feedItems[1].visibility,
@@ -165,8 +159,7 @@ enum MockFixtures {
     tomDickID: AdventureDetail(
       id: tomDickID,
       title: feedItems[2].title,
-      summary: feedItems[2].summary,
-      body: feedItems[2].body,
+      description: feedItems[2].description,
       categorySlug: feedItems[2].categorySlug,
       categoryLabel: feedItems[2].categoryLabel,
       visibility: feedItems[2].visibility,
@@ -182,8 +175,7 @@ enum MockFixtures {
     capeID: AdventureDetail(
       id: capeID,
       title: feedItems[3].title,
-      summary: feedItems[3].summary,
-      body: feedItems[3].body,
+      description: feedItems[3].description,
       categorySlug: feedItems[3].categorySlug,
       categoryLabel: feedItems[3].categoryLabel,
       visibility: feedItems[3].visibility,

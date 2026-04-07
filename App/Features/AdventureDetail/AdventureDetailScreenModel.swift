@@ -65,7 +65,7 @@ extension AdventureDetailScreenModel {
       .filter { !$0.isEmpty }
     let subtitleSegments = [locationSubtitle.joined(separator: ", "), "@\(authorHandle)"]
       .filter { !$0.isEmpty }
-    let aboutLines = [detail.summary, detail.body]
+    let aboutLines = [detail.description]
       .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
       .filter { !$0.isEmpty }
 

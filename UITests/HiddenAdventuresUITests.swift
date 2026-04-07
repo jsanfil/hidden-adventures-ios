@@ -458,8 +458,8 @@ final class HiddenAdventuresUITests: XCTestCase {
           screenshotDir: directory
         )
         self.assertExists(
-          app.staticTexts["detail.aboutBody"],
-          name: "detail-about-body",
+          app.staticTexts["detail.description"],
+          name: "detail-description",
           in: app,
           screenshotDir: directory
         )
@@ -494,15 +494,15 @@ final class HiddenAdventuresUITests: XCTestCase {
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.staticTexts["detail.aboutBody"],
-      name: "detail-about-body",
+      app.staticTexts["detail.description"],
+      name: "detail-description",
       in: app,
       screenshotDir: screenshotDir
     )
     assertFrameAbove(
-      app.staticTexts["detail.aboutBody"],
+      app.staticTexts["detail.description"],
       other: app.textFields["detail.composer"],
-      name: "detail-about-body-above-composer",
+      name: "detail-description-above-composer",
       in: app,
       screenshotDir: screenshotDir
     )

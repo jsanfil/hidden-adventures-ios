@@ -299,7 +299,7 @@ struct AdventureDetailView: View {
             .font(.system(size: 15, weight: .regular))
             .foregroundStyle(HATheme.Colors.mutedForeground)
             .lineSpacing(4)
-            .accessibilityIdentifier(index == 0 ? "detail.aboutBody" : "detail.aboutBody.\(index)")
+            .accessibilityIdentifier(index == 0 ? "detail.description" : "detail.description.\(index)")
         }
       }
     }
