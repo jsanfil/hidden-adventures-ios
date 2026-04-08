@@ -1,0 +1,46 @@
+{
+  "configurations" : [
+    {
+      "id" : "9A1C0E22-1C5F-4D4C-9F7C-6E95A1B1AC10",
+      "name" : "Local Dev",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "selectedTests" : [
+        "HiddenAdventuresUITests/WelcomeScreenUITests/testWelcome_rendersCoreChrome",
+        "HiddenAdventuresUITests/ProfileScreenUITests/testProfile_rendersCoreChrome",
+        "HiddenAdventuresUITests/ExploreFeedScreenUITests/testExploreFeed_rendersCoreChrome",
+        "HiddenAdventuresUITests/ExploreMapScreenUITests/testExploreMap_rendersCoreChrome",
+        "HiddenAdventuresUITests/ExploreMapScreenUITests/testExploreMap_selectedPinVisible",
+        "HiddenAdventuresUITests/CreatePhotosScreenUITests/testCreatePhotos_rendersCoreChrome",
+        "HiddenAdventuresUITests/CreateDetailsScreenUITests/testCreateDetailsEmpty_rendersCoreChrome",
+        "HiddenAdventuresUITests/CreateDetailsScreenUITests/testCreateDetailsLocation_rendersCoreChrome",
+        "HiddenAdventuresUITests/CreateLocationSheetUITests/testCreateLocationOptions_rendersCoreChrome",
+        "HiddenAdventuresUITests/CreateLocationSheetUITests/testCreateLocationSearchEmpty_rendersCoreChrome",
+        "HiddenAdventuresUITests/CreateLocationSheetUITests/testCreateLocationSearchResults_rendersCoreChrome",
+        "HiddenAdventuresUITests/CreateLocationSheetUITests/testCreateLocationPin_rendersCoreChrome",
+        "HiddenAdventuresUITests/DetailScreenUITests/testDetail_rendersCoreChrome"
+      ],
+      "target" : {
+        "containerPath" : "container:HiddenAdventures.xcodeproj",
+        "identifier" : "2E243C4235B4CFEF9545C046",
+        "name" : "HiddenAdventuresUITests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:HiddenAdventures.xcodeproj",
+        "identifier" : "483EE0774C13FB5827CD3D20",
+        "name" : "HiddenAdventuresTests"
+      }
+    }
+  ],
+  "version" : 1
+}

@@ -78,6 +78,10 @@ schemes:
       environmentVariables:
         HA_RUNTIME_MODE: fixture
         HA_SERVER_MODE: local_automation
+      testPlans:
+        - path: UITests/TestPlans/LocalDev.xctestplan
+          defaultPlan: true
+        - path: UITests/TestPlans/FullRegression.xctestplan
       targets:
         - name: HiddenAdventuresTests
         - name: HiddenAdventuresUITests
@@ -99,6 +103,10 @@ schemes:
       environmentVariables:
         HA_RUNTIME_MODE: fixture
         HA_SERVER_MODE: local_manual_qa
+      testPlans:
+        - path: UITests/TestPlans/LocalDev.xctestplan
+          defaultPlan: true
+        - path: UITests/TestPlans/FullRegression.xctestplan
       targets:
         - name: HiddenAdventuresTests
         - name: HiddenAdventuresUITests
@@ -118,6 +126,10 @@ schemes:
       environmentVariables:
         HA_RUNTIME_MODE: fixture
         HA_SERVER_MODE: local_automation
+      testPlans:
+        - path: UITests/TestPlans/LocalDev.xctestplan
+          defaultPlan: true
+        - path: UITests/TestPlans/FullRegression.xctestplan
       targets:
         - name: HiddenAdventuresTests
         - name: HiddenAdventuresUITests
@@ -137,6 +149,10 @@ schemes:
       environmentVariables:
         HA_RUNTIME_MODE: fixture
         HA_SERVER_MODE: production
+      testPlans:
+        - path: UITests/TestPlans/LocalDev.xctestplan
+          defaultPlan: true
+        - path: UITests/TestPlans/FullRegression.xctestplan
       targets:
         - name: HiddenAdventuresTests
         - name: HiddenAdventuresUITests

@@ -1,0 +1,31 @@
+{
+  "configurations" : [
+    {
+      "id" : "53B4F8D4-1D35-4B91-A1AA-5C0EF4D62D7B",
+      "name" : "Full Regression",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:HiddenAdventures.xcodeproj",
+        "identifier" : "2E243C4235B4CFEF9545C046",
+        "name" : "HiddenAdventuresUITests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:HiddenAdventures.xcodeproj",
+        "identifier" : "483EE0774C13FB5827CD3D20",
+        "name" : "HiddenAdventuresTests"
+      }
+    }
+  ],
+  "version" : 1
+}

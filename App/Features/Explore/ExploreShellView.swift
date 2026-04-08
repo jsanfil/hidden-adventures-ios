@@ -7,6 +7,7 @@ struct ExploreShellView: View {
   let viewerHandle: String?
   let viewerDisplayName: String?
   @Binding var mode: ExploreMode
+  @Binding var createAdventureVariant: CreateAdventureFixtureVariant?
   let onViewerProfileLoaded: (ProfileDetail) -> Void
   let onOpenDetail: (String) -> Void
   let onLogout: () -> Void
@@ -46,11 +47,22 @@ struct ExploreShellView: View {
         }
       }
     }
+    .overlay {
+      if let createAdventureVariant {
+        CreateAdventureView(initialVariant: createAdventureVariant) {
+          self.createAdventureVariant = nil
+        }
+        .ignoresSafeArea()
+        .zIndex(1)
+      }
+    }
     .safeAreaInset(edge: .bottom, spacing: 8) {
-      HABottomTabBar(
-        selectedTab: selectedTab,
-        onSelect: handleTabSelection
-      )
+      if createAdventureVariant == nil {
+        HABottomTabBar(
+          selectedTab: selectedTab,
+          onSelect: handleTabSelection
+        )
+      }
     }
     .task {
       guard feedItems.isEmpty else { return }
@@ -229,9 +241,11 @@ struct ExploreShellView: View {
       mode = .feed
     case .explore:
       mode = .map
+    case .post:
+      createAdventureVariant = .photos
     case .profile:
       mode = .profile
-    case .post, .saved:
+    case .saved:
       break
     }
   }
@@ -336,6 +350,7 @@ private struct ExploreShellPreviewWrapper: View {
       viewerHandle: MockFixtures.profile.handle,
       viewerDisplayName: MockFixtures.profile.displayName,
       mode: $mode,
+      createAdventureVariant: .constant(nil),
       onViewerProfileLoaded: { _ in },
       onOpenDetail: { _ in },
       onLogout: {}

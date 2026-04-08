@@ -76,6 +76,7 @@ struct RootView: View {
             viewerHandle: session.viewerHandle,
             viewerDisplayName: session.viewerDisplayName,
             mode: coordinator.exploreModeBinding,
+            createAdventureVariant: coordinator.createAdventureBinding,
             onViewerProfileLoaded: session.seedViewerProfile,
             onOpenDetail: { adventureID in
               coordinator.path.append(.detail(adventureID))

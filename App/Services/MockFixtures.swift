@@ -101,6 +101,50 @@ enum MockFixtures {
     capeID: ["coastal-path", "hero-mountain"]
   ]
 
+  static let createAdventureAvailablePhotos = [
+    "hero-mountain",
+    "swimming-hole",
+    "scenic-overlook",
+    "coastal-path",
+    "trail-forest"
+  ]
+
+  static let createAdventureSearchResults = [
+    CreateAdventureSearchResult(
+      id: "yosemite",
+      name: "Yosemite National Park",
+      subtitle: "California, United States",
+      latitude: 37.8651,
+      longitude: -119.5383
+    ),
+    CreateAdventureSearchResult(
+      id: "yellow-rock",
+      name: "Yellow Rock Trail",
+      subtitle: "Kanab, Utah, United States",
+      latitude: 37.0525,
+      longitude: -111.9899
+    ),
+    CreateAdventureSearchResult(
+      id: "crater-lake",
+      name: "Crater Lake",
+      subtitle: "Oregon, United States",
+      latitude: 42.8684,
+      longitude: -122.1685
+    )
+  ]
+
+  static let createAdventureCurrentLocation = CreateAdventureResolvedLocation(
+    name: "Yosemite Valley, California",
+    latitude: 37.7459,
+    longitude: -119.5332
+  )
+
+  static let createAdventurePinnedLocation = CreateAdventureResolvedLocation(
+    name: "Yosemite National Park",
+    latitude: 37.8651,
+    longitude: -119.5383
+  )
+
   static let adventureMedia: [String: [AdventureMediaItem]] = [
     eagleID: [
       AdventureMediaItem(id: "media-hero-mountain", sortOrder: 0, isPrimary: true, width: 1600, height: 1200),
@@ -331,6 +375,139 @@ enum MockFixtures {
       return uiTestBluePoolID
     default:
       return id
+    }
+  }
+
+  static func createAdventureScreenModel(
+    for variant: CreateAdventureFixtureVariant
+  ) -> CreateAdventureScreenModel {
+    switch variant {
+    case .photos:
+      return CreateAdventureScreenModel(
+        step: .photos,
+        selectedPhotoNames: ["hero-mountain", "swimming-hole"],
+        activePhotoIndex: 0,
+        title: "",
+        description: "",
+        resolvedLocation: nil,
+        locationLabel: "",
+        selectedCategory: nil,
+        visibility: .public,
+        isLocationPickerPresented: false,
+        locationPickerMode: .options,
+        locationSearchQuery: "",
+        currentLocationState: .idle,
+        locationSearchResults: [],
+        pinLocation: createAdventurePinnedLocation
+      )
+    case .detailsEmpty:
+      return CreateAdventureScreenModel(
+        step: .details,
+        selectedPhotoNames: ["hero-mountain", "swimming-hole"],
+        activePhotoIndex: 0,
+        title: "",
+        description: "",
+        resolvedLocation: nil,
+        locationLabel: "",
+        selectedCategory: .trails,
+        visibility: .public,
+        isLocationPickerPresented: false,
+        locationPickerMode: .options,
+        locationSearchQuery: "",
+        currentLocationState: .idle,
+        locationSearchResults: [],
+        pinLocation: createAdventurePinnedLocation
+      )
+    case .detailsLocation:
+      return CreateAdventureScreenModel(
+        step: .details,
+        selectedPhotoNames: ["hero-mountain", "swimming-hole"],
+        activePhotoIndex: 0,
+        title: "",
+        description: "",
+        resolvedLocation: createAdventurePinnedLocation,
+        locationLabel: "Yosemite National Park",
+        selectedCategory: .trails,
+        visibility: .public,
+        isLocationPickerPresented: false,
+        locationPickerMode: .options,
+        locationSearchQuery: "",
+        currentLocationState: .idle,
+        locationSearchResults: [],
+        pinLocation: createAdventurePinnedLocation
+      )
+    case .locationOptions:
+      return CreateAdventureScreenModel(
+        step: .details,
+        selectedPhotoNames: ["hero-mountain", "swimming-hole"],
+        activePhotoIndex: 0,
+        title: "",
+        description: "",
+        resolvedLocation: nil,
+        locationLabel: "",
+        selectedCategory: .trails,
+        visibility: .public,
+        isLocationPickerPresented: true,
+        locationPickerMode: .options,
+        locationSearchQuery: "",
+        currentLocationState: .idle,
+        locationSearchResults: [],
+        pinLocation: createAdventurePinnedLocation
+      )
+    case .locationSearchEmpty:
+      return CreateAdventureScreenModel(
+        step: .details,
+        selectedPhotoNames: ["hero-mountain", "swimming-hole"],
+        activePhotoIndex: 0,
+        title: "",
+        description: "",
+        resolvedLocation: nil,
+        locationLabel: "",
+        selectedCategory: nil,
+        visibility: .public,
+        isLocationPickerPresented: true,
+        locationPickerMode: .search,
+        locationSearchQuery: "",
+        currentLocationState: .idle,
+        locationSearchResults: [],
+        pinLocation: createAdventurePinnedLocation
+      )
+    case .locationSearchResults:
+      return CreateAdventureScreenModel(
+        step: .details,
+        selectedPhotoNames: ["hero-mountain", "swimming-hole"],
+        activePhotoIndex: 0,
+        title: "",
+        description: "",
+        resolvedLocation: nil,
+        locationLabel: "",
+        selectedCategory: nil,
+        visibility: .public,
+        isLocationPickerPresented: true,
+        locationPickerMode: .search,
+        locationSearchQuery: "yose",
+        currentLocationState: .idle,
+        locationSearchResults: createAdventureSearchResults,
+        pinLocation: createAdventurePinnedLocation
+      )
+    case .locationPin:
+      return CreateAdventureScreenModel(
+        step: .details,
+        selectedPhotoNames: ["hero-mountain", "swimming-hole"],
+        activePhotoIndex: 0,
+        title: "",
+        description: "",
+        resolvedLocation: nil,
+        locationLabel: "",
+        selectedCategory: nil,
+        visibility: .public,
+        isLocationPickerPresented: true,
+        locationPickerMode: .pin,
+        locationSearchQuery: "",
+        currentLocationState: .idle,
+        locationSearchResults: [],
+        pinLocation: createAdventurePinnedLocation
+      )
     }
   }
 }

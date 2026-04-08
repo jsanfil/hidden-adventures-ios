@@ -63,6 +63,13 @@ SwiftUI iOS client for the Hidden Adventures rebuild.
 4. Validate the manual QA path against `HiddenAdventures-LocalManualQA` and the sibling server's `local-manual-qa` mode with native email-code auth or an explicit troubleshooting token.
 5. For manual QA of `Get Started`, prefer a fresh email address that has never been used in the non-prod Cognito pool if confirmation delivery does not arrive after recreating a deleted user.
 
+## UI Test Workflow
+
+- Use `Scripts/run_ui_screen_tests.sh` for day-to-day work on a single screen or top-level view.
+- Pass `UITEST_ONLY_TESTING` or a second argument to narrow the run to a specific test class or method, for example `HiddenAdventuresUITests/ExploreMapScreenUITests/testExploreMap_rendersCoreChrome`.
+- Use `Scripts/run_ui_gallery.sh` when you want the full regression pass, including the screenshot/gallery coverage and walkthrough flow.
+- The `HiddenAdventures-LocalAutomation` scheme now references the checked-in `LocalDev` and `FullRegression` test plans so Xcode can run the fast subset by default and the full suite on demand.
+
 ## Suggested App Structure
 
 - `App/`: app entrypoint and root composition

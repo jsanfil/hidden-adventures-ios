@@ -26,9 +26,11 @@ final class AppCoordinator: ObservableObject {
   @Published var stage: AppStage
   @Published var path: [AppRoute]
   @Published var exploreMode: ExploreMode
+  @Published var createAdventureVariant: CreateAdventureFixtureVariant?
 
   init(environment: [String: String] = ProcessInfo.processInfo.environment) {
     path = []
+    createAdventureVariant = nil
 
     switch environment["UITEST_START_SCREEN"] {
     case "email":
@@ -51,6 +53,34 @@ final class AppCoordinator: ObservableObject {
       exploreMode = .feed
       let adventureID = environment["UITEST_DETAIL_ID"] ?? MockFixtures.bluePoolID
       path = [.detail(adventureID)]
+    case "create-photos":
+      stage = .explore
+      exploreMode = .feed
+      createAdventureVariant = .photos
+    case "create-details-empty":
+      stage = .explore
+      exploreMode = .feed
+      createAdventureVariant = .detailsEmpty
+    case "create-details-location":
+      stage = .explore
+      exploreMode = .feed
+      createAdventureVariant = .detailsLocation
+    case "create-location-options":
+      stage = .explore
+      exploreMode = .feed
+      createAdventureVariant = .locationOptions
+    case "create-location-search-empty":
+      stage = .explore
+      exploreMode = .feed
+      createAdventureVariant = .locationSearchEmpty
+    case "create-location-search-results":
+      stage = .explore
+      exploreMode = .feed
+      createAdventureVariant = .locationSearchResults
+    case "create-location-pin":
+      stage = .explore
+      exploreMode = .feed
+      createAdventureVariant = .locationPin
     default:
       stage = .welcome
       exploreMode = .feed
@@ -71,9 +101,17 @@ final class AppCoordinator: ObservableObject {
     )
   }
 
+  var createAdventureBinding: Binding<CreateAdventureFixtureVariant?> {
+    Binding(
+      get: { self.createAdventureVariant },
+      set: { self.createAdventureVariant = $0 }
+    )
+  }
+
   func resetToWelcome() {
     path = []
     stage = .welcome
     exploreMode = .feed
+    createAdventureVariant = nil
   }
 }
