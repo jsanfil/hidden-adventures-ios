@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct CreateAdventureView: View {
   private enum Layout {
@@ -7,6 +8,8 @@ struct CreateAdventureView: View {
   }
 
   let initialVariant: CreateAdventureFixtureVariant
+  let adventureService: AdventureService?
+  let runtimeMode: AppRuntimeMode
   let onClose: () -> Void
 
   @State private var step: CreateAdventureStep
@@ -24,13 +27,19 @@ struct CreateAdventureView: View {
   @State private var currentLocationState: CreateAdventureCurrentLocationState
   @State private var locationSearchResults: [CreateAdventureSearchResult]
   @State private var pinLocation: CreateAdventureResolvedLocation
+  @State private var isSubmitting: Bool
+  @State private var submissionError: String?
 
   init(
     initialVariant: CreateAdventureFixtureVariant = .photos,
+    adventureService: AdventureService? = nil,
+    runtimeMode: AppRuntimeMode = .fixturePreview,
     onClose: @escaping () -> Void
   ) {
     let model = MockFixtures.createAdventureScreenModel(for: initialVariant)
     self.initialVariant = initialVariant
+    self.adventureService = adventureService
+    self.runtimeMode = runtimeMode
     self.onClose = onClose
     _step = State(initialValue: model.step)
     _selectedPhotoNames = State(initialValue: model.selectedPhotoNames)
@@ -47,6 +56,8 @@ struct CreateAdventureView: View {
     _currentLocationState = State(initialValue: model.currentLocationState)
     _locationSearchResults = State(initialValue: model.locationSearchResults)
     _pinLocation = State(initialValue: model.pinLocation)
+    _isSubmitting = State(initialValue: false)
+    _submissionError = State(initialValue: nil)
   }
 
   private var availablePhotoNames: [String] {
@@ -55,6 +66,10 @@ struct CreateAdventureView: View {
 
   private var canContinueFromPhotos: Bool {
     selectedPhotoNames.isEmpty == false
+  }
+
+  private var canSubmitAdventure: Bool {
+    title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false && isSubmitting == false
   }
 
   var body: some View {
@@ -151,7 +166,7 @@ struct CreateAdventureView: View {
         .accessibilityIdentifier("create.next")
       } else {
         Button {
-          onClose()
+          submitAdventure()
         } label: {
           Text("Post")
             .font(.system(size: 15, weight: .semibold))
@@ -162,6 +177,8 @@ struct CreateAdventureView: View {
             .clipShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
+        .disabled(canSubmitAdventure == false)
+        .opacity(canSubmitAdventure ? 1 : 0.65)
         .accessibilityIdentifier("create.post")
       }
     }
@@ -312,6 +329,13 @@ struct CreateAdventureView: View {
     ScrollView(showsIndicators: false) {
       VStack(alignment: .leading, spacing: 18) {
         photoStrip
+
+        if let submissionError {
+          Text(submissionError)
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(.red)
+            .accessibilityIdentifier("create.submit.error")
+        }
 
         labeledField("TITLE") {
           TextField("Give this spot a name...", text: $title)
@@ -1065,6 +1089,62 @@ struct CreateAdventureView: View {
 
   private func coordinateText(for location: CreateAdventureResolvedLocation) -> String {
     "\(String(format: "%.4f", location.latitude)), \(String(format: "%.4f", location.longitude))"
+  }
+
+  private func submitAdventure() {
+    submissionError = nil
+
+    guard runtimeMode == .liveServer, let adventureService else {
+      onClose()
+      return
+    }
+
+    Task {
+      isSubmitting = true
+      defer { isSubmitting = false }
+
+      do {
+        let request = try buildCreateRequest()
+        _ = try await adventureService.createAdventure(request: request)
+        onClose()
+      } catch {
+        submissionError = error.localizedDescription
+      }
+    }
+  }
+
+  private func buildCreateRequest() throws -> CreateAdventureRequest {
+    let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmedPlaceLabel = locationLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    return CreateAdventureRequest(
+      title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+      description: trimmedDescription.isEmpty ? nil : trimmedDescription,
+      categorySlug: selectedCategory,
+      visibility: visibility,
+      location: resolvedLocation.map {
+        AdventureLocation(latitude: $0.latitude, longitude: $0.longitude)
+      },
+      placeLabel: trimmedPlaceLabel.isEmpty ? nil : trimmedPlaceLabel,
+      photos: try selectedPhotoNames.map(photoUpload(for:))
+    )
+  }
+
+  private func photoUpload(for imageName: String) throws -> CreateAdventurePhotoUpload {
+    guard let image = UIImage(named: imageName) else {
+      throw FixtureServiceError.notFound
+    }
+
+    guard let data = image.jpegData(compressionQuality: 0.88) else {
+      throw FixtureServiceError.notSupported
+    }
+
+    return CreateAdventurePhotoUpload(
+      data: data,
+      mimeType: "image/jpeg",
+      width: Int(image.size.width),
+      height: Int(image.size.height)
+    )
   }
 }
 

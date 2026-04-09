@@ -1,4 +1,77 @@
 import Foundation
+import UIKit
+
+struct CreateAdventurePhotoUpload: Sendable {
+  let data: Data
+  let mimeType: String
+  let width: Int?
+  let height: Int?
+}
+
+struct CreateAdventureRequest: Sendable {
+  let title: String
+  let description: String?
+  let categorySlug: Category?
+  let visibility: Visibility
+  let location: AdventureLocation?
+  let placeLabel: String?
+  let photos: [CreateAdventurePhotoUpload]
+}
+
+struct CreatedAdventureItem: Codable, Equatable, Sendable {
+  let id: String
+  let status: String
+}
+
+struct CreateAdventureResponse: Codable, Equatable, Sendable {
+  let item: CreatedAdventureItem
+}
+
+private struct AdventureUploadAllocationRequest: Encodable {
+  struct Item: Encodable {
+    let clientId: String
+    let mimeType: String
+    let byteSize: Int
+    let width: Int?
+    let height: Int?
+  }
+
+  let items: [Item]
+}
+
+private struct AdventureUploadAllocationResponse: Decodable {
+  struct Item: Decodable {
+    struct Upload: Decodable {
+      let method: String
+      let url: String
+      let headers: [String: String]
+      let expiresAt: String
+    }
+
+    let clientId: String
+    let mediaId: String
+    let storageKey: String
+    let upload: Upload
+  }
+
+  let items: [Item]
+}
+
+private struct AdventureCreatePayload: Encodable {
+  struct Media: Encodable {
+    let mediaId: String
+    let sortOrder: Int
+    let isPrimary: Bool
+  }
+
+  let title: String
+  let description: String?
+  let categorySlug: String?
+  let visibility: String
+  let location: AdventureLocation?
+  let placeLabel: String?
+  let media: [Media]
+}
 
 protocol AdventureService {
   func listFeed(
@@ -17,6 +90,10 @@ protocol AdventureService {
   func loadMediaData(
     id: String
   ) async throws -> Data
+
+  func createAdventure(
+    request: CreateAdventureRequest
+  ) async throws -> CreateAdventureResponse
 }
 
 struct FixtureAdventureService: AdventureService {
@@ -52,6 +129,18 @@ struct FixtureAdventureService: AdventureService {
     id: String
   ) async throws -> Data {
     throw FixtureServiceError.notSupported
+  }
+
+  func createAdventure(
+    request: CreateAdventureRequest
+  ) async throws -> CreateAdventureResponse {
+    _ = request
+    return CreateAdventureResponse(
+      item: CreatedAdventureItem(
+        id: UUID().uuidString.lowercased(),
+        status: "pending_moderation"
+      )
+    )
   }
 }
 
@@ -103,6 +192,86 @@ struct RemoteAdventureService: AdventureService {
     )
     await MediaDataCache.shared.insert(data, for: id)
     return data
+  }
+
+  func createAdventure(
+    request: CreateAdventureRequest
+  ) async throws -> CreateAdventureResponse {
+    let allocationRequest = AdventureUploadAllocationRequest(
+      items: request.photos.enumerated().map { index, photo in
+        AdventureUploadAllocationRequest.Item(
+          clientId: "photo-\(index)",
+          mimeType: photo.mimeType,
+          byteSize: photo.data.count,
+          width: photo.width,
+          height: photo.height
+        )
+      }
+    )
+
+    let allocationResponse: AdventureUploadAllocationResponse = try await client.post(
+      pathComponents: ["media", "adventure-uploads"],
+      body: allocationRequest,
+      requiresAuth: true
+    )
+
+    guard allocationResponse.items.count == request.photos.count else {
+      throw APIError.invalidResponse
+    }
+
+    for (index, allocation) in allocationResponse.items.enumerated() {
+      try await uploadPhoto(request.photos[index], target: allocation.upload)
+    }
+
+    let payload = AdventureCreatePayload(
+      title: request.title,
+      description: request.description,
+      categorySlug: request.categorySlug?.rawValue,
+      visibility: request.visibility.rawValue,
+      location: request.location,
+      placeLabel: request.placeLabel,
+      media: allocationResponse.items.enumerated().map { index, item in
+        AdventureCreatePayload.Media(
+          mediaId: item.mediaId,
+          sortOrder: index,
+          isPrimary: index == 0
+        )
+      }
+    )
+
+    return try await client.post(
+      pathComponents: ["adventures"],
+      body: payload,
+      requiresAuth: true
+    )
+  }
+
+  private func uploadPhoto(
+    _ photo: CreateAdventurePhotoUpload,
+    target: AdventureUploadAllocationResponse.Item.Upload
+  ) async throws {
+    guard let url = URL(string: target.url) else {
+      throw APIError.invalidBaseURL(target.url)
+    }
+
+    var uploadRequest = URLRequest(url: url)
+    uploadRequest.httpMethod = target.method
+    uploadRequest.httpBody = photo.data
+    for (header, value) in target.headers {
+      uploadRequest.setValue(value, forHTTPHeaderField: header)
+    }
+
+    let (_, response) = try await client.session.data(for: uploadRequest)
+    guard let httpResponse = response as? HTTPURLResponse else {
+      throw APIError.invalidResponse
+    }
+
+    guard (200..<300).contains(httpResponse.statusCode) else {
+      throw APIError.server(
+        statusCode: httpResponse.statusCode,
+        message: HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+      )
+    }
   }
 }
 

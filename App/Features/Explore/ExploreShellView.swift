@@ -49,7 +49,11 @@ struct ExploreShellView: View {
     }
     .overlay {
       if let createAdventureVariant {
-        CreateAdventureView(initialVariant: createAdventureVariant) {
+        CreateAdventureView(
+          initialVariant: createAdventureVariant,
+          adventureService: adventureService,
+          runtimeMode: runtimeMode
+        ) {
           self.createAdventureVariant = nil
         }
         .ignoresSafeArea()
