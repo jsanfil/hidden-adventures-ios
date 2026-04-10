@@ -169,23 +169,23 @@ final class ScreenGalleryRegressionUITests: HiddenAdventuresUITestCase {
     try captureScreen(
       named: "gallery-explore-map",
       startScreen: "explore-map",
-      expectedIdentifier: "map.card.blue-pool"
+      expectedIdentifier: "map.filterButton"
     ) { app, directory in
       self.assertExists(
-        app.buttons.matching(identifier: "map.visibilityBar").firstMatch,
-        name: "map-visibility-bar",
+        app.textFields["map.searchField"],
+        name: "map-search-field",
         in: app,
         screenshotDir: directory
       )
       self.assertExists(
-        app.buttons["map.locationButton"],
-        name: "map-location-button",
+        app.buttons["map.filterButton"],
+        name: "map-filter-button",
         in: app,
         screenshotDir: directory
       )
       self.assertExists(
-        app.buttons["List view"],
-        name: "map-list-view-button",
+        app.buttons["map.recenterButton"],
+        name: "map-recenter-button",
         in: app,
         screenshotDir: directory
       )
@@ -198,7 +198,7 @@ final class ScreenGalleryRegressionUITests: HiddenAdventuresUITestCase {
       )
       self.assertExists(
         app.buttons["map.pin.\(self.bluePoolID)"],
-        name: "map-selected-pin",
+        name: "map-blue-pool-pin",
         in: app,
         screenshotDir: directory
       )
@@ -220,15 +220,21 @@ final class ScreenGalleryRegressionUITests: HiddenAdventuresUITestCase {
         in: app,
         screenshotDir: directory
       )
+      self.assertExists(
+        app.otherElements["map.card.image.blue-pool"],
+        name: "map-blue-pool-image",
+        in: app,
+        screenshotDir: directory
+      )
       self.assertHittable(
-        app.buttons["map.card.blue-pool"],
+        app.buttons["map.card.\(self.bluePoolID)"],
         name: "map-blue-pool-card",
         in: app,
         screenshotDir: directory
       )
-      self.assertNotExists(
-        app.staticTexts["Search places..."],
-        name: "map-search-removed",
+      self.assertExists(
+        app.buttons["map.sheet.modeButton"],
+        name: "map-sheet-mode-button",
         in: app,
         screenshotDir: directory
       )

@@ -109,15 +109,9 @@ struct ExploreShellView: View {
 
   private var mapScreen: some View {
     MapExploreView(
-      items: filteredItems,
+      items: feedItems,
+      adventureService: adventureService,
       runtimeMode: runtimeMode,
-      visibilityFilter: visibilityFilter,
-      activeCategory: activeCategory,
-      onVisibilityChange: { visibilityFilter = $0 },
-      onCategoryToggle: { category in
-        activeCategory = activeCategory == category ? nil : category
-      },
-      onSelectTab: handleTabSelection,
       onOpenDetail: onOpenDetail
     )
   }

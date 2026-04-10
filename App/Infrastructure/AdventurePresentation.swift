@@ -22,37 +22,103 @@ enum AdventurePresentation {
           id: "blue-pool",
           destinationID: MockFixtures.bluePoolID,
           title: "Blue Pool",
+          placeLabel: "Willamette NF",
+          distanceText: "2.4 mi",
           rating: 4.8,
-          category: "Swimming",
-          imageNames: ["swimming-hole", "hidden-canyon", "hero-mountain"]
+          category: "Water Spots",
+          categorySlug: .waterSpots,
+          visibility: .connections,
+          imageNames: ["swimming-hole", "hidden-canyon", "hero-mountain"],
+          location: AdventureLocation(latitude: 44.3956, longitude: -122.0099),
+          markerPoint: CGPoint(x: 0.43, y: 0.37)
         ),
         MapCardPresentation(
           id: "opal-creek-trail",
           destinationID: MockFixtures.eagleID,
           title: "Opal Creek Trail",
+          placeLabel: "Opal Creek Wilderness",
+          distanceText: "4.1 mi",
           rating: 4.9,
-          category: "Trail",
-          imageNames: ["trail-forest", "coastal-path"]
+          category: "Trails",
+          categorySlug: .trails,
+          visibility: .public,
+          imageNames: ["trail-forest", "coastal-path"],
+          location: AdventureLocation(latitude: 44.8525, longitude: -122.0899),
+          markerPoint: CGPoint(x: 0.67, y: 0.28)
         ),
         MapCardPresentation(
           id: "tom-dick-harry",
           destinationID: MockFixtures.tomDickID,
           title: "Tom Dick & Harry",
+          placeLabel: "Mt. Hood",
+          distanceText: "8.2 mi",
           rating: 4.7,
-          category: "Viewpoint",
-          imageNames: ["scenic-overlook"]
+          category: "Viewpoints",
+          categorySlug: .viewpoints,
+          visibility: .public,
+          imageNames: ["scenic-overlook"],
+          location: AdventureLocation(latitude: 45.3739, longitude: -121.7162),
+          markerPoint: CGPoint(x: 0.26, y: 0.20)
+        ),
+        MapCardPresentation(
+          id: "oneonta-gorge",
+          destinationID: MockFixtures.oneontaID,
+          title: "Oneonta Gorge",
+          placeLabel: "Columbia River Gorge",
+          distanceText: "12.5 mi",
+          rating: 4.9,
+          category: "Caves",
+          categorySlug: .caves,
+          visibility: .private,
+          imageNames: ["hidden-canyon", "swimming-hole"],
+          location: AdventureLocation(latitude: 45.5908, longitude: -122.0868),
+          markerPoint: CGPoint(x: 0.31, y: 0.53)
+        ),
+        MapCardPresentation(
+          id: "multnomah-falls",
+          destinationID: MockFixtures.multnomahID,
+          title: "Multnomah Falls",
+          placeLabel: "Columbia River Gorge",
+          distanceText: "14.2 mi",
+          rating: 4.8,
+          category: "Viewpoints",
+          categorySlug: .viewpoints,
+          visibility: .public,
+          imageNames: ["hero-mountain", "scenic-overlook"],
+          location: AdventureLocation(latitude: 45.5762, longitude: -122.1158),
+          markerPoint: CGPoint(x: 0.72, y: 0.45)
+        ),
+        MapCardPresentation(
+          id: "forest-park-loop",
+          destinationID: MockFixtures.forestParkID,
+          title: "Forest Park Loop",
+          placeLabel: "Portland, OR",
+          distanceText: "1.2 mi",
+          rating: 4.5,
+          category: "Trails",
+          categorySlug: .trails,
+          visibility: .connections,
+          imageNames: ["trail-forest"],
+          location: AdventureLocation(latitude: 45.5723, longitude: -122.7614),
+          markerPoint: CGPoint(x: 0.48, y: 0.73)
         )
       ]
     }
 
-    return Array(items.prefix(3)).map { item in
+    return items.map { item in
       MapCardPresentation(
         id: item.title.mapIdentifier,
         destinationID: item.id,
         title: item.title,
+        placeLabel: item.placeLabel ?? "Hidden location",
+        distanceText: "25 mi",
         rating: item.stats.averageRating,
         category: item.categorySlug?.displayTitle ?? "Adventure",
-        imageNames: []
+        categorySlug: item.categorySlug,
+        visibility: item.visibility,
+        imageNames: [],
+        location: item.location,
+        markerPoint: nil
       )
     }
   }
@@ -263,9 +329,15 @@ struct MapCardPresentation: Identifiable {
   let id: String
   let destinationID: String
   let title: String
+  let placeLabel: String
+  let distanceText: String
   let rating: Double
   let category: String
+  let categorySlug: Category?
+  let visibility: Visibility
   let imageNames: [String]
+  let location: AdventureLocation?
+  let markerPoint: CGPoint?
 }
 
 struct HAMediaCarouselOrPlaceholder_Previews: PreviewProvider {

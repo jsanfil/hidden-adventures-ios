@@ -6,20 +6,20 @@ final class ExploreMapScreenUITests: HiddenAdventuresUITestCase {
     let app = launchApp(startScreen: "explore-map")
 
     assertExists(
-      app.buttons.matching(identifier: "map.visibilityBar").firstMatch,
-      name: "map-visibility-bar",
+      app.textFields["map.searchField"],
+      name: "map-search-field",
       in: app,
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.buttons["map.locationButton"],
-      name: "map-location-button",
+      app.buttons["map.filterButton"],
+      name: "map-filter-button",
       in: app,
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.buttons["List view"],
-      name: "map-list-view-button",
+      app.buttons["map.recenterButton"],
+      name: "map-recenter-button",
       in: app,
       screenshotDir: screenshotDir
     )
@@ -32,7 +32,7 @@ final class ExploreMapScreenUITests: HiddenAdventuresUITestCase {
     )
     assertExists(
       app.buttons["map.pin.\(bluePoolID)"],
-      name: "map-selected-pin",
+      name: "map-blue-pool-pin",
       in: app,
       screenshotDir: screenshotDir
     )
@@ -54,27 +54,111 @@ final class ExploreMapScreenUITests: HiddenAdventuresUITestCase {
       in: app,
       screenshotDir: screenshotDir
     )
+    assertExists(
+      app.otherElements["map.card.image.blue-pool"],
+      name: "map-blue-pool-image",
+      in: app,
+      screenshotDir: screenshotDir
+    )
     assertHittable(
-      app.buttons["map.card.blue-pool"],
+      app.buttons["map.card.\(bluePoolID)"],
       name: "map-blue-pool-card",
       in: app,
       screenshotDir: screenshotDir
     )
+    assertExists(
+      app.buttons["map.sheet.modeButton"],
+      name: "map-sheet-mode-button",
+      in: app,
+      screenshotDir: screenshotDir
+    )
     assertNotExists(
-      app.staticTexts["Search places..."],
-      name: "map-search-removed",
+      app.staticTexts["0.0"],
+      name: "map-peek-rating-hidden",
       in: app,
       screenshotDir: screenshotDir
     )
   }
 
-  func testExploreMap_selectedPinVisible() throws {
+  func testExploreMap_filterPopoverVisible() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "explore-map-filter")
+    let app = launchApp(startScreen: "explore-map")
+
+    app.buttons["map.filterButton"].tap()
+
+    assertExists(
+      app.buttons["map.filter.option.all"],
+      name: "map-filter-all-option",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.buttons["map.filter.option.public"],
+      name: "map-filter-public-option",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.buttons["map.filter.option.connections"],
+      name: "map-filter-connections-option",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.buttons["map.filter.option.private"],
+      name: "map-filter-private-option",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+  }
+
+  func testExploreMap_selectedPinShowsPreview() throws {
     let screenshotDir = try preparedScreenshotDirectory(named: "explore-map-pin-smoke")
     let app = launchApp(startScreen: "explore-map")
 
+    app.buttons["map.pin.\(bluePoolID)"].tap()
+
     assertExists(
-      app.buttons["map.pin.\(bluePoolID)"],
-      name: "map-selected-pin",
+      app.otherElements["map.preview"],
+      name: "map-preview-card",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.buttons["map.preview.close"],
+      name: "map-preview-close",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+  }
+
+  func testExploreMap_expandedSheetShowsListRows() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "explore-map-expanded")
+    let app = launchApp(startScreen: "explore-map")
+
+    app.buttons["map.sheet.modeButton"].tap()
+
+    assertExists(
+      app.buttons["map.listrow.\(bluePoolID)"],
+      name: "map-blue-pool-list-row",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.buttons["map.listrow.\(eagleID)"],
+      name: "map-eagle-list-row",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.staticTexts["25 mi"],
+      name: "map-expanded-distance-visible",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.staticTexts["0.0"],
+      name: "map-expanded-rating-visible",
       in: app,
       screenshotDir: screenshotDir
     )

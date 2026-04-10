@@ -8,6 +8,9 @@ enum MockFixtures {
   static let bluePoolID = "adventure-blue-pool"
   static let tomDickID = "adventure-tom-dick-harry"
   static let capeID = "adventure-cape-kiwanda"
+  static let oneontaID = "adventure-oneonta-gorge"
+  static let multnomahID = "adventure-multnomah-falls"
+  static let forestParkID = "adventure-forest-park-loop"
 
   static let bootstrapDraft = ProfileBootstrapDraft(
     displayName: "Jordan",
@@ -91,6 +94,51 @@ enum MockFixtures {
       author: AdventureAuthor(handle: "amy", displayName: "Amy L.", homeCity: "Salem", homeRegion: "OR"),
       primaryMedia: MediaReference(id: "media-coastal-path", storageKey: "coastal-path"),
       stats: AdventureStats(favoriteCount: 892, commentCount: 16, ratingCount: 84, averageRating: 4.7)
+    ),
+    AdventureCard(
+      id: oneontaID,
+      title: "Oneonta Gorge",
+      description: "A dramatic slot canyon route with mossy walls, cold creek crossings, and just enough adventure to feel hidden.",
+      categorySlug: .caves,
+      categoryLabel: "Canyon",
+      visibility: .private,
+      createdAt: "2026-03-15T08:30:00Z",
+      publishedAt: "2026-03-15T08:30:00Z",
+      location: AdventureLocation(latitude: 45.5908, longitude: -122.0868),
+      placeLabel: "Columbia River Gorge, OR",
+      author: AdventureAuthor(handle: "megan", displayName: "Megan", homeCity: "Portland", homeRegion: "OR"),
+      primaryMedia: MediaReference(id: "media-hidden-canyon", storageKey: "hidden-canyon"),
+      stats: AdventureStats(favoriteCount: 3104, commentCount: 89, ratingCount: 913, averageRating: 4.9)
+    ),
+    AdventureCard(
+      id: multnomahID,
+      title: "Multnomah Falls",
+      description: "The classic gorge stop still earns its reputation, especially when the lower bridge catches the afternoon mist.",
+      categorySlug: .viewpoints,
+      categoryLabel: "Waterfall View",
+      visibility: .public,
+      createdAt: "2026-03-14T08:30:00Z",
+      publishedAt: "2026-03-14T08:30:00Z",
+      location: AdventureLocation(latitude: 45.5762, longitude: -122.1158),
+      placeLabel: "Columbia River Gorge, OR",
+      author: AdventureAuthor(handle: "lena", displayName: "Lena", homeCity: "Portland", homeRegion: "OR"),
+      primaryMedia: MediaReference(id: "media-hero-falls", storageKey: "hero-mountain"),
+      stats: AdventureStats(favoriteCount: 2240, commentCount: 51, ratingCount: 628, averageRating: 4.8)
+    ),
+    AdventureCard(
+      id: forestParkID,
+      title: "Forest Park Loop",
+      description: "An easy reset close to downtown with tall firs, soft trail underfoot, and enough quiet to feel miles away.",
+      categorySlug: .trails,
+      categoryLabel: "Urban Escape",
+      visibility: .connections,
+      createdAt: "2026-03-13T08:30:00Z",
+      publishedAt: "2026-03-13T08:30:00Z",
+      location: AdventureLocation(latitude: 45.5723, longitude: -122.7614),
+      placeLabel: "Portland, OR",
+      author: AdventureAuthor(handle: "jo", displayName: "Jo", homeCity: "Portland", homeRegion: "OR"),
+      primaryMedia: MediaReference(id: "media-forest-park", storageKey: "trail-forest"),
+      stats: AdventureStats(favoriteCount: 642, commentCount: 18, ratingCount: 105, averageRating: 4.5)
     )
   ]
 
@@ -98,7 +146,10 @@ enum MockFixtures {
     eagleID: ["hero-mountain", "scenic-overlook", "trail-forest"],
     bluePoolID: ["swimming-hole", "hidden-canyon", "trail-forest", "hero-mountain"],
     tomDickID: ["scenic-overlook", "trail-forest"],
-    capeID: ["coastal-path", "hero-mountain"]
+    capeID: ["coastal-path", "hero-mountain"],
+    oneontaID: ["hidden-canyon", "swimming-hole", "scenic-overlook"],
+    multnomahID: ["hero-mountain", "scenic-overlook"],
+    forestParkID: ["trail-forest", "coastal-path"]
   ]
 
   static let createAdventureAvailablePhotos = [
@@ -164,6 +215,18 @@ enum MockFixtures {
     capeID: [
       AdventureMediaItem(id: "media-coastal-path", sortOrder: 0, isPrimary: true, width: 1600, height: 1200),
       AdventureMediaItem(id: "media-hero-mountain", sortOrder: 1, isPrimary: false, width: 1600, height: 1200)
+    ],
+    oneontaID: [
+      AdventureMediaItem(id: "media-hidden-canyon", sortOrder: 0, isPrimary: true, width: 1600, height: 1200),
+      AdventureMediaItem(id: "media-swimming-hole", sortOrder: 1, isPrimary: false, width: 1600, height: 1200)
+    ],
+    multnomahID: [
+      AdventureMediaItem(id: "media-hero-mountain", sortOrder: 0, isPrimary: true, width: 1600, height: 1200),
+      AdventureMediaItem(id: "media-scenic-overlook", sortOrder: 1, isPrimary: false, width: 1600, height: 1200)
+    ],
+    forestParkID: [
+      AdventureMediaItem(id: "media-trail-forest", sortOrder: 0, isPrimary: true, width: 1600, height: 1200),
+      AdventureMediaItem(id: "media-coastal-path", sortOrder: 1, isPrimary: false, width: 1600, height: 1200)
     ]
   ]
 
@@ -231,6 +294,54 @@ enum MockFixtures {
       stats: feedItems[3].stats,
       placeLabel: feedItems[3].placeLabel,
       updatedAt: "2026-03-16T08:30:00Z"
+    ),
+    oneontaID: AdventureDetail(
+      id: oneontaID,
+      title: feedItems[4].title,
+      description: feedItems[4].description,
+      categorySlug: feedItems[4].categorySlug,
+      categoryLabel: feedItems[4].categoryLabel,
+      visibility: feedItems[4].visibility,
+      createdAt: feedItems[4].createdAt,
+      publishedAt: feedItems[4].publishedAt,
+      location: feedItems[4].location,
+      author: feedItems[4].author,
+      primaryMedia: feedItems[4].primaryMedia,
+      stats: feedItems[4].stats,
+      placeLabel: "Columbia River Gorge",
+      updatedAt: "2026-03-15T08:30:00Z"
+    ),
+    multnomahID: AdventureDetail(
+      id: multnomahID,
+      title: feedItems[5].title,
+      description: feedItems[5].description,
+      categorySlug: feedItems[5].categorySlug,
+      categoryLabel: feedItems[5].categoryLabel,
+      visibility: feedItems[5].visibility,
+      createdAt: feedItems[5].createdAt,
+      publishedAt: feedItems[5].publishedAt,
+      location: feedItems[5].location,
+      author: feedItems[5].author,
+      primaryMedia: feedItems[5].primaryMedia,
+      stats: feedItems[5].stats,
+      placeLabel: "Columbia River Gorge",
+      updatedAt: "2026-03-14T08:30:00Z"
+    ),
+    forestParkID: AdventureDetail(
+      id: forestParkID,
+      title: feedItems[6].title,
+      description: feedItems[6].description,
+      categorySlug: feedItems[6].categorySlug,
+      categoryLabel: feedItems[6].categoryLabel,
+      visibility: feedItems[6].visibility,
+      createdAt: feedItems[6].createdAt,
+      publishedAt: feedItems[6].publishedAt,
+      location: feedItems[6].location,
+      author: feedItems[6].author,
+      primaryMedia: feedItems[6].primaryMedia,
+      stats: feedItems[6].stats,
+      placeLabel: "Portland, OR",
+      updatedAt: "2026-03-13T08:30:00Z"
     )
   ]
 
