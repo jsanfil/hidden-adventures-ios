@@ -25,6 +25,7 @@
 		5B58C9379D10CC5F756AB455 /* AdventureDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51AEB6FD9CC9D30EC2CC883E /* AdventureDetailView.swift */; };
 		5FF1999DA0CDC78210EAAEC8 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B33EC6D97B65EF29FDCB70C /* RootView.swift */; };
 		62C06078139D3DE7646834ED /* ExploreShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 742712AC53B2228B513E2B06 /* ExploreShellView.swift */; };
+		648A1C093F5F44B792F63531 /* ExploreLocationSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 648A1C083F5F44B792F63531 /* ExploreLocationSearch.swift */; };
 		667E9CB3F5192D2F2618F4F5 /* DetailScreenUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E13547CAFE706BA9FCD8491 /* DetailScreenUITests.swift */; };
 		67B2C8F82886F8611EA41B19 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A85B19635A8492F38A602880 /* WelcomeView.swift */; };
 		6EE6AC8E2576DE9484094829 /* WalkthroughFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FCDFA427313D13A957A8283 /* WalkthroughFlowUITests.swift */; };
@@ -98,6 +99,7 @@
 		7152BCD3FCE7EB6F6DF3D607 /* AppSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSession.swift; sourceTree = "<group>"; };
 		725134AE2289C5B714A9678B /* ScreenGalleryRegressionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenGalleryRegressionUITests.swift; sourceTree = "<group>"; };
 		742712AC53B2228B513E2B06 /* ExploreShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreShellView.swift; sourceTree = "<group>"; };
+		648A1C083F5F44B792F63531 /* ExploreLocationSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreLocationSearch.swift; sourceTree = "<group>"; };
 		7B9C204CDC9CECCE3B5C52BB /* MapExploreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapExploreView.swift; sourceTree = "<group>"; };
 		808A87D5F1BF4CFE8454A0FB /* HiddenAdventuresUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = HiddenAdventuresUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		85DEB3130C9F6520644EA13B /* ProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileService.swift; sourceTree = "<group>"; };
@@ -345,6 +347,7 @@
 		FC61830ABAC26CE0AB6C717C /* Explore */ = {
 			isa = PBXGroup;
 			children = (
+				648A1C083F5F44B792F63531 /* ExploreLocationSearch.swift */,
 				742712AC53B2228B513E2B06 /* ExploreShellView.swift */,
 				DEBD234077F99604B20D3700 /* FeedView.swift */,
 				7B9C204CDC9CECCE3B5C52BB /* MapExploreView.swift */,
@@ -514,6 +517,7 @@
 				9ADA44B142A6FA2CA40C4B42 /* DomainModels.swift in Sources */,
 				9850F8D83B318009FF879E7D /* EmailAuthView.swift in Sources */,
 				62C06078139D3DE7646834ED /* ExploreShellView.swift in Sources */,
+				648A1C093F5F44B792F63531 /* ExploreLocationSearch.swift in Sources */,
 				A8C4B0E9F16AC84BEC0B95E9 /* FeedView.swift in Sources */,
 				C9E91AFB760282C44A5742A1 /* HAComponents.swift in Sources */,
 				AF5F56F417AC628A475C211F /* HATheme.swift in Sources */,

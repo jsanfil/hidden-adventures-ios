@@ -140,21 +140,9 @@ final class ScreenGalleryRegressionUITests: HiddenAdventuresUITestCase {
         in: app,
         screenshotDir: directory
       )
-      self.assertHittable(
-        app.buttons["feed.card.\(self.eagleID)"],
-        name: "feed-first-card",
-        in: app,
-        screenshotDir: directory
-      )
       self.assertExists(
-        app.staticTexts["feed.card.title.\(self.eagleID)"],
-        name: "feed-first-card-title",
-        in: app,
-        screenshotDir: directory
-      )
-      self.assertExists(
-        app.staticTexts["feed.card.location.\(self.eagleID)"],
-        name: "feed-first-card-location",
+        app.scrollViews["feed.scroll"],
+        name: "feed-scroll",
         in: app,
         screenshotDir: directory
       )

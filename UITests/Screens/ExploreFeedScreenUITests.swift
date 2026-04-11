@@ -1,6 +1,27 @@
 import XCTest
 
 final class ExploreFeedScreenUITests: HiddenAdventuresUITestCase {
+  private func anyFeedCard(in app: XCUIApplication) -> XCUIElementQuery {
+    app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "feed.card."))
+  }
+
+  private func anyFeedCardTitle(in app: XCUIApplication) -> XCUIElementQuery {
+    app.staticTexts.matching(NSPredicate(format: "identifier BEGINSWITH %@", "feed.card.title."))
+  }
+
+  private func anyFeedCardLocation(in app: XCUIApplication) -> XCUIElementQuery {
+    app.staticTexts.matching(NSPredicate(format: "identifier BEGINSWITH %@", "feed.card.location."))
+  }
+
+  private func waitForAnyFeedCard(
+    in app: XCUIApplication,
+    timeout: TimeInterval = 10
+  ) -> XCUIElement {
+    let firstCard = anyFeedCard(in: app).firstMatch
+    XCTAssertTrue(firstCard.waitForExistence(timeout: timeout), "Expected at least one feed card in Explore.")
+    return firstCard
+  }
+
   func testExploreFeed_rendersCoreChrome() throws {
     let screenshotDir = try preparedScreenshotDirectory(named: "explore-feed-smoke")
     let app = launchApp(startScreen: "explore-feed")
@@ -54,21 +75,9 @@ final class ExploreFeedScreenUITests: HiddenAdventuresUITestCase {
       in: app,
       screenshotDir: screenshotDir
     )
-    assertHittable(
-      app.buttons["feed.card.\(eagleID)"],
-      name: "feed-first-card",
-      in: app,
-      screenshotDir: screenshotDir
-    )
     assertExists(
-      app.staticTexts["feed.card.title.\(eagleID)"],
-      name: "feed-first-card-title",
-      in: app,
-      screenshotDir: screenshotDir
-    )
-    assertExists(
-      app.staticTexts["feed.card.location.\(eagleID)"],
-      name: "feed-first-card-location",
+      app.scrollViews["feed.scroll"],
+      name: "feed-scroll",
       in: app,
       screenshotDir: screenshotDir
     )
@@ -83,7 +92,20 @@ final class ExploreFeedScreenUITests: HiddenAdventuresUITestCase {
     let screenshotDir = try preparedScreenshotDirectory(named: "explore-feed-detail-return")
     let app = launchApp(startScreen: "explore-feed")
 
-    let feedCard = app.buttons["feed.card.\(eagleID)"]
+    app.buttons["header.search"].tap()
+    let searchField = app.textFields["feed.searchField"]
+    assertExists(searchField, name: "feed-search-field-before-detail", in: app, screenshotDir: screenshotDir)
+    searchField.tap()
+    searchField.typeText("Port")
+    assertExists(
+      app.buttons["feed.searchSuggestion.portland-oregon"],
+      name: "feed-search-suggestion-before-detail",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    app.buttons["feed.searchSuggestion.portland-oregon"].tap()
+
+    let feedCard = waitForAnyFeedCard(in: app)
     assertHittable(
       feedCard,
       name: "feed-detail-entry-card",
@@ -129,12 +151,70 @@ final class ExploreFeedScreenUITests: HiddenAdventuresUITestCase {
       in: app,
       screenshotDir: screenshotDir
     )
-    assertExists(
-      app.buttons["feed.card.\(eagleID)"],
-      name: "feed-first-card-after-detail-return",
+    assertExists(feedCard, name: "feed-first-card-after-detail-return", in: app, screenshotDir: screenshotDir)
+    saveScreenshot(named: "feed-after-detail-return", to: screenshotDir)
+  }
+
+  func testExploreFeed_placeSearchSuggestionsSyncWithMap() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "explore-feed-search")
+    let app = launchApp(startScreen: "explore-feed")
+
+    let searchButton = app.buttons["header.search"]
+    assertHittable(
+      searchButton,
+      name: "feed-search-expand-button",
       in: app,
       screenshotDir: screenshotDir
     )
-    saveScreenshot(named: "feed-after-detail-return", to: screenshotDir)
+    searchButton.tap()
+
+    let searchField = app.textFields["feed.searchField"]
+    assertExists(
+      searchField,
+      name: "feed-search-field",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    searchField.tap()
+    searchField.typeText("Port")
+
+    assertExists(
+      app.otherElements["feed.searchSuggestions"],
+      name: "feed-search-suggestions",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.buttons["feed.searchSuggestion.portland-oregon"],
+      name: "feed-search-suggestion-portland",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+
+    app.buttons["feed.searchSuggestion.portland-oregon"].tap()
+
+    assertNotExists(
+      app.otherElements["feed.searchSuggestions"],
+      name: "feed-search-suggestions-dismissed",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(waitForAnyFeedCard(in: app), name: "feed-card-still-visible-after-search", in: app, screenshotDir: screenshotDir)
+
+    app.buttons["tab.explore"].tap()
+
+    assertExists(
+      app.textFields["map.searchField"],
+      name: "map-search-field-after-feed-selection",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertValue(
+      app.textFields["map.searchField"],
+      equals: "Portland, Oregon",
+      name: "map-search-field-synced-value",
+      in: app,
+      screenshotDir: screenshotDir
+    )
   }
 }

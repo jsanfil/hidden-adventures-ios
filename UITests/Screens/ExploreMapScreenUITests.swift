@@ -188,4 +188,59 @@ final class ExploreMapScreenUITests: HiddenAdventuresUITestCase {
       screenshotDir: screenshotDir
     )
   }
+
+  func testExploreMap_placeSelectionSyncsBackToFeedAndClearsSharedScope() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "explore-map-feed-sync")
+    let app = launchApp(startScreen: "explore-map")
+
+    let searchField = app.textFields["map.searchField"]
+    searchField.tap()
+    searchField.typeText("Port")
+
+    assertExists(
+      app.buttons["map.searchSuggestion.portland-oregon"],
+      name: "map-search-suggestion-portland-sync",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    app.buttons["map.searchSuggestion.portland-oregon"].tap()
+
+    app.buttons["tab.home"].tap()
+
+    let searchButton = app.buttons["header.search"]
+    assertExists(
+      searchButton,
+      name: "feed-search-button-after-map-selection",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    searchButton.tap()
+
+    let feedSearchField = app.textFields["feed.searchField"]
+    assertValue(
+      feedSearchField,
+      equals: "Portland, Oregon",
+      name: "feed-search-field-synced-value",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+
+    app.buttons["feed.searchClear"].tap()
+
+    assertNotExists(
+      app.textFields["feed.searchField"],
+      name: "feed-search-collapsed-after-clear",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+
+    app.buttons["tab.explore"].tap()
+    assertValue(
+      app.textFields["map.searchField"],
+      equals: "Search for a place...",
+      name: "map-search-cleared-after-feed-clear",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+  }
 }

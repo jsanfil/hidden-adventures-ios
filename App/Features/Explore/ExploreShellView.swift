@@ -14,18 +14,50 @@ struct ExploreShellView: View {
   let onLogout: () -> Void
 
   @StateObject private var locationController = ExploreDiscoveryLocationController()
+  @StateObject private var locationSearchController: ExploreLocationSearchController
 
   @State private var feedResponse: FeedResponse?
   @State private var visibilityFilter: VisibilityFilter = .all
   @State private var activeCategory: Category?
   @State private var discoveryScopeState: ExploreDiscoveryScopeState?
+  @State private var isFeedSearchExpanded = false
+  @State private var feedSearchText = ""
   @State private var isLoading = true
   @State private var errorMessage: String?
   @State private var hasStartedLocationUpdates = false
 
+  @FocusState private var isFeedSearchFieldFocused: Bool
+
   private let defaultFeedLimit = 20
   private let defaultRadiusMiles = MapExploreRegionHelper.defaultRadiusMiles
   private let fallbackDiscoveryLocation = AdventureLocation(latitude: 37.3349, longitude: -122.0090)
+
+  init(
+    adventureService: AdventureService,
+    profileService: ProfileService,
+    runtimeMode: AppRuntimeMode,
+    viewerHandle: String?,
+    viewerDisplayName: String?,
+    mode: Binding<ExploreMode>,
+    createAdventureVariant: Binding<CreateAdventureFixtureVariant?>,
+    onViewerProfileLoaded: @escaping (ProfileDetail) -> Void,
+    onOpenDetail: @escaping (String) -> Void,
+    onLogout: @escaping () -> Void
+  ) {
+    self.adventureService = adventureService
+    self.profileService = profileService
+    self.runtimeMode = runtimeMode
+    self.viewerHandle = viewerHandle
+    self.viewerDisplayName = viewerDisplayName
+    self._mode = mode
+    self._createAdventureVariant = createAdventureVariant
+    self.onViewerProfileLoaded = onViewerProfileLoaded
+    self.onOpenDetail = onOpenDetail
+    self.onLogout = onLogout
+    _locationSearchController = StateObject(
+      wrappedValue: ExploreLocationSearchController(runtimeMode: runtimeMode)
+    )
+  }
 
   private var feedItems: [AdventureCard] {
     feedResponse?.items ?? []
@@ -69,6 +101,22 @@ struct ExploreShellView: View {
     return discoveryScopeState?.label
   }
 
+  private var selectedDiscoveryPlaceLabel: String? {
+    guard discoveryScopeState?.source == .searchedPlace else {
+      return nil
+    }
+
+    return discoveryScopeState?.label
+  }
+
+  private var shouldShowFeedSearchSuggestions: Bool {
+    mode == .feed
+      && isFeedSearchExpanded
+      && isFeedSearchFieldFocused
+      && feedSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+      && locationSearchController.completions.isEmpty == false
+  }
+
   private var currentLocation: AdventureLocation? {
     locationController.currentLocationCoordinate.map {
       AdventureLocation(latitude: $0.latitude, longitude: $0.longitude)
@@ -94,6 +142,12 @@ struct ExploreShellView: View {
         case .profile:
           profileScreen
         }
+      }
+
+      if mode == .feed && isFeedSearchExpanded {
+        feedSearchOverlay
+          .transition(.opacity)
+          .zIndex(1)
       }
     }
     .overlay {
@@ -166,6 +220,12 @@ struct ExploreShellView: View {
         await reloadDiscoveryContent()
       }
     }
+    .onChange(of: feedSearchText) {
+      locationSearchController.updateQuery(feedSearchText)
+    }
+    .onChange(of: selectedDiscoveryPlaceLabel) {
+      syncFeedSearchTextWithSelection()
+    }
     .toolbar(.hidden, for: .navigationBar)
   }
 
@@ -193,9 +253,9 @@ struct ExploreShellView: View {
       .padding(.bottom, 12)
 
       FeedView(
-        items: filteredItems,
-        scope: activeFeedScope,
-        adventureService: adventureService,
+      items: filteredItems,
+      scope: activeFeedScope,
+      adventureService: adventureService,
         runtimeMode: runtimeMode,
         onOpenDetail: onOpenDetail
       )
@@ -207,11 +267,13 @@ struct ExploreShellView: View {
       items: feedItems,
       scope: activeFeedScope,
       scopeLabel: mapScopeLabel,
+      selectedPlaceLabel: selectedDiscoveryPlaceLabel,
       currentLocation: currentLocation,
       adventureService: adventureService,
       runtimeMode: runtimeMode,
       onUseCurrentLocation: useCurrentLocationScope,
       onSelectDiscoveryPlace: selectDiscoveryPlace,
+      onClearSelectedDiscoveryPlace: clearSelectedDiscoveryPlace,
       onOpenDetail: onOpenDetail
     )
   }
@@ -230,33 +292,138 @@ struct ExploreShellView: View {
 
   private var header: some View {
     HStack(alignment: .top) {
-      VStack(alignment: .leading, spacing: 4) {
-        Text("Good morning")
-          .font(.system(size: 14, weight: .regular))
-          .foregroundStyle(HATheme.Colors.mutedForeground)
-
-        Text(viewerDisplayName ?? viewerHandle ?? "Explorer")
-          .font(.system(size: 20, weight: .semibold))
-          .foregroundStyle(HATheme.Colors.foreground)
-      }
-
+      defaultHeaderTitle
       Spacer()
-
-      HStack(spacing: 10) {
-        CircleIconButton(systemImage: "magnifyingglass", accessibilityID: "header.search")
-        CircleIconButton(systemImage: "bell", showsIndicator: true, accessibilityID: "header.notifications")
-        if mode == .profile {
-          CircleIconButton(
-            systemImage: "rectangle.portrait.and.arrow.right",
-            accessibilityID: "header.logout",
-            action: onLogout
-          )
-        }
-      }
+      headerActions
     }
     .padding(.horizontal, 20)
     .padding(.top, 12)
     .padding(.bottom, 12)
+  }
+
+  private var defaultHeaderTitle: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text("Good morning")
+        .font(.system(size: 14, weight: .regular))
+        .foregroundStyle(HATheme.Colors.mutedForeground)
+
+      Text(viewerDisplayName ?? viewerHandle ?? "Explorer")
+        .font(.system(size: 20, weight: .semibold))
+        .foregroundStyle(HATheme.Colors.foreground)
+    }
+  }
+
+  private var expandedFeedSearchHeader: some View {
+    HStack(spacing: 10) {
+      Image(systemName: "magnifyingglass")
+        .font(.system(size: 17, weight: .medium))
+        .foregroundStyle(HATheme.Colors.mutedForeground)
+
+      TextField("Search for a place...", text: $feedSearchText)
+        .font(.system(size: 16, weight: .medium))
+        .foregroundStyle(HATheme.Colors.foreground)
+        .textInputAutocapitalization(.words)
+        .disableAutocorrection(true)
+        .focused($isFeedSearchFieldFocused)
+        .submitLabel(.search)
+        .onSubmit {
+          Task {
+            await selectFirstFeedSuggestionIfNeeded()
+          }
+        }
+        .accessibilityIdentifier("feed.searchField")
+
+      if feedSearchText.isEmpty == false {
+        Button {
+          clearFeedSearch()
+        } label: {
+          Image(systemName: "xmark")
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(HATheme.Colors.mutedForeground)
+            .frame(width: 22, height: 22)
+            .background(HATheme.Colors.secondary)
+            .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("feed.searchClear")
+      }
+    }
+    .padding(.horizontal, 16)
+    .frame(height: 44)
+    .background(.white)
+    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .shadow(color: HATheme.Colors.shadow.opacity(1.1), radius: 14, x: 0, y: 6)
+  }
+
+  private var feedSearchOverlay: some View {
+    ZStack(alignment: .top) {
+      Color.black.opacity(0.16)
+        .ignoresSafeArea()
+        .contentShape(Rectangle())
+        .onTapGesture {
+          dismissFeedSearchOverlay()
+        }
+
+      VStack(spacing: 12) {
+        HAStatusBarSpacer()
+
+        VStack(spacing: 12) {
+          HStack(spacing: 10) {
+            expandedFeedSearchHeader
+
+            Button("Cancel") {
+              dismissFeedSearchOverlay()
+            }
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(HATheme.Colors.foreground)
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("feed.searchCancel")
+          }
+
+          if shouldShowFeedSearchSuggestions {
+            ScrollView(showsIndicators: false) {
+              ExploreLocationSuggestionsPopover(
+                suggestions: locationSearchController.completions,
+                suggestionsAccessibilityID: "feed.searchSuggestions",
+                suggestionAccessibilityPrefix: "feed.searchSuggestion",
+                onSelect: handleFeedSuggestionSelection
+              )
+            }
+            .frame(maxHeight: 420)
+          }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 16)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .shadow(color: HATheme.Colors.shadow.opacity(1.4), radius: 30, x: 0, y: 12)
+        .padding(.horizontal, 12)
+
+        Spacer(minLength: 0)
+      }
+    }
+    .onAppear {
+      isFeedSearchFieldFocused = true
+    }
+  }
+
+  private var headerActions: some View {
+    HStack(spacing: 10) {
+      CircleIconButton(
+        systemImage: mode == .feed && isFeedSearchExpanded ? "xmark" : "magnifyingglass",
+        accessibilityID: "header.search",
+        action: toggleFeedSearch
+      )
+      CircleIconButton(systemImage: "bell", showsIndicator: true, accessibilityID: "header.notifications")
+      if mode == .profile {
+        CircleIconButton(
+          systemImage: "rectangle.portrait.and.arrow.right",
+          accessibilityID: "header.logout",
+          action: onLogout
+        )
+      }
+    }
   }
 
   private var visibilityControl: some View {
@@ -370,7 +537,7 @@ struct ExploreShellView: View {
     }
   }
 
-  private func selectDiscoveryPlace(_ place: MapExploreResolvedPlace) {
+  private func selectDiscoveryPlace(_ place: ExploreLocationResolvedPlace) {
     let nextScopeState = ExploreDiscoveryScopeState(
       scope: FeedScope(center: place.location, radiusMiles: defaultRadiusMiles),
       label: place.title,
@@ -382,6 +549,38 @@ struct ExploreShellView: View {
     }
 
     discoveryScopeState = nextScopeState
+    feedSearchText = place.title
+    Task {
+      await reloadDiscoveryContent()
+    }
+  }
+
+  private func clearSelectedDiscoveryPlace() {
+    let nextScopeState: ExploreDiscoveryScopeState?
+
+    if let currentLocation {
+      nextScopeState = ExploreDiscoveryScopeState(
+        scope: FeedScope(center: currentLocation, radiusMiles: defaultRadiusMiles),
+        label: "",
+        source: .currentLocation
+      )
+    } else {
+      nextScopeState = nil
+    }
+
+    guard nextScopeState != discoveryScopeState || discoveryScopeState?.source == .searchedPlace else {
+      isFeedSearchExpanded = false
+      isFeedSearchFieldFocused = false
+      feedSearchText = ""
+      locationSearchController.clearSuggestions()
+      return
+    }
+
+    discoveryScopeState = nextScopeState
+    isFeedSearchExpanded = false
+    isFeedSearchFieldFocused = false
+    feedSearchText = ""
+    locationSearchController.clearSuggestions()
     Task {
       await reloadDiscoveryContent()
     }
@@ -420,6 +619,77 @@ struct ExploreShellView: View {
     }
 
     return String(format: "%.1f miles", radiusMiles)
+  }
+
+  private func toggleFeedSearch() {
+    guard mode == .feed else {
+      return
+    }
+
+    if isFeedSearchExpanded {
+      isFeedSearchExpanded = false
+      isFeedSearchFieldFocused = false
+      locationSearchController.clearSuggestions()
+      syncFeedSearchTextWithSelection()
+      return
+    }
+
+    isFeedSearchExpanded = true
+    syncFeedSearchTextWithSelection()
+    isFeedSearchFieldFocused = true
+  }
+
+  private func clearFeedSearch() {
+    if selectedDiscoveryPlaceLabel?.isEmpty == false {
+      clearSelectedDiscoveryPlace()
+      return
+    }
+
+    feedSearchText = ""
+    locationSearchController.clearSuggestions()
+  }
+
+  private func handleFeedSuggestionSelection(_ suggestion: ExploreLocationSearchSuggestion) {
+    Task {
+      guard let resolved = await locationSearchController.resolveSuggestion(suggestion) else {
+        return
+      }
+
+      await MainActor.run {
+        locationSearchController.clearSuggestions()
+        isFeedSearchExpanded = false
+        isFeedSearchFieldFocused = false
+        selectDiscoveryPlace(resolved)
+      }
+    }
+  }
+
+  private func selectFirstFeedSuggestionIfNeeded() async {
+    guard let suggestion = locationSearchController.completions.first else {
+      return
+    }
+
+    handleFeedSuggestionSelection(suggestion)
+  }
+
+  private func syncFeedSearchTextWithSelection() {
+    let nextValue = selectedDiscoveryPlaceLabel ?? ""
+
+    guard feedSearchText != nextValue || nextValue.isEmpty else {
+      return
+    }
+
+    feedSearchText = nextValue
+    if nextValue.isEmpty {
+      locationSearchController.clearSuggestions()
+    }
+  }
+
+  private func dismissFeedSearchOverlay() {
+    isFeedSearchExpanded = false
+    isFeedSearchFieldFocused = false
+    locationSearchController.clearSuggestions()
+    syncFeedSearchTextWithSelection()
   }
 }
 

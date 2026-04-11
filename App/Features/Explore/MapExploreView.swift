@@ -6,14 +6,16 @@ struct MapExploreView: View {
   let items: [AdventureCard]
   let scope: FeedScope
   let scopeLabel: String?
+  let selectedPlaceLabel: String?
   let currentLocation: AdventureLocation?
   let adventureService: any AdventureService
   let runtimeMode: AppRuntimeMode
   let onUseCurrentLocation: () -> Void
-  let onSelectDiscoveryPlace: (MapExploreResolvedPlace) -> Void
+  let onSelectDiscoveryPlace: (ExploreLocationResolvedPlace) -> Void
+  let onClearSelectedDiscoveryPlace: () -> Void
   let onOpenDetail: (String) -> Void
 
-  @StateObject private var locationSearchController: MapExploreLocationSearchController
+  @StateObject private var locationSearchController: ExploreLocationSearchController
   @State private var searchText = ""
   @State private var visibilityFilter: VisibilityFilter = .all
   @State private var activeCategory: Category?
@@ -29,27 +31,31 @@ struct MapExploreView: View {
     items: [AdventureCard],
     scope: FeedScope,
     scopeLabel: String? = nil,
+    selectedPlaceLabel: String? = nil,
     currentLocation: AdventureLocation? = nil,
     adventureService: any AdventureService,
     runtimeMode: AppRuntimeMode,
     initialState: MapExploreInitialState = .default,
     onUseCurrentLocation: @escaping () -> Void = {},
-    onSelectDiscoveryPlace: @escaping (MapExploreResolvedPlace) -> Void = { _ in },
+    onSelectDiscoveryPlace: @escaping (ExploreLocationResolvedPlace) -> Void = { _ in },
+    onClearSelectedDiscoveryPlace: @escaping () -> Void = {},
     onOpenDetail: @escaping (String) -> Void
   ) {
     self.items = items
     self.scope = scope
     self.scopeLabel = scopeLabel
+    self.selectedPlaceLabel = selectedPlaceLabel
     self.currentLocation = currentLocation
     self.adventureService = adventureService
     self.runtimeMode = runtimeMode
     self.onUseCurrentLocation = onUseCurrentLocation
     self.onSelectDiscoveryPlace = onSelectDiscoveryPlace
+    self.onClearSelectedDiscoveryPlace = onClearSelectedDiscoveryPlace
     self.onOpenDetail = onOpenDetail
     _locationSearchController = StateObject(
-      wrappedValue: MapExploreLocationSearchController(runtimeMode: runtimeMode)
+      wrappedValue: ExploreLocationSearchController(runtimeMode: runtimeMode)
     )
-    _searchText = State(initialValue: initialState.searchText)
+    _searchText = State(initialValue: selectedPlaceLabel ?? initialState.searchText)
     _visibilityFilter = State(initialValue: initialState.visibilityFilter)
     _activeCategory = State(initialValue: initialState.activeCategory)
     _selectedAdventureID = State(initialValue: initialState.selectedAdventureID)
@@ -144,6 +150,9 @@ struct MapExploreView: View {
       .onChange(of: searchText) {
         locationSearchController.updateQuery(searchText)
       }
+      .onChange(of: selectedPlaceLabel) {
+        syncSearchTextWithSelectedPlace()
+      }
       .onChange(of: visibilityFilter) {
         updateSelectionAfterFiltering()
       }
@@ -155,6 +164,9 @@ struct MapExploreView: View {
       }
       .onChange(of: items.map(\.id)) {
         updateSelectionAfterFiltering()
+      }
+      .onAppear {
+        syncSearchTextWithSelectedPlace()
       }
     }
   }
@@ -236,43 +248,12 @@ struct MapExploreView: View {
   }
 
   private var searchSuggestionsPopover: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      ForEach(locationSearchController.completions) { suggestion in
-        Button {
-          handleSuggestionSelection(suggestion)
-        } label: {
-          VStack(alignment: .leading, spacing: 4) {
-            Text(suggestion.title)
-              .font(.system(size: 15, weight: .semibold))
-              .foregroundStyle(HATheme.Colors.foreground)
-              .frame(maxWidth: .infinity, alignment: .leading)
-
-            if suggestion.subtitle.isEmpty == false {
-              Text(suggestion.subtitle)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(HATheme.Colors.mutedForeground)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-          }
-          .padding(.horizontal, 16)
-          .padding(.vertical, 12)
-          .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("map.searchSuggestion.\(suggestion.accessibilityIdentifier)")
-
-        if suggestion.id != locationSearchController.completions.last?.id {
-          Divider()
-            .padding(.leading, 16)
-        }
-      }
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(.white)
-    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-    .shadow(color: HATheme.Colors.shadow.opacity(1.3), radius: 22, x: 0, y: 10)
-    .accessibilityElement(children: .contain)
-    .accessibilityIdentifier("map.searchSuggestions")
+    ExploreLocationSuggestionsPopover(
+      suggestions: locationSearchController.completions,
+      suggestionsAccessibilityID: "map.searchSuggestions",
+      suggestionAccessibilityPrefix: "map.searchSuggestion",
+      onSelect: handleSuggestionSelection
+    )
   }
 
   private var filterPopover: some View {
@@ -848,13 +829,22 @@ struct MapExploreView: View {
   }
 
   private func clearSearch() {
+    let shouldResetSelectedPlace = selectedPlaceLabel?.isEmpty == false
+
     searchText = ""
     isSearchFieldFocused = false
     locationSearchController.clearSuggestions()
+    selectedAdventureID = nil
+
+    if shouldResetSelectedPlace {
+      onClearSelectedDiscoveryPlace()
+      return
+    }
+
     recenterMap()
   }
 
-  private func handleSuggestionSelection(_ suggestion: MapExploreSearchSuggestion) {
+  private func handleSuggestionSelection(_ suggestion: ExploreLocationSearchSuggestion) {
     Task {
       guard let resolved = await locationSearchController.resolveSuggestion(suggestion) else {
         return
@@ -891,155 +881,19 @@ struct MapExploreView: View {
 
     return String(format: "%.1f miles", radiusMiles)
   }
-}
 
-@MainActor
-final class MapExploreLocationSearchController: NSObject, ObservableObject {
-  @Published private(set) var completions: [MapExploreSearchSuggestion] = []
+  private func syncSearchTextWithSelectedPlace() {
+    let nextValue = selectedPlaceLabel ?? ""
 
-  private let runtimeMode: AppRuntimeMode
-  private let completer: MKLocalSearchCompleter?
-
-  init(runtimeMode: AppRuntimeMode) {
-    self.runtimeMode = runtimeMode
-
-    if runtimeMode == .fixturePreview {
-      completer = nil
-      super.init()
+    guard searchText != nextValue else {
       return
     }
 
-    let completer = MKLocalSearchCompleter()
-    self.completer = completer
-    super.init()
-    completer.delegate = self
-    completer.resultTypes = [.address, .pointOfInterest]
-  }
-
-  func updateQuery(_ query: String) {
-    let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    guard trimmed.isEmpty == false else {
-      completions = []
-      completer?.queryFragment = ""
-      return
+    searchText = nextValue
+    if nextValue.isEmpty {
+      locationSearchController.clearSuggestions()
     }
-
-    if runtimeMode == .fixturePreview {
-      let normalized = trimmed.localizedLowercase
-      completions = MapExploreSearchSuggestion.fixtureSuggestions.filter { suggestion in
-        suggestion.title.localizedLowercase.contains(normalized)
-          || suggestion.subtitle.localizedLowercase.contains(normalized)
-      }
-      return
-    }
-
-    completer?.queryFragment = trimmed
   }
-
-  func clearSuggestions() {
-    completions = []
-  }
-
-  func resolveSuggestion(_ suggestion: MapExploreSearchSuggestion) async -> MapExploreResolvedPlace? {
-    if let coordinate = suggestion.fixtureCoordinate {
-      return MapExploreResolvedPlace(
-        title: suggestion.displayLabel,
-        location: AdventureLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
-        region: MapExploreRegionHelper.region(center: coordinate)
-      )
-    }
-
-    guard let completion = suggestion.completion else {
-      return nil
-    }
-
-    let request = MKLocalSearch.Request(completion: completion)
-
-    do {
-      let response = try await MKLocalSearch(request: request).start()
-      if let coordinate = response.mapItems.first?.placemark.coordinate {
-        return MapExploreResolvedPlace(
-          title: suggestion.displayLabel,
-          location: AdventureLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
-          region: MapExploreRegionHelper.region(center: coordinate)
-        )
-      }
-    } catch {
-      return nil
-    }
-
-    return nil
-  }
-}
-
-extension MapExploreLocationSearchController: @preconcurrency MKLocalSearchCompleterDelegate {
-  func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-    completions = completer.results.map(MapExploreSearchSuggestion.init(completion:))
-  }
-
-  func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
-    completions = []
-  }
-}
-
-struct MapExploreSearchSuggestion: Identifiable {
-  let id: String
-  let title: String
-  let subtitle: String
-  fileprivate let completion: MKLocalSearchCompletion?
-  fileprivate let fixtureCoordinate: CLLocationCoordinate2D?
-
-  init(title: String, subtitle: String, fixtureCoordinate: CLLocationCoordinate2D) {
-    self.id = "\(title)|\(subtitle)"
-    self.title = title
-    self.subtitle = subtitle
-    self.completion = nil
-    self.fixtureCoordinate = fixtureCoordinate
-  }
-
-  init(completion: MKLocalSearchCompletion) {
-    self.id = "\(completion.title)|\(completion.subtitle)"
-    self.title = completion.title
-    self.subtitle = completion.subtitle
-    self.completion = completion
-    self.fixtureCoordinate = nil
-  }
-
-  var displayLabel: String {
-    subtitle.isEmpty ? title : "\(title), \(subtitle)"
-  }
-
-  var accessibilityIdentifier: String {
-    displayLabel
-      .lowercased()
-      .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
-      .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-  }
-
-  static let fixtureSuggestions: [MapExploreSearchSuggestion] = [
-    MapExploreSearchSuggestion(
-      title: "Portland",
-      subtitle: "Oregon",
-      fixtureCoordinate: CLLocationCoordinate2D(latitude: 45.5152, longitude: -122.6784)
-    ),
-    MapExploreSearchSuggestion(
-      title: "Mount Hood",
-      subtitle: "Oregon",
-      fixtureCoordinate: CLLocationCoordinate2D(latitude: 45.3735, longitude: -121.6959)
-    ),
-    MapExploreSearchSuggestion(
-      title: "Columbia River Gorge",
-      subtitle: "Oregon",
-      fixtureCoordinate: CLLocationCoordinate2D(latitude: 45.6698, longitude: -121.8842)
-    )
-  ]
-}
-
-struct MapExploreResolvedPlace {
-  let title: String
-  let location: AdventureLocation
-  let region: MKCoordinateRegion
 }
 
 enum MapExploreRegionHelper {
