@@ -78,6 +78,14 @@ struct MapExploreView: View {
     }
   }
 
+  private var peekCardWidth: CGFloat { 240 }
+
+  private var peekCardAspectRatio: CGFloat { 16.0 / 9.0 }
+
+  private var peekCardHeight: CGFloat {
+    peekCardWidth / peekCardAspectRatio
+  }
+
   private var mappableItems: [MapCardPresentation] {
     filteredItems.filter { $0.location != nil }
   }
@@ -467,7 +475,7 @@ struct MapExploreView: View {
 
   private var peekCardRail: some View {
     ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: 4) {
+      HStack(spacing: 20) {
         ForEach(filteredItems) { item in
           Button {
             selectAdventure(item)
@@ -511,7 +519,7 @@ struct MapExploreView: View {
 
   private func mapCard(for item: MapCardPresentation) -> some View {
     ZStack(alignment: .topLeading) {
-      mapMedia(for: item, aspectRatio: 16 / 10, cornerRadius: 18)
+      mapMedia(for: item, aspectRatio: peekCardAspectRatio, cornerRadius: 18)
         .overlay {
           RoundedRectangle(cornerRadius: 18, style: .continuous)
             .fill(
@@ -561,7 +569,7 @@ struct MapExploreView: View {
           .accessibilityIdentifier("map.card.title.\(item.id)")
       }
     }
-    .frame(width: 240)
+    .frame(width: peekCardWidth, height: peekCardHeight)
   }
 
   private func expandedRow(for item: MapCardPresentation) -> some View {
