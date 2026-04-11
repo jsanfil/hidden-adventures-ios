@@ -1,3 +1,4 @@
+import CoreLocation
 import XCTest
 @testable import HiddenAdventures
 
@@ -784,5 +785,89 @@ private final class ProfileServiceStub: ProfileService {
 
   func updateMyProfile(request: MeProfileUpdateRequest) async throws -> MeProfileResponse {
     MeProfileResponse(profile: updatedProfile)
+  }
+}
+
+final class MapExploreHelperTests: XCTestCase {
+  func testRegionHelperCreatesApproximateTwentyFiveMileRadiusRegion() {
+    let region = MapExploreRegionHelper.region(
+      center: CLLocationCoordinate2D(latitude: 45.5152, longitude: -122.6784)
+    )
+
+    XCTAssertEqual(region.center.latitude, 45.5152, accuracy: 0.0001)
+    XCTAssertEqual(region.center.longitude, -122.6784, accuracy: 0.0001)
+    XCTAssertGreaterThan(region.span.latitudeDelta, 0.6)
+    XCTAssertGreaterThan(region.span.longitudeDelta, 0.6)
+  }
+
+  func testFallbackRegionUsesAdventureCoordinates() {
+    let items = [
+      MapCardPresentation(
+        id: "one",
+        destinationID: "one",
+        title: "One",
+        placeLabel: "First",
+        distanceText: "1 mi",
+        rating: 4.5,
+        category: "Trails",
+        categorySlug: .trails,
+        visibility: .public,
+        imageNames: [],
+        location: AdventureLocation(latitude: 45.50, longitude: -122.80),
+        markerPoint: nil
+      ),
+      MapCardPresentation(
+        id: "two",
+        destinationID: "two",
+        title: "Two",
+        placeLabel: "Second",
+        distanceText: "2 mi",
+        rating: 4.7,
+        category: "Water Spots",
+        categorySlug: .waterSpots,
+        visibility: .public,
+        imageNames: [],
+        location: AdventureLocation(latitude: 45.60, longitude: -122.60),
+        markerPoint: nil
+      )
+    ]
+
+    guard let region = MapExploreRegionHelper.fallbackRegion(for: items) else {
+      return XCTFail("Expected a fallback region for mappable items.")
+    }
+
+    XCTAssertEqual(region.center.latitude, 45.55, accuracy: 0.01)
+    XCTAssertEqual(region.center.longitude, -122.70, accuracy: 0.01)
+  }
+
+  func testSelectionHelperClearsMissingSelectionAfterFiltering() {
+    let filteredItems = [
+      MapCardPresentation(
+        id: "one",
+        destinationID: "one",
+        title: "One",
+        placeLabel: "First",
+        distanceText: "1 mi",
+        rating: 4.5,
+        category: "Trails",
+        categorySlug: .trails,
+        visibility: .public,
+        imageNames: [],
+        location: AdventureLocation(latitude: 45.50, longitude: -122.80),
+        markerPoint: nil
+      )
+    ]
+
+    let validSelection = MapExploreSelectionHelper.validSelectionID(
+      currentSelectionID: "one",
+      filteredItems: filteredItems
+    )
+    let clearedSelection = MapExploreSelectionHelper.validSelectionID(
+      currentSelectionID: "missing",
+      filteredItems: filteredItems
+    )
+
+    XCTAssertEqual(validSelection, "one")
+    XCTAssertNil(clearedSelection)
   }
 }

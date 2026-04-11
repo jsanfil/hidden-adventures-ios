@@ -30,6 +30,7 @@ targets:
       base:
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: Hidden Adventures uses your location to center the explore map around you.
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
         INFOPLIST_KEY_UILaunchScreen_Generation: true
         PRODUCT_BUNDLE_IDENTIFIER: com.hiddenadventures.ios

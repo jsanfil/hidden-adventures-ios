@@ -1,3 +1,5 @@
+import CoreLocation
+import MapKit
 import SwiftUI
 
 struct MapExploreView: View {
@@ -6,12 +8,18 @@ struct MapExploreView: View {
   let runtimeMode: AppRuntimeMode
   let onOpenDetail: (String) -> Void
 
+  @StateObject private var locationSearchController: MapExploreLocationSearchController
   @State private var searchText = ""
   @State private var visibilityFilter: VisibilityFilter = .all
   @State private var activeCategory: Category?
   @State private var selectedAdventureID: String?
   @State private var sheetState: MapSheetState = .peek
   @State private var isFilterPopoverPresented = false
+  @State private var mapPosition: MapCameraPosition = .automatic
+  @State private var hasSetInitialMapPosition = false
+  @State private var hasCenteredOnUserLocation = false
+
+  @FocusState private var isSearchFieldFocused: Bool
 
   init(
     items: [AdventureCard],
@@ -24,6 +32,9 @@ struct MapExploreView: View {
     self.adventureService = adventureService
     self.runtimeMode = runtimeMode
     self.onOpenDetail = onOpenDetail
+    _locationSearchController = StateObject(
+      wrappedValue: MapExploreLocationSearchController(runtimeMode: runtimeMode)
+    )
     _searchText = State(initialValue: initialState.searchText)
     _visibilityFilter = State(initialValue: initialState.visibilityFilter)
     _activeCategory = State(initialValue: initialState.activeCategory)
@@ -43,13 +54,12 @@ struct MapExploreView: View {
     mapItems.filter { item in
       let visibilityMatches = visibilityFilter.matches(item.visibility)
       let categoryMatches = activeCategory == nil || item.categorySlug == activeCategory
-      let searchMatches = searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        || item.title.localizedCaseInsensitiveContains(searchText)
-        || item.placeLabel.localizedCaseInsensitiveContains(searchText)
-        || item.category.localizedCaseInsensitiveContains(searchText)
-
-      return visibilityMatches && categoryMatches && searchMatches
+      return visibilityMatches && categoryMatches
     }
+  }
+
+  private var mappableItems: [MapCardPresentation] {
+    filteredItems.filter { $0.location != nil }
   }
 
   private var selectedAdventure: MapCardPresentation? {
@@ -60,10 +70,16 @@ struct MapExploreView: View {
     return filteredItems.first { $0.destinationID == selectedAdventureID }
   }
 
+  private var shouldShowSearchSuggestions: Bool {
+    isSearchFieldFocused
+      && searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+      && locationSearchController.completions.isEmpty == false
+  }
+
   var body: some View {
     GeometryReader { geometry in
       ZStack(alignment: .top) {
-        mapSurface(size: geometry.size)
+        mapSurface
 
         VStack(spacing: 0) {
           topChrome
@@ -72,10 +88,10 @@ struct MapExploreView: View {
 
           Spacer()
         }
-
-        currentLocationIndicator(in: geometry.size)
+        .zIndex(4)
 
         recenterButton(bottomInset: floatingBottomInset(for: geometry.size.height))
+          .zIndex(3)
 
         if let selectedAdventure {
           previewCard(for: selectedAdventure)
@@ -93,8 +109,21 @@ struct MapExploreView: View {
       }
       .clipped()
       .background(HATheme.Colors.mapBackground)
+      .task {
+        locationSearchController.begin()
+        applyInitialMapPositionIfNeeded()
+      }
+      .onReceive(locationSearchController.$currentLocationCoordinate) { coordinate in
+        guard let coordinate, hasCenteredOnUserLocation == false else {
+          return
+        }
+
+        hasCenteredOnUserLocation = true
+        hasSetInitialMapPosition = true
+        centerMap(on: MapExploreRegionHelper.region(center: coordinate))
+      }
       .onChange(of: searchText) {
-        updateSelectionAfterFiltering()
+        locationSearchController.updateQuery(searchText)
       }
       .onChange(of: visibilityFilter) {
         updateSelectionAfterFiltering()
@@ -107,40 +136,57 @@ struct MapExploreView: View {
 
   private var topChrome: some View {
     HStack(alignment: .top, spacing: 10) {
-      HStack(spacing: 10) {
-        Image(systemName: "magnifyingglass")
-          .font(.system(size: 17, weight: .medium))
-          .foregroundStyle(HATheme.Colors.mutedForeground)
+      ZStack(alignment: .topLeading) {
+        HStack(spacing: 10) {
+          Image(systemName: "magnifyingglass")
+            .font(.system(size: 17, weight: .medium))
+            .foregroundStyle(HATheme.Colors.mutedForeground)
 
-        TextField("Search adventures or places...", text: $searchText)
-          .font(.system(size: 16, weight: .medium))
-          .foregroundStyle(HATheme.Colors.foreground)
-          .textInputAutocapitalization(.words)
-          .disableAutocorrection(true)
-          .accessibilityIdentifier("map.searchField")
+          TextField("Search for a place...", text: $searchText)
+            .font(.system(size: 16, weight: .medium))
+            .foregroundStyle(HATheme.Colors.foreground)
+            .textInputAutocapitalization(.words)
+            .disableAutocorrection(true)
+            .focused($isSearchFieldFocused)
+            .submitLabel(.search)
+            .onSubmit {
+              Task {
+                await selectFirstSuggestionIfNeeded()
+              }
+            }
+            .accessibilityIdentifier("map.searchField")
 
-        if !searchText.isEmpty {
-          Button {
-            searchText = ""
-          } label: {
-            Image(systemName: "xmark")
-              .font(.system(size: 12, weight: .bold))
-              .foregroundStyle(HATheme.Colors.mutedForeground)
-              .frame(width: 22, height: 22)
-              .background(HATheme.Colors.secondary)
-              .clipShape(Circle())
+          if searchText.isEmpty == false {
+            Button {
+              clearSearch()
+            } label: {
+              Image(systemName: "xmark")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(HATheme.Colors.mutedForeground)
+                .frame(width: 22, height: 22)
+                .background(HATheme.Colors.secondary)
+                .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("map.searchClear")
           }
-          .buttonStyle(.plain)
-          .accessibilityIdentifier("map.searchClear")
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 44)
+        .background(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: HATheme.Colors.shadow.opacity(1.1), radius: 14, x: 0, y: 6)
+
+        if shouldShowSearchSuggestions {
+          searchSuggestionsPopover
+            .padding(.top, 56)
         }
       }
-      .padding(.horizontal, 16)
-      .frame(height: 44)
-      .background(.white)
-      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-      .shadow(color: HATheme.Colors.shadow.opacity(1.1), radius: 14, x: 0, y: 6)
+      .frame(maxWidth: .infinity, alignment: .leading)
 
       Button {
+        isSearchFieldFocused = false
+        locationSearchController.clearSuggestions()
         withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
           isFilterPopoverPresented.toggle()
         }
@@ -162,6 +208,46 @@ struct MapExploreView: View {
         }
       }
     }
+  }
+
+  private var searchSuggestionsPopover: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      ForEach(locationSearchController.completions) { suggestion in
+        Button {
+          handleSuggestionSelection(suggestion)
+        } label: {
+          VStack(alignment: .leading, spacing: 4) {
+            Text(suggestion.title)
+              .font(.system(size: 15, weight: .semibold))
+              .foregroundStyle(HATheme.Colors.foreground)
+              .frame(maxWidth: .infinity, alignment: .leading)
+
+            if suggestion.subtitle.isEmpty == false {
+              Text(suggestion.subtitle)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(HATheme.Colors.mutedForeground)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+          }
+          .padding(.horizontal, 16)
+          .padding(.vertical, 12)
+          .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("map.searchSuggestion.\(suggestion.accessibilityIdentifier)")
+
+        if suggestion.id != locationSearchController.completions.last?.id {
+          Divider()
+            .padding(.leading, 16)
+        }
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(.white)
+    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .shadow(color: HATheme.Colors.shadow.opacity(1.3), radius: 22, x: 0, y: 10)
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("map.searchSuggestions")
   }
 
   private var filterPopover: some View {
@@ -213,184 +299,48 @@ struct MapExploreView: View {
     .accessibilityIdentifier("map.filterPopover")
   }
 
-  @ViewBuilder
-  private func mapSurface(size: CGSize) -> some View {
-    ZStack {
-      LinearGradient(
-        colors: [HATheme.Colors.mapForest, HATheme.Colors.mapBackground],
-        startPoint: .top,
-        endPoint: .bottom
-      )
-      .ignoresSafeArea()
+  private var mapSurface: some View {
+    Map(position: $mapPosition, interactionModes: .all) {
+      UserAnnotation()
 
-      RoundedRectangle(cornerRadius: 28, style: .continuous)
-        .fill(HATheme.Colors.mapForest.opacity(0.38))
-        .frame(width: 112, height: 88)
-        .position(x: size.width * 0.22, y: size.height * 0.26)
-
-      RoundedRectangle(cornerRadius: 36, style: .continuous)
-        .fill(HATheme.Colors.mapForest.opacity(0.34))
-        .frame(width: 150, height: 110)
-        .position(x: size.width * 0.79, y: size.height * 0.78)
-
-      Circle()
-        .fill(HATheme.Colors.mapForest.opacity(0.30))
-        .frame(width: 84, height: 84)
-        .position(x: size.width * 0.40, y: size.height * 0.74)
-
-      Ellipse()
-        .fill(HATheme.Colors.accent.opacity(0.36))
-        .frame(width: 110, height: 72)
-        .position(x: size.width * 0.72, y: size.height * 0.40)
-
-      Path { path in
-        path.move(to: CGPoint(x: size.width * 0.24, y: size.height * 0.10))
-        path.addCurve(
-          to: CGPoint(x: size.width * 0.14, y: size.height * 0.61),
-          control1: CGPoint(x: size.width * 0.31, y: size.height * 0.24),
-          control2: CGPoint(x: size.width * 0.12, y: size.height * 0.42)
-        )
-      }
-      .stroke(.white.opacity(0.60), style: StrokeStyle(lineWidth: 4, lineCap: .round))
-
-      Path { path in
-        path.move(to: CGPoint(x: size.width * 0.48, y: size.height * 0.08))
-        path.addCurve(
-          to: CGPoint(x: size.width * 0.37, y: size.height * 0.94),
-          control1: CGPoint(x: size.width * 0.51, y: size.height * 0.31),
-          control2: CGPoint(x: size.width * 0.43, y: size.height * 0.67)
-        )
-      }
-      .stroke(.white.opacity(0.58), style: StrokeStyle(lineWidth: 4, lineCap: .round))
-
-      Path { path in
-        path.move(to: CGPoint(x: size.width * 0.77, y: size.height * 0.12))
-        path.addCurve(
-          to: CGPoint(x: size.width * 0.70, y: size.height * 0.46),
-          control1: CGPoint(x: size.width * 0.75, y: size.height * 0.24),
-          control2: CGPoint(x: size.width * 0.74, y: size.height * 0.36)
-        )
-      }
-      .stroke(.white.opacity(0.54), style: StrokeStyle(lineWidth: 3, lineCap: .round))
-
-      Path { path in
-        path.move(to: CGPoint(x: 0, y: size.height * 0.53))
-        path.addCurve(
-          to: CGPoint(x: size.width, y: size.height * 0.49),
-          control1: CGPoint(x: size.width * 0.24, y: size.height * 0.47),
-          control2: CGPoint(x: size.width * 0.72, y: size.height * 0.59)
-        )
-      }
-      .stroke(.white.opacity(0.82), style: StrokeStyle(lineWidth: 8, lineCap: .round))
-
-      Path { path in
-        path.move(to: CGPoint(x: 0, y: size.height * 0.77))
-        path.addCurve(
-          to: CGPoint(x: size.width * 0.84, y: size.height * 0.80),
-          control1: CGPoint(x: size.width * 0.18, y: size.height * 0.76),
-          control2: CGPoint(x: size.width * 0.53, y: size.height * 0.74)
-        )
-      }
-      .stroke(.white.opacity(0.66), style: StrokeStyle(lineWidth: 6, lineCap: .round))
-
-      Color.clear
-        .contentShape(Rectangle())
-        .ignoresSafeArea()
-        .onTapGesture {
-          withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
-            isFilterPopoverPresented = false
-            selectedAdventureID = nil
-          }
-        }
-
-      ForEach(Array(filteredItems.enumerated()), id: \.element.id) { index, item in
-        let point = markerPoint(for: item, fallbackIndex: index, in: size)
-        MapPinButton(
-          item: item,
-          isSelected: selectedAdventure?.destinationID == item.destinationID
-        ) {
-          withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-            if selectedAdventure?.destinationID == item.destinationID {
-              selectedAdventureID = nil
-            } else {
-              selectedAdventureID = item.destinationID
-              sheetState = .collapsed
+      ForEach(mappableItems) { item in
+        if let coordinate = item.location?.coordinate {
+          Annotation(item.title, coordinate: coordinate, anchor: .bottom) {
+            MapPinButton(
+              item: item,
+              isSelected: selectedAdventure?.destinationID == item.destinationID,
+              accessibilityAdventureID: accessibilityAdventureID(item.destinationID)
+            ) {
+              withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                if selectedAdventure?.destinationID == item.destinationID {
+                  selectedAdventureID = nil
+                } else {
+                  selectedAdventureID = item.destinationID
+                  sheetState = .collapsed
+                  centerMap(on: item)
+                }
+                isFilterPopoverPresented = false
+                isSearchFieldFocused = false
+                locationSearchController.clearSuggestions()
+              }
             }
-            isFilterPopoverPresented = false
           }
         }
-        .position(point)
       }
     }
-  }
-
-  private func markerPoint(
-    for item: MapCardPresentation,
-    fallbackIndex index: Int,
-    in size: CGSize
-  ) -> CGPoint {
-    if runtimeMode == .fixturePreview, let markerPoint = item.markerPoint {
-      return CGPoint(x: size.width * markerPoint.x, y: size.height * markerPoint.y)
-    }
-
-    if let location = item.location,
-       let bounds = liveLocationBounds {
-      let longitudeSpan = max(bounds.maxLongitude - bounds.minLongitude, 0.0001)
-      let latitudeSpan = max(bounds.maxLatitude - bounds.minLatitude, 0.0001)
-      let normalizedX = (location.longitude - bounds.minLongitude) / longitudeSpan
-      let normalizedY = 1 - ((location.latitude - bounds.minLatitude) / latitudeSpan)
-      return CGPoint(
-        x: size.width * (0.18 + (normalizedX * 0.64)),
-        y: size.height * (0.22 + (normalizedY * 0.56))
-      )
-    }
-
-    let fallbackPoints: [CGPoint] = [
-      CGPoint(x: size.width * 0.45, y: size.height * 0.37),
-      CGPoint(x: size.width * 0.67, y: size.height * 0.28),
-      CGPoint(x: size.width * 0.26, y: size.height * 0.20),
-      CGPoint(x: size.width * 0.31, y: size.height * 0.53),
-      CGPoint(x: size.width * 0.72, y: size.height * 0.45),
-      CGPoint(x: size.width * 0.48, y: size.height * 0.73)
-    ]
-
-    return fallbackPoints[index % fallbackPoints.count]
-  }
-
-  private var liveLocationBounds: (minLatitude: Double, maxLatitude: Double, minLongitude: Double, maxLongitude: Double)? {
-    let locations = filteredItems.compactMap(\.location)
-    guard let first = locations.first else {
-      return nil
-    }
-
-    return locations.dropFirst().reduce(
-      (first.latitude, first.latitude, first.longitude, first.longitude)
-    ) { partialResult, location in
-      (
-        min(partialResult.0, location.latitude),
-        max(partialResult.1, location.latitude),
-        min(partialResult.2, location.longitude),
-        max(partialResult.3, location.longitude)
-      )
-    }
-  }
-
-  private func currentLocationIndicator(in size: CGSize) -> some View {
-    ZStack {
-      Circle()
-        .fill(Color(red: 0.24, green: 0.48, blue: 0.96).opacity(0.16))
-        .frame(width: 28, height: 28)
-
-      Circle()
-        .fill(Color(red: 0.24, green: 0.48, blue: 0.96))
-        .frame(width: 12, height: 12)
-        .overlay {
-          Circle()
-            .stroke(.white, lineWidth: 3)
+    .mapStyle(.standard(elevation: .realistic))
+    .ignoresSafeArea()
+    .simultaneousGesture(
+      TapGesture().onEnded {
+        withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+          isFilterPopoverPresented = false
+          isSearchFieldFocused = false
+          locationSearchController.clearSuggestions()
+          selectedAdventureID = nil
         }
-    }
-    .position(x: size.width * 0.50, y: size.height * 0.67)
-    .accessibilityIdentifier("map.currentLocation")
+      }
+    )
+    .accessibilityIdentifier("map.surface")
   }
 
   private func recenterButton(bottomInset: CGFloat) -> some View {
@@ -399,7 +349,9 @@ struct MapExploreView: View {
       HStack {
         Spacer()
 
-        Button(action: {}) {
+        Button {
+          recenterMap()
+        } label: {
           Image(systemName: "scope")
             .font(.system(size: 18, weight: .semibold))
             .foregroundStyle(HATheme.Colors.primary)
@@ -778,14 +730,17 @@ struct MapExploreView: View {
     withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
       selectedAdventureID = item.destinationID
       isFilterPopoverPresented = false
+      isSearchFieldFocused = false
+      locationSearchController.clearSuggestions()
+      centerMap(on: item)
     }
   }
 
   private func updateSelectionAfterFiltering() {
-    if let selectedAdventureID,
-       !filteredItems.contains(where: { $0.destinationID == selectedAdventureID }) {
-      self.selectedAdventureID = nil
-    }
+    selectedAdventureID = MapExploreSelectionHelper.validSelectionID(
+      currentSelectionID: selectedAdventureID,
+      filteredItems: filteredItems
+    )
 
     if filteredItems.isEmpty {
       sheetState = .peek
@@ -793,8 +748,359 @@ struct MapExploreView: View {
     }
   }
 
+  private func applyInitialMapPositionIfNeeded() {
+    guard hasSetInitialMapPosition == false else {
+      return
+    }
+
+    guard let region = locationSearchController.defaultInitialRegion(for: filteredItems) else {
+      return
+    }
+
+    hasSetInitialMapPosition = true
+    centerMap(on: region, animated: false)
+  }
+
+  private func centerMap(on item: MapCardPresentation) {
+    guard let coordinate = item.location?.coordinate else {
+      return
+    }
+
+    centerMap(on: MapExploreRegionHelper.region(center: coordinate))
+  }
+
+  private func centerMap(on region: MKCoordinateRegion, animated: Bool = true) {
+    if animated {
+      withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
+        mapPosition = .region(region)
+      }
+    } else {
+      mapPosition = .region(region)
+    }
+  }
+
+  private func recenterMap() {
+    if let region = locationSearchController.regionAroundCurrentLocation() {
+      hasCenteredOnUserLocation = true
+      centerMap(on: region)
+      return
+    }
+
+    if let region = MapExploreRegionHelper.fallbackRegion(for: filteredItems) {
+      centerMap(on: region)
+    }
+  }
+
+  private func clearSearch() {
+    searchText = ""
+    isSearchFieldFocused = false
+    locationSearchController.clearSuggestions()
+    recenterMap()
+  }
+
+  private func handleSuggestionSelection(_ suggestion: MapExploreSearchSuggestion) {
+    Task {
+      guard let resolved = await locationSearchController.resolveSuggestion(suggestion) else {
+        return
+      }
+
+      await MainActor.run {
+        searchText = resolved.title
+        selectedAdventureID = nil
+        isFilterPopoverPresented = false
+        isSearchFieldFocused = false
+        locationSearchController.clearSuggestions()
+        centerMap(on: resolved.region)
+      }
+    }
+  }
+
+  private func selectFirstSuggestionIfNeeded() async {
+    guard let suggestion = locationSearchController.completions.first else {
+      return
+    }
+
+    handleSuggestionSelection(suggestion)
+  }
+
   private func accessibilityAdventureID(_ id: String) -> String {
     runtimeMode == .fixturePreview ? MockFixtures.uiTestAdventureID(for: id) : id
+  }
+}
+
+@MainActor
+final class MapExploreLocationSearchController: NSObject, ObservableObject {
+  @Published private(set) var completions: [MapExploreSearchSuggestion] = []
+  @Published private(set) var currentLocationCoordinate: CLLocationCoordinate2D?
+
+  private let runtimeMode: AppRuntimeMode
+  private let locationManager: CLLocationManager?
+  private let completer: MKLocalSearchCompleter?
+  private var hasRequestedLocation = false
+
+  init(runtimeMode: AppRuntimeMode) {
+    self.runtimeMode = runtimeMode
+
+    if runtimeMode == .fixturePreview {
+      locationManager = nil
+      completer = nil
+    } else {
+      let locationManager = CLLocationManager()
+      let completer = MKLocalSearchCompleter()
+      self.locationManager = locationManager
+      self.completer = completer
+      super.init()
+      locationManager.delegate = self
+      completer.delegate = self
+      completer.resultTypes = [.address, .pointOfInterest]
+      return
+    }
+
+    super.init()
+  }
+
+  func begin() {
+    guard runtimeMode != .fixturePreview, let locationManager else {
+      return
+    }
+
+    switch locationManager.authorizationStatus {
+    case .authorizedAlways, .authorizedWhenInUse:
+      requestLocationIfNeeded()
+    case .notDetermined:
+      locationManager.requestWhenInUseAuthorization()
+    case .denied, .restricted:
+      break
+    @unknown default:
+      break
+    }
+  }
+
+  func updateQuery(_ query: String) {
+    let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard trimmed.isEmpty == false else {
+      completions = []
+      completer?.queryFragment = ""
+      return
+    }
+
+    if runtimeMode == .fixturePreview {
+      let normalized = trimmed.localizedLowercase
+      completions = MapExploreSearchSuggestion.fixtureSuggestions.filter { suggestion in
+        suggestion.title.localizedLowercase.contains(normalized)
+          || suggestion.subtitle.localizedLowercase.contains(normalized)
+      }
+      return
+    }
+
+    completer?.queryFragment = trimmed
+  }
+
+  func clearSuggestions() {
+    completions = []
+  }
+
+  func defaultInitialRegion(for items: [MapCardPresentation]) -> MKCoordinateRegion? {
+    if let region = regionAroundCurrentLocation() {
+      return region
+    }
+
+    return MapExploreRegionHelper.fallbackRegion(for: items)
+  }
+
+  func regionAroundCurrentLocation() -> MKCoordinateRegion? {
+    guard let currentLocationCoordinate else {
+      return nil
+    }
+
+    return MapExploreRegionHelper.region(center: currentLocationCoordinate)
+  }
+
+  func resolveSuggestion(_ suggestion: MapExploreSearchSuggestion) async -> MapExploreResolvedPlace? {
+    if let coordinate = suggestion.fixtureCoordinate {
+      return MapExploreResolvedPlace(
+        title: suggestion.displayLabel,
+        region: MapExploreRegionHelper.region(center: coordinate)
+      )
+    }
+
+    guard let completion = suggestion.completion else {
+      return nil
+    }
+
+    let request = MKLocalSearch.Request(completion: completion)
+
+    do {
+      let response = try await MKLocalSearch(request: request).start()
+      if let coordinate = response.mapItems.first?.placemark.coordinate {
+        return MapExploreResolvedPlace(
+          title: suggestion.displayLabel,
+          region: MapExploreRegionHelper.region(center: coordinate)
+        )
+      }
+    } catch {
+      return nil
+    }
+
+    return nil
+  }
+
+  private func requestLocationIfNeeded() {
+    guard hasRequestedLocation == false, let locationManager else {
+      return
+    }
+
+    hasRequestedLocation = true
+    locationManager.requestLocation()
+  }
+}
+
+extension MapExploreLocationSearchController: @preconcurrency CLLocationManagerDelegate {
+  func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+    switch manager.authorizationStatus {
+    case .authorizedAlways, .authorizedWhenInUse:
+      requestLocationIfNeeded()
+    case .denied, .restricted, .notDetermined:
+      break
+    @unknown default:
+      break
+    }
+  }
+
+  func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    currentLocationCoordinate = locations.last?.coordinate
+  }
+
+  func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {}
+}
+
+extension MapExploreLocationSearchController: @preconcurrency MKLocalSearchCompleterDelegate {
+  func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+    completions = completer.results.map(MapExploreSearchSuggestion.init(completion:))
+  }
+
+  func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
+    completions = []
+  }
+}
+
+struct MapExploreSearchSuggestion: Identifiable {
+  let id: String
+  let title: String
+  let subtitle: String
+  fileprivate let completion: MKLocalSearchCompletion?
+  fileprivate let fixtureCoordinate: CLLocationCoordinate2D?
+
+  init(title: String, subtitle: String, fixtureCoordinate: CLLocationCoordinate2D) {
+    self.id = "\(title)|\(subtitle)"
+    self.title = title
+    self.subtitle = subtitle
+    self.completion = nil
+    self.fixtureCoordinate = fixtureCoordinate
+  }
+
+  init(completion: MKLocalSearchCompletion) {
+    self.id = "\(completion.title)|\(completion.subtitle)"
+    self.title = completion.title
+    self.subtitle = completion.subtitle
+    self.completion = completion
+    self.fixtureCoordinate = nil
+  }
+
+  var displayLabel: String {
+    subtitle.isEmpty ? title : "\(title), \(subtitle)"
+  }
+
+  var accessibilityIdentifier: String {
+    displayLabel
+      .lowercased()
+      .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
+      .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+  }
+
+  static let fixtureSuggestions: [MapExploreSearchSuggestion] = [
+    MapExploreSearchSuggestion(
+      title: "Portland",
+      subtitle: "Oregon",
+      fixtureCoordinate: CLLocationCoordinate2D(latitude: 45.5152, longitude: -122.6784)
+    ),
+    MapExploreSearchSuggestion(
+      title: "Mount Hood",
+      subtitle: "Oregon",
+      fixtureCoordinate: CLLocationCoordinate2D(latitude: 45.3735, longitude: -121.6959)
+    ),
+    MapExploreSearchSuggestion(
+      title: "Columbia River Gorge",
+      subtitle: "Oregon",
+      fixtureCoordinate: CLLocationCoordinate2D(latitude: 45.6698, longitude: -121.8842)
+    )
+  ]
+}
+
+struct MapExploreResolvedPlace {
+  let title: String
+  let region: MKCoordinateRegion
+}
+
+enum MapExploreRegionHelper {
+  static let defaultRadiusMiles = 25.0
+  private static let metersPerMile = 1_609.344
+
+  static func region(
+    center: CLLocationCoordinate2D,
+    radiusMiles: Double = defaultRadiusMiles
+  ) -> MKCoordinateRegion {
+    let diameterMeters = radiusMiles * metersPerMile * 2
+    return MKCoordinateRegion(
+      center: center,
+      latitudinalMeters: diameterMeters,
+      longitudinalMeters: diameterMeters
+    )
+  }
+
+  static func fallbackRegion(for items: [MapCardPresentation]) -> MKCoordinateRegion? {
+    let coordinates = items.compactMap(\.location?.coordinate)
+    guard let first = coordinates.first else {
+      return nil
+    }
+
+    guard coordinates.count > 1 else {
+      return region(center: first)
+    }
+
+    let minLatitude = coordinates.map(\.latitude).min() ?? first.latitude
+    let maxLatitude = coordinates.map(\.latitude).max() ?? first.latitude
+    let minLongitude = coordinates.map(\.longitude).min() ?? first.longitude
+    let maxLongitude = coordinates.map(\.longitude).max() ?? first.longitude
+
+    let center = CLLocationCoordinate2D(
+      latitude: (minLatitude + maxLatitude) / 2,
+      longitude: (minLongitude + maxLongitude) / 2
+    )
+
+    let latitudeDelta = max((maxLatitude - minLatitude) * 1.4, 0.08)
+    let longitudeDelta = max((maxLongitude - minLongitude) * 1.4, 0.08)
+
+    return MKCoordinateRegion(
+      center: center,
+      span: MKCoordinateSpan(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
+    )
+  }
+}
+
+enum MapExploreSelectionHelper {
+  static func validSelectionID(
+    currentSelectionID: String?,
+    filteredItems: [MapCardPresentation]
+  ) -> String? {
+    guard let currentSelectionID else {
+      return nil
+    }
+
+    return filteredItems.contains(where: { $0.destinationID == currentSelectionID })
+      ? currentSelectionID
+      : nil
   }
 }
 
@@ -818,6 +1124,16 @@ struct MapExploreView_Previews: PreviewProvider {
         isFilterPopoverPresented: false
       )
       .previewDisplayName("Selected Preview")
+
+      MapExplorePreviewHarness(
+        initialSelection: nil,
+        initialSheetState: .peek,
+        searchText: "Port",
+        activeCategory: nil,
+        visibilityFilter: .all,
+        isFilterPopoverPresented: false
+      )
+      .previewDisplayName("Search Suggestions")
 
       MapExplorePreviewHarness(
         initialSelection: nil,
@@ -895,6 +1211,7 @@ enum MapSheetState {
 private struct MapPinButton: View {
   let item: MapCardPresentation
   let isSelected: Bool
+  let accessibilityAdventureID: String
   let action: () -> Void
 
   var body: some View {
@@ -937,10 +1254,6 @@ private struct MapPinButton: View {
     .buttonStyle(.plain)
     .accessibilityIdentifier("map.pin.\(accessibilityAdventureID)")
   }
-
-  private var accessibilityAdventureID: String {
-    MockFixtures.uiTestAdventureID(for: item.destinationID)
-  }
 }
 
 private struct MarkerPoint: Shape {
@@ -951,5 +1264,11 @@ private struct MarkerPoint: Shape {
     path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
     path.closeSubpath()
     return path
+  }
+}
+
+private extension AdventureLocation {
+  var coordinate: CLLocationCoordinate2D {
+    CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
   }
 }

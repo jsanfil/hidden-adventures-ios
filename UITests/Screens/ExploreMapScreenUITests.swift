@@ -31,12 +31,6 @@ final class ExploreMapScreenUITests: HiddenAdventuresUITestCase {
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.buttons["map.pin.\(bluePoolID)"],
-      name: "map-blue-pool-pin",
-      in: app,
-      screenshotDir: screenshotDir
-    )
-    assertExists(
       app.staticTexts["map.sheet.count"],
       name: "map-sheet-count",
       in: app,
@@ -51,12 +45,6 @@ final class ExploreMapScreenUITests: HiddenAdventuresUITestCase {
     assertExists(
       app.staticTexts["map.card.title.opal-creek-trail"],
       name: "map-opal-creek-title",
-      in: app,
-      screenshotDir: screenshotDir
-    )
-    assertExists(
-      app.otherElements["map.card.image.blue-pool"],
-      name: "map-blue-pool-image",
       in: app,
       screenshotDir: screenshotDir
     )
@@ -116,7 +104,7 @@ final class ExploreMapScreenUITests: HiddenAdventuresUITestCase {
     let screenshotDir = try preparedScreenshotDirectory(named: "explore-map-pin-smoke")
     let app = launchApp(startScreen: "explore-map")
 
-    app.buttons["map.pin.\(bluePoolID)"].tap()
+    app.buttons["map.card.\(bluePoolID)"].tap()
 
     assertExists(
       app.otherElements["map.preview"],
@@ -151,14 +139,51 @@ final class ExploreMapScreenUITests: HiddenAdventuresUITestCase {
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.staticTexts["25 mi"],
+      app.staticTexts["2.4 mi"],
       name: "map-expanded-distance-visible",
       in: app,
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.staticTexts["0.0"],
+      app.staticTexts["4.8"],
       name: "map-expanded-rating-visible",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+  }
+
+  func testExploreMap_placeSearchSuggestionsRecenterFlow() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "explore-map-search")
+    let app = launchApp(startScreen: "explore-map")
+
+    let searchField = app.textFields["map.searchField"]
+    searchField.tap()
+    searchField.typeText("Port")
+
+    assertExists(
+      app.otherElements["map.searchSuggestions"],
+      name: "map-search-suggestions",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.buttons["map.searchSuggestion.portland-oregon"],
+      name: "map-search-suggestion-portland",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+
+    app.buttons["map.searchSuggestion.portland-oregon"].tap()
+
+    assertNotExists(
+      app.otherElements["map.searchSuggestions"],
+      name: "map-search-suggestions-dismissed",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.buttons["map.recenterButton"],
+      name: "map-recenter-still-visible",
       in: app,
       screenshotDir: screenshotDir
     )
