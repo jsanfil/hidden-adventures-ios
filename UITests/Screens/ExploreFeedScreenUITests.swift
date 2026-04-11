@@ -78,4 +78,63 @@ final class ExploreFeedScreenUITests: HiddenAdventuresUITestCase {
     )
     XCTAssertEqual(categoryChips.count, 8, "Expected exactly 8 category chips in Explore.")
   }
+
+  func testExploreFeed_returningFromDetailPreservesHomeTabChrome() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "explore-feed-detail-return")
+    let app = launchApp(startScreen: "explore-feed")
+
+    let feedCard = app.buttons["feed.card.\(eagleID)"]
+    assertHittable(
+      feedCard,
+      name: "feed-detail-entry-card",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    feedCard.tap()
+
+    let detailBackButton = app.buttons["detail.back"]
+    assertExists(
+      detailBackButton,
+      name: "detail-back-after-feed-open",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+
+    let detailScrollView = app.scrollViews.firstMatch
+    assertExists(
+      detailScrollView,
+      name: "detail-scroll-container",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    drag(
+      in: detailScrollView,
+      from: CGVector(dx: 0.5, dy: 0.78),
+      to: CGVector(dx: 0.5, dy: 0.28)
+    )
+
+    detailBackButton.tap()
+
+    let homeTab = app.buttons["tab.home"]
+    assertExists(
+      homeTab,
+      name: "feed-home-tab-after-detail-return",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertValue(
+      homeTab,
+      equals: "selected",
+      name: "feed-home-tab-selected-after-detail-return",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.buttons["feed.card.\(eagleID)"],
+      name: "feed-first-card-after-detail-return",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    saveScreenshot(named: "feed-after-detail-return", to: screenshotDir)
+  }
 }

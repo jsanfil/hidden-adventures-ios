@@ -219,15 +219,28 @@ struct HABottomTabBar: View {
       tabBarContent
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+        .background {
+          Capsule(style: .continuous)
+            .fill(
+              LinearGradient(
+                colors: [
+                  HATheme.Colors.secondary.opacity(0.50),
+                  HATheme.Colors.background.opacity(0.34)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+              )
+            )
+        }
         .glassEffect(
-          .regular.tint(HATheme.Colors.card.opacity(0.12)),
+          .regular.tint(HATheme.Colors.secondary.opacity(0.08)),
           in: .capsule
         )
         .overlay {
           Capsule(style: .continuous)
-            .strokeBorder(.white.opacity(0.38), lineWidth: 1)
+            .strokeBorder(.white.opacity(0.28), lineWidth: 1)
         }
-        .shadow(color: HATheme.Colors.shadow.opacity(0.14), radius: 16, x: 0, y: 8)
+        .shadow(color: HATheme.Colors.shadow.opacity(0.12), radius: 16, x: 0, y: 8)
     }
   }
 

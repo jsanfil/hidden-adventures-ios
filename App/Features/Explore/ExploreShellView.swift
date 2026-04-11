@@ -111,10 +111,23 @@ struct ExploreShellView: View {
     }
     .safeAreaInset(edge: .bottom, spacing: 8) {
       if createAdventureVariant == nil {
-        HABottomTabBar(
-          selectedTab: selectedTab,
-          onSelect: handleTabSelection
-        )
+        ZStack(alignment: .bottom) {
+          LinearGradient(
+            colors: [
+              HATheme.Colors.background.opacity(0),
+              HATheme.Colors.background.opacity(0.34)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+          )
+          .frame(height: 96)
+          .allowsHitTesting(false)
+
+          HABottomTabBar(
+            selectedTab: selectedTab,
+            onSelect: handleTabSelection
+          )
+        }
       }
     }
     .task {
