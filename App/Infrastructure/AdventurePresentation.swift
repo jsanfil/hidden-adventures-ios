@@ -111,7 +111,7 @@ enum AdventurePresentation {
         destinationID: item.id,
         title: item.title,
         placeLabel: item.placeLabel ?? "Hidden location",
-        distanceText: "25 mi",
+        distanceText: distanceText(for: item.distanceMiles),
         rating: item.stats.averageRating,
         category: item.categorySlug?.displayTitle ?? "Adventure",
         categorySlug: item.categorySlug,
@@ -121,6 +121,14 @@ enum AdventurePresentation {
         markerPoint: nil
       )
     }
+  }
+
+  static func distanceText(for distanceMiles: Double?) -> String {
+    guard let distanceMiles else {
+      return "Nearby"
+    }
+
+    return String(format: "%.1f mi", distanceMiles)
   }
 }
 

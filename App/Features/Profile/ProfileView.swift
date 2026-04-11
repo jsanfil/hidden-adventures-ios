@@ -130,6 +130,7 @@ struct ProfileView: View {
 
       FeedView(
         items: adventures,
+        scope: nil,
         adventureService: adventureService,
         runtimeMode: runtimeMode,
         onOpenDetail: onOpenDetail

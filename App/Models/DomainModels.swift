@@ -64,6 +64,56 @@ struct AdventureLocation: Codable, Hashable, Sendable {
   let longitude: Double
 }
 
+struct FeedScope: Codable, Hashable, Sendable {
+  let center: AdventureLocation
+  let radiusMiles: Double
+}
+
+enum FeedSort: String, Codable, Sendable {
+  case recent
+  case distance
+}
+
+struct FeedQuery: Hashable, Sendable {
+  let limit: Int
+  let offset: Int
+  let latitude: Double?
+  let longitude: Double?
+  let radiusMiles: Double?
+  let sort: FeedSort?
+
+  init(
+    limit: Int,
+    offset: Int,
+    latitude: Double? = nil,
+    longitude: Double? = nil,
+    radiusMiles: Double? = nil,
+    sort: FeedSort? = nil
+  ) {
+    self.limit = limit
+    self.offset = offset
+    self.latitude = latitude
+    self.longitude = longitude
+    self.radiusMiles = radiusMiles
+    self.sort = sort
+  }
+
+  var isGeoScoped: Bool {
+    latitude != nil && longitude != nil
+  }
+
+  var scope: FeedScope? {
+    guard let latitude, let longitude, let radiusMiles else {
+      return nil
+    }
+
+    return FeedScope(
+      center: AdventureLocation(latitude: latitude, longitude: longitude),
+      radiusMiles: radiusMiles
+    )
+  }
+}
+
 struct AdventureAuthor: Codable, Hashable, Sendable {
   let handle: String
   let displayName: String?
@@ -105,6 +155,7 @@ struct AdventureCard: Codable, Identifiable, Hashable, Sendable {
   let author: AdventureAuthor
   let primaryMedia: MediaReference?
   let stats: AdventureStats
+  let distanceMiles: Double?
 }
 
 struct AdventureDetail: Codable, Identifiable, Hashable, Sendable {
@@ -165,6 +216,7 @@ struct AuthBootstrapResponse: Codable, Sendable {
 struct FeedResponse: Codable, Sendable {
   let items: [AdventureCard]
   let paging: Paging
+  let scope: FeedScope?
 }
 
 struct AdventureDetailResponse: Codable, Sendable {

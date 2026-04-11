@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 
 struct ExploreShellView: View {
@@ -12,17 +13,65 @@ struct ExploreShellView: View {
   let onOpenDetail: (String) -> Void
   let onLogout: () -> Void
 
-  @State private var feedItems: [AdventureCard] = []
+  @StateObject private var locationController = ExploreDiscoveryLocationController()
+
+  @State private var feedResponse: FeedResponse?
   @State private var visibilityFilter: VisibilityFilter = .all
   @State private var activeCategory: Category?
+  @State private var discoveryScopeState: ExploreDiscoveryScopeState?
   @State private var isLoading = true
   @State private var errorMessage: String?
+  @State private var hasStartedLocationUpdates = false
+
+  private let defaultFeedLimit = 20
+  private let defaultRadiusMiles = MapExploreRegionHelper.defaultRadiusMiles
+  private let fallbackDiscoveryLocation = AdventureLocation(latitude: 37.3349, longitude: -122.0090)
+
+  private var feedItems: [AdventureCard] {
+    feedResponse?.items ?? []
+  }
 
   var filteredItems: [AdventureCard] {
     feedItems.filter { item in
       let visibilityMatches = visibilityFilter.matches(item.visibility)
       let categoryMatches = activeCategory == nil || item.categorySlug == activeCategory
       return visibilityMatches && categoryMatches
+    }
+  }
+
+  private var fallbackScope: FeedScope {
+    FeedScope(center: fallbackDiscoveryLocation, radiusMiles: defaultRadiusMiles)
+  }
+
+  private var effectiveDiscoveryScope: FeedScope {
+    if let searchedScope = discoveryScopeState?.scope,
+      discoveryScopeState?.source == .searchedPlace
+    {
+      return searchedScope
+    }
+
+    if let currentLocation {
+      return FeedScope(center: currentLocation, radiusMiles: defaultRadiusMiles)
+    }
+
+    return fallbackScope
+  }
+
+  private var activeFeedScope: FeedScope {
+    feedResponse?.scope ?? effectiveDiscoveryScope
+  }
+
+  private var mapScopeLabel: String? {
+    guard discoveryScopeState?.source == .searchedPlace else {
+      return nil
+    }
+
+    return discoveryScopeState?.label
+  }
+
+  private var currentLocation: AdventureLocation? {
+    locationController.currentLocationCoordinate.map {
+      AdventureLocation(latitude: $0.latitude, longitude: $0.longitude)
     }
   }
 
@@ -69,8 +118,40 @@ struct ExploreShellView: View {
       }
     }
     .task {
-      guard feedItems.isEmpty else { return }
-      await loadFeed()
+      if hasStartedLocationUpdates == false {
+        hasStartedLocationUpdates = true
+        locationController.begin(runtimeMode: runtimeMode)
+      }
+
+      guard feedResponse == nil else { return }
+      await reloadDiscoveryContent()
+    }
+    .onReceive(locationController.$currentLocationCoordinate) { coordinate in
+      guard let coordinate else {
+        return
+      }
+
+      guard discoveryScopeState?.source != .searchedPlace else {
+        return
+      }
+
+      let currentLocationState = ExploreDiscoveryScopeState(
+        scope: FeedScope(
+          center: AdventureLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
+          radiusMiles: defaultRadiusMiles
+        ),
+        label: "",
+        source: .currentLocation
+      )
+
+      guard currentLocationState != discoveryScopeState else {
+        return
+      }
+
+      discoveryScopeState = currentLocationState
+      Task {
+        await reloadDiscoveryContent()
+      }
     }
     .toolbar(.hidden, for: .navigationBar)
   }
@@ -100,6 +181,7 @@ struct ExploreShellView: View {
 
       FeedView(
         items: filteredItems,
+        scope: activeFeedScope,
         adventureService: adventureService,
         runtimeMode: runtimeMode,
         onOpenDetail: onOpenDetail
@@ -110,8 +192,13 @@ struct ExploreShellView: View {
   private var mapScreen: some View {
     MapExploreView(
       items: feedItems,
+      scope: activeFeedScope,
+      scopeLabel: mapScopeLabel,
+      currentLocation: currentLocation,
       adventureService: adventureService,
       runtimeMode: runtimeMode,
+      onUseCurrentLocation: useCurrentLocationScope,
+      onSelectDiscoveryPlace: selectDiscoveryPlace,
       onOpenDetail: onOpenDetail
     )
   }
@@ -225,7 +312,7 @@ struct ExploreShellView: View {
 
       HAPrimaryButton(title: "Try Again") {
         Task {
-          await loadFeed()
+          await reloadDiscoveryContent()
         }
       }
       .frame(maxWidth: 240)
@@ -248,17 +335,78 @@ struct ExploreShellView: View {
     }
   }
 
-  private func loadFeed() async {
+  private func useCurrentLocationScope() {
+    guard let currentLocation else {
+      locationController.requestCurrentLocation()
+      return
+    }
+
+    let nextScopeState = ExploreDiscoveryScopeState(
+      scope: FeedScope(center: currentLocation, radiusMiles: defaultRadiusMiles),
+      label: "",
+      source: .currentLocation
+    )
+
+    guard nextScopeState != discoveryScopeState else {
+      return
+    }
+
+    discoveryScopeState = nextScopeState
+    Task {
+      await reloadDiscoveryContent()
+    }
+  }
+
+  private func selectDiscoveryPlace(_ place: MapExploreResolvedPlace) {
+    let nextScopeState = ExploreDiscoveryScopeState(
+      scope: FeedScope(center: place.location, radiusMiles: defaultRadiusMiles),
+      label: place.title,
+      source: .searchedPlace
+    )
+
+    guard nextScopeState != discoveryScopeState else {
+      return
+    }
+
+    discoveryScopeState = nextScopeState
+    Task {
+      await reloadDiscoveryContent()
+    }
+  }
+
+  private func reloadDiscoveryContent() async {
     isLoading = true
     defer { isLoading = false }
 
     do {
-      let response = try await adventureService.listFeed(limit: 20, offset: 0)
-      feedItems = response.items
+      let feedQuery = makeFeedQuery(sort: .recent)
+      let nextFeedResponse = try await adventureService.listFeed(query: feedQuery)
+      feedResponse = nextFeedResponse
       errorMessage = nil
     } catch {
       errorMessage = error.localizedDescription
     }
+  }
+
+  private func makeFeedQuery(sort: FeedSort) -> FeedQuery {
+    let scope = effectiveDiscoveryScope
+
+    return FeedQuery(
+      limit: defaultFeedLimit,
+      offset: 0,
+      latitude: scope.center.latitude,
+      longitude: scope.center.longitude,
+      radiusMiles: scope.radiusMiles,
+      sort: sort
+    )
+  }
+
+  private func radiusText(_ radiusMiles: Double) -> String {
+    if radiusMiles.rounded(.towardZero) == radiusMiles {
+      return "\(Int(radiusMiles)) miles"
+    }
+
+    return String(format: "%.1f miles", radiusMiles)
   }
 }
 
@@ -337,18 +485,87 @@ enum VisibilityFilter: CaseIterable, Identifiable {
   }
 }
 
+@MainActor
+final class ExploreDiscoveryLocationController: NSObject, ObservableObject {
+  @Published private(set) var currentLocationCoordinate: CLLocationCoordinate2D?
+  @Published private(set) var authorizationStatus: CLAuthorizationStatus
+
+  private let locationManager = CLLocationManager()
+
+  override init() {
+    authorizationStatus = locationManager.authorizationStatus
+    super.init()
+    locationManager.delegate = self
+  }
+
+  func begin(runtimeMode: AppRuntimeMode) {
+    guard runtimeMode != .fixturePreview else {
+      return
+    }
+
+    requestCurrentLocation()
+  }
+
+  func requestCurrentLocation() {
+    authorizationStatus = locationManager.authorizationStatus
+
+    switch authorizationStatus {
+    case .authorizedAlways, .authorizedWhenInUse:
+      locationManager.requestLocation()
+    case .notDetermined:
+      locationManager.requestWhenInUseAuthorization()
+    case .denied, .restricted:
+      break
+    @unknown default:
+      break
+    }
+  }
+}
+
+extension ExploreDiscoveryLocationController: @preconcurrency CLLocationManagerDelegate {
+  func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+    authorizationStatus = manager.authorizationStatus
+
+    switch manager.authorizationStatus {
+    case .authorizedAlways, .authorizedWhenInUse:
+      requestCurrentLocation()
+    case .denied, .restricted, .notDetermined:
+      break
+    @unknown default:
+      break
+    }
+  }
+
+  func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    currentLocationCoordinate = locations.last?.coordinate
+  }
+
+  func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {}
+}
+private struct ExploreDiscoveryScopeState: Equatable {
+  let scope: FeedScope
+  let label: String
+  let source: ExploreDiscoveryScopeSource
+}
+
+private enum ExploreDiscoveryScopeSource {
+  case currentLocation
+  case searchedPlace
+}
+
 private struct ExploreShellPreviewWrapper: View {
   @State private var mode: ExploreMode = .feed
+  @State private var createAdventureVariant: CreateAdventureFixtureVariant?
 
   var body: some View {
     ExploreShellView(
       adventureService: FixtureAdventureService(),
       profileService: FixtureProfileService(),
       runtimeMode: .fixturePreview,
-      viewerHandle: MockFixtures.profile.handle,
-      viewerDisplayName: MockFixtures.profile.displayName,
+      viewerHandle: "jordan",
+      viewerDisplayName: "Jordan",
       mode: $mode,
-      createAdventureVariant: .constant(nil),
+      createAdventureVariant: $createAdventureVariant,
       onViewerProfileLoaded: { _ in },
       onOpenDetail: { _ in },
       onLogout: {}

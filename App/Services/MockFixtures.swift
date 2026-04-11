@@ -48,7 +48,8 @@ enum MockFixtures {
       placeLabel: "Columbia River Gorge, OR",
       author: AdventureAuthor(handle: "jordan", displayName: "Jordan", homeCity: "Portland", homeRegion: "OR"),
       primaryMedia: MediaReference(id: "media-hero-mountain", storageKey: "hero-mountain"),
-      stats: AdventureStats(favoriteCount: 2847, commentCount: 118, ratingCount: 847, averageRating: 4.9)
+      stats: AdventureStats(favoriteCount: 2847, commentCount: 118, ratingCount: 847, averageRating: 4.9),
+      distanceMiles: nil
     ),
     AdventureCard(
       id: bluePoolID,
@@ -63,7 +64,8 @@ enum MockFixtures {
       placeLabel: "Willamette National Forest, OR",
       author: AdventureAuthor(handle: "sarahk", displayName: "Sarah K.", homeCity: "Bend", homeRegion: "OR"),
       primaryMedia: MediaReference(id: "media-swimming-hole", storageKey: "swimming-hole"),
-      stats: AdventureStats(favoriteCount: 1523, commentCount: 64, ratingCount: 847, averageRating: 4.8)
+      stats: AdventureStats(favoriteCount: 1523, commentCount: 64, ratingCount: 847, averageRating: 4.8),
+      distanceMiles: nil
     ),
     AdventureCard(
       id: tomDickID,
@@ -78,7 +80,8 @@ enum MockFixtures {
       placeLabel: "Mt. Hood, OR",
       author: AdventureAuthor(handle: "mikej", displayName: "Mike J.", homeCity: "Hood River", homeRegion: "OR"),
       primaryMedia: MediaReference(id: "media-scenic-overlook", storageKey: "scenic-overlook"),
-      stats: AdventureStats(favoriteCount: 982, commentCount: 24, ratingCount: 126, averageRating: 4.7)
+      stats: AdventureStats(favoriteCount: 982, commentCount: 24, ratingCount: 126, averageRating: 4.7),
+      distanceMiles: nil
     ),
     AdventureCard(
       id: capeID,
@@ -93,7 +96,8 @@ enum MockFixtures {
       placeLabel: "Pacific City, OR",
       author: AdventureAuthor(handle: "amy", displayName: "Amy L.", homeCity: "Salem", homeRegion: "OR"),
       primaryMedia: MediaReference(id: "media-coastal-path", storageKey: "coastal-path"),
-      stats: AdventureStats(favoriteCount: 892, commentCount: 16, ratingCount: 84, averageRating: 4.7)
+      stats: AdventureStats(favoriteCount: 892, commentCount: 16, ratingCount: 84, averageRating: 4.7),
+      distanceMiles: nil
     ),
     AdventureCard(
       id: oneontaID,
@@ -108,7 +112,8 @@ enum MockFixtures {
       placeLabel: "Columbia River Gorge, OR",
       author: AdventureAuthor(handle: "megan", displayName: "Megan", homeCity: "Portland", homeRegion: "OR"),
       primaryMedia: MediaReference(id: "media-hidden-canyon", storageKey: "hidden-canyon"),
-      stats: AdventureStats(favoriteCount: 3104, commentCount: 89, ratingCount: 913, averageRating: 4.9)
+      stats: AdventureStats(favoriteCount: 3104, commentCount: 89, ratingCount: 913, averageRating: 4.9),
+      distanceMiles: nil
     ),
     AdventureCard(
       id: multnomahID,
@@ -123,7 +128,8 @@ enum MockFixtures {
       placeLabel: "Columbia River Gorge, OR",
       author: AdventureAuthor(handle: "lena", displayName: "Lena", homeCity: "Portland", homeRegion: "OR"),
       primaryMedia: MediaReference(id: "media-hero-falls", storageKey: "hero-mountain"),
-      stats: AdventureStats(favoriteCount: 2240, commentCount: 51, ratingCount: 628, averageRating: 4.8)
+      stats: AdventureStats(favoriteCount: 2240, commentCount: 51, ratingCount: 628, averageRating: 4.8),
+      distanceMiles: nil
     ),
     AdventureCard(
       id: forestParkID,
@@ -138,7 +144,8 @@ enum MockFixtures {
       placeLabel: "Portland, OR",
       author: AdventureAuthor(handle: "jo", displayName: "Jo", homeCity: "Portland", homeRegion: "OR"),
       primaryMedia: MediaReference(id: "media-forest-park", storageKey: "trail-forest"),
-      stats: AdventureStats(favoriteCount: 642, commentCount: 18, ratingCount: 105, averageRating: 4.5)
+      stats: AdventureStats(favoriteCount: 642, commentCount: 18, ratingCount: 105, averageRating: 4.5),
+      distanceMiles: nil
     )
   ]
 

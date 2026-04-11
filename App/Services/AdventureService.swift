@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 import UIKit
 
 struct CreateAdventurePhotoUpload: Sendable {
@@ -75,8 +76,7 @@ private struct AdventureCreatePayload: Encodable {
 
 protocol AdventureService {
   func listFeed(
-    limit: Int,
-    offset: Int
+    query: FeedQuery
   ) async throws -> FeedResponse
 
   func getAdventure(
@@ -98,13 +98,72 @@ protocol AdventureService {
 
 struct FixtureAdventureService: AdventureService {
   func listFeed(
-    limit: Int,
-    offset: Int
+    query: FeedQuery
   ) async throws -> FeedResponse {
-    let items = Array(MockFixtures.feedItems.dropFirst(offset).prefix(limit))
+    let filteredItems = MockFixtures.feedItems
+      .compactMap { item -> AdventureCard? in
+        guard
+          let scope = query.scope,
+          let location = item.location
+        else {
+          return item
+        }
+
+        let distanceMiles = CLLocation(
+          latitude: scope.center.latitude,
+          longitude: scope.center.longitude
+        ).distance(
+          from: CLLocation(latitude: location.latitude, longitude: location.longitude)
+        ) / 1_609.344
+
+        guard distanceMiles <= scope.radiusMiles else {
+          return nil
+        }
+
+        return AdventureCard(
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          categorySlug: item.categorySlug,
+          categoryLabel: item.categoryLabel,
+          visibility: item.visibility,
+          createdAt: item.createdAt,
+          publishedAt: item.publishedAt,
+          location: item.location,
+          placeLabel: item.placeLabel,
+          author: item.author,
+          primaryMedia: item.primaryMedia,
+          stats: item.stats,
+          distanceMiles: Double(round(distanceMiles * 10) / 10)
+        )
+      }
+
+    let sortedItems: [AdventureCard]
+    if query.scope != nil && query.sort == .distance {
+      sortedItems = filteredItems.sorted { lhs, rhs in
+        switch (lhs.distanceMiles, rhs.distanceMiles) {
+        case let (.some(left), .some(right)):
+          if left == right {
+            return lhs.id > rhs.id
+          }
+          return left < right
+        case (.some, .none):
+          return true
+        case (.none, .some):
+          return false
+        case (.none, .none):
+          return lhs.id > rhs.id
+        }
+      }
+    } else {
+      sortedItems = filteredItems
+    }
+
+    let items = Array(sortedItems.dropFirst(query.offset).prefix(query.limit))
     return FeedResponse(
       items: items,
-      paging: Paging(limit: limit, offset: offset, returned: items.count)
+      paging: Paging(limit: query.limit, offset: query.offset, returned: items.count),
+      scope: query.scope
     )
   }
 
@@ -148,17 +207,35 @@ struct RemoteAdventureService: AdventureService {
   let client: APIClient
 
   func listFeed(
-    limit: Int,
-    offset: Int
+    query: FeedQuery
   ) async throws -> FeedResponse {
-    try await client.get(
+    var queryItems = [
+      URLQueryItem(name: "limit", value: String(query.limit)),
+      URLQueryItem(name: "offset", value: String(query.offset))
+    ]
+
+    if let latitude = query.latitude {
+      queryItems.append(URLQueryItem(name: "latitude", value: String(latitude)))
+    }
+
+    if let longitude = query.longitude {
+      queryItems.append(URLQueryItem(name: "longitude", value: String(longitude)))
+    }
+
+    if let radiusMiles = query.radiusMiles {
+      queryItems.append(URLQueryItem(name: "radiusMiles", value: String(radiusMiles)))
+    }
+
+    if let sort = query.sort {
+      queryItems.append(URLQueryItem(name: "sort", value: sort.rawValue))
+    }
+
+    let response: FeedResponse = try await client.get(
       pathComponents: ["feed"],
-      queryItems: [
-        URLQueryItem(name: "limit", value: String(limit)),
-        URLQueryItem(name: "offset", value: String(offset))
-      ],
+      queryItems: queryItems,
       requiresAuth: true
     )
+    return response
   }
 
   func getAdventure(

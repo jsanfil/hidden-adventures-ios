@@ -4,8 +4,13 @@ import SwiftUI
 
 struct MapExploreView: View {
   let items: [AdventureCard]
+  let scope: FeedScope
+  let scopeLabel: String?
+  let currentLocation: AdventureLocation?
   let adventureService: any AdventureService
   let runtimeMode: AppRuntimeMode
+  let onUseCurrentLocation: () -> Void
+  let onSelectDiscoveryPlace: (MapExploreResolvedPlace) -> Void
   let onOpenDetail: (String) -> Void
 
   @StateObject private var locationSearchController: MapExploreLocationSearchController
@@ -17,20 +22,29 @@ struct MapExploreView: View {
   @State private var isFilterPopoverPresented = false
   @State private var mapPosition: MapCameraPosition = .automatic
   @State private var hasSetInitialMapPosition = false
-  @State private var hasCenteredOnUserLocation = false
 
   @FocusState private var isSearchFieldFocused: Bool
 
   init(
     items: [AdventureCard],
+    scope: FeedScope,
+    scopeLabel: String? = nil,
+    currentLocation: AdventureLocation? = nil,
     adventureService: any AdventureService,
     runtimeMode: AppRuntimeMode,
     initialState: MapExploreInitialState = .default,
+    onUseCurrentLocation: @escaping () -> Void = {},
+    onSelectDiscoveryPlace: @escaping (MapExploreResolvedPlace) -> Void = { _ in },
     onOpenDetail: @escaping (String) -> Void
   ) {
     self.items = items
+    self.scope = scope
+    self.scopeLabel = scopeLabel
+    self.currentLocation = currentLocation
     self.adventureService = adventureService
     self.runtimeMode = runtimeMode
+    self.onUseCurrentLocation = onUseCurrentLocation
+    self.onSelectDiscoveryPlace = onSelectDiscoveryPlace
     self.onOpenDetail = onOpenDetail
     _locationSearchController = StateObject(
       wrappedValue: MapExploreLocationSearchController(runtimeMode: runtimeMode)
@@ -76,6 +90,21 @@ struct MapExploreView: View {
       && locationSearchController.completions.isEmpty == false
   }
 
+  private var sheetTitle: String {
+    if let scopeLabel, scopeLabel.isEmpty == false {
+      return "Near \(scopeLabel)"
+    }
+
+    return "Nearby Adventures"
+  }
+
+  private var sheetCountText: String {
+    let count = filteredItems.count
+    let noun = count == 1 ? "place" : "places"
+
+    return "\(count) \(noun) within \(radiusText(scope.radiusMiles))"
+  }
+
   var body: some View {
     GeometryReader { geometry in
       ZStack(alignment: .top) {
@@ -110,17 +139,7 @@ struct MapExploreView: View {
       .clipped()
       .background(HATheme.Colors.mapBackground)
       .task {
-        locationSearchController.begin()
         applyInitialMapPositionIfNeeded()
-      }
-      .onReceive(locationSearchController.$currentLocationCoordinate) { coordinate in
-        guard let coordinate, hasCenteredOnUserLocation == false else {
-          return
-        }
-
-        hasCenteredOnUserLocation = true
-        hasSetInitialMapPosition = true
-        centerMap(on: MapExploreRegionHelper.region(center: coordinate))
       }
       .onChange(of: searchText) {
         locationSearchController.updateQuery(searchText)
@@ -129,6 +148,12 @@ struct MapExploreView: View {
         updateSelectionAfterFiltering()
       }
       .onChange(of: activeCategory) {
+        updateSelectionAfterFiltering()
+      }
+      .onChange(of: scopeCenterKey) {
+        applyScopeMapPosition()
+      }
+      .onChange(of: items.map(\.id)) {
         updateSelectionAfterFiltering()
       }
     }
@@ -383,11 +408,11 @@ struct MapExploreView: View {
 
       HStack(alignment: .top) {
         VStack(alignment: .leading, spacing: sheetState == .collapsed ? 2 : 4) {
-          Text("Nearby Adventures")
+          Text(sheetTitle)
             .font(.system(size: 16, weight: .semibold))
             .foregroundStyle(HATheme.Colors.foreground)
 
-          Text("\(filteredItems.count) places within 25 miles")
+          Text(sheetCountText)
             .font(.system(size: 14, weight: .regular))
             .foregroundStyle(HATheme.Colors.mutedForeground)
             .accessibilityIdentifier("map.sheet.count")
@@ -481,7 +506,7 @@ struct MapExploreView: View {
     ScrollView {
       LazyVStack(spacing: 12) {
         if filteredItems.isEmpty {
-          Text("No adventures match this search yet.")
+          Text("No adventures match this area yet.")
             .font(.system(size: 15, weight: .medium))
             .foregroundStyle(HATheme.Colors.mutedForeground)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -517,14 +542,27 @@ struct MapExploreView: View {
             )
         }
         .accessibilityIdentifier("map.card.image.\(item.id)")
-      Text(item.category)
-        .font(.system(size: 10, weight: .medium))
-        .foregroundStyle(HATheme.Colors.foreground)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(.white.opacity(0.92))
-        .clipShape(Capsule(style: .continuous))
-        .padding(8)
+
+      VStack(alignment: .leading, spacing: 8) {
+        Text(item.category)
+          .font(.system(size: 10, weight: .medium))
+          .foregroundStyle(HATheme.Colors.foreground)
+          .padding(.horizontal, 8)
+          .padding(.vertical, 3)
+          .background(.white.opacity(0.92))
+          .clipShape(Capsule(style: .continuous))
+
+        if item.distanceText != "Nearby" {
+          Text(item.distanceText)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(.black.opacity(0.26))
+            .clipShape(Capsule(style: .continuous))
+        }
+      }
+      .padding(8)
 
       VStack {
         Spacer(minLength: 0)
@@ -748,17 +786,34 @@ struct MapExploreView: View {
     }
   }
 
+  private var scopeCenterKey: String {
+    return "\(scope.center.latitude)|\(scope.center.longitude)|\(scope.radiusMiles)"
+  }
+
   private func applyInitialMapPositionIfNeeded() {
     guard hasSetInitialMapPosition == false else {
       return
     }
 
-    guard let region = locationSearchController.defaultInitialRegion(for: filteredItems) else {
+    guard let region = initialRegion else {
       return
     }
 
     hasSetInitialMapPosition = true
     centerMap(on: region, animated: false)
+  }
+
+  private func applyScopeMapPosition() {
+    guard let region = initialRegion else {
+      return
+    }
+
+    hasSetInitialMapPosition = true
+    centerMap(on: region)
+  }
+
+  private var initialRegion: MKCoordinateRegion? {
+    MapExploreRegionHelper.region(center: scope.center.coordinate, radiusMiles: scope.radiusMiles)
   }
 
   private func centerMap(on item: MapCardPresentation) {
@@ -780,15 +835,16 @@ struct MapExploreView: View {
   }
 
   private func recenterMap() {
-    if let region = locationSearchController.regionAroundCurrentLocation() {
-      hasCenteredOnUserLocation = true
-      centerMap(on: region)
-      return
+    if currentLocation != nil {
+      onUseCurrentLocation()
     }
 
-    if let region = MapExploreRegionHelper.fallbackRegion(for: filteredItems) {
-      centerMap(on: region)
+    if let currentLocation {
+      centerMap(on: MapExploreRegionHelper.region(center: currentLocation.coordinate))
+      return
     }
+    
+    centerMap(on: MapExploreRegionHelper.region(center: scope.center.coordinate, radiusMiles: scope.radiusMiles))
   }
 
   private func clearSearch() {
@@ -811,6 +867,7 @@ struct MapExploreView: View {
         isSearchFieldFocused = false
         locationSearchController.clearSuggestions()
         centerMap(on: resolved.region)
+        onSelectDiscoveryPlace(resolved)
       }
     }
   }
@@ -826,54 +883,37 @@ struct MapExploreView: View {
   private func accessibilityAdventureID(_ id: String) -> String {
     runtimeMode == .fixturePreview ? MockFixtures.uiTestAdventureID(for: id) : id
   }
+
+  private func radiusText(_ radiusMiles: Double) -> String {
+    if radiusMiles.rounded(.towardZero) == radiusMiles {
+      return "\(Int(radiusMiles)) miles"
+    }
+
+    return String(format: "%.1f miles", radiusMiles)
+  }
 }
 
 @MainActor
 final class MapExploreLocationSearchController: NSObject, ObservableObject {
   @Published private(set) var completions: [MapExploreSearchSuggestion] = []
-  @Published private(set) var currentLocationCoordinate: CLLocationCoordinate2D?
 
   private let runtimeMode: AppRuntimeMode
-  private let locationManager: CLLocationManager?
   private let completer: MKLocalSearchCompleter?
-  private var hasRequestedLocation = false
 
   init(runtimeMode: AppRuntimeMode) {
     self.runtimeMode = runtimeMode
 
     if runtimeMode == .fixturePreview {
-      locationManager = nil
       completer = nil
-    } else {
-      let locationManager = CLLocationManager()
-      let completer = MKLocalSearchCompleter()
-      self.locationManager = locationManager
-      self.completer = completer
       super.init()
-      locationManager.delegate = self
-      completer.delegate = self
-      completer.resultTypes = [.address, .pointOfInterest]
       return
     }
 
+    let completer = MKLocalSearchCompleter()
+    self.completer = completer
     super.init()
-  }
-
-  func begin() {
-    guard runtimeMode != .fixturePreview, let locationManager else {
-      return
-    }
-
-    switch locationManager.authorizationStatus {
-    case .authorizedAlways, .authorizedWhenInUse:
-      requestLocationIfNeeded()
-    case .notDetermined:
-      locationManager.requestWhenInUseAuthorization()
-    case .denied, .restricted:
-      break
-    @unknown default:
-      break
-    }
+    completer.delegate = self
+    completer.resultTypes = [.address, .pointOfInterest]
   }
 
   func updateQuery(_ query: String) {
@@ -901,26 +941,11 @@ final class MapExploreLocationSearchController: NSObject, ObservableObject {
     completions = []
   }
 
-  func defaultInitialRegion(for items: [MapCardPresentation]) -> MKCoordinateRegion? {
-    if let region = regionAroundCurrentLocation() {
-      return region
-    }
-
-    return MapExploreRegionHelper.fallbackRegion(for: items)
-  }
-
-  func regionAroundCurrentLocation() -> MKCoordinateRegion? {
-    guard let currentLocationCoordinate else {
-      return nil
-    }
-
-    return MapExploreRegionHelper.region(center: currentLocationCoordinate)
-  }
-
   func resolveSuggestion(_ suggestion: MapExploreSearchSuggestion) async -> MapExploreResolvedPlace? {
     if let coordinate = suggestion.fixtureCoordinate {
       return MapExploreResolvedPlace(
         title: suggestion.displayLabel,
+        location: AdventureLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
         region: MapExploreRegionHelper.region(center: coordinate)
       )
     }
@@ -936,6 +961,7 @@ final class MapExploreLocationSearchController: NSObject, ObservableObject {
       if let coordinate = response.mapItems.first?.placemark.coordinate {
         return MapExploreResolvedPlace(
           title: suggestion.displayLabel,
+          location: AdventureLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
           region: MapExploreRegionHelper.region(center: coordinate)
         )
       }
@@ -945,34 +971,6 @@ final class MapExploreLocationSearchController: NSObject, ObservableObject {
 
     return nil
   }
-
-  private func requestLocationIfNeeded() {
-    guard hasRequestedLocation == false, let locationManager else {
-      return
-    }
-
-    hasRequestedLocation = true
-    locationManager.requestLocation()
-  }
-}
-
-extension MapExploreLocationSearchController: @preconcurrency CLLocationManagerDelegate {
-  func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-    switch manager.authorizationStatus {
-    case .authorizedAlways, .authorizedWhenInUse:
-      requestLocationIfNeeded()
-    case .denied, .restricted, .notDetermined:
-      break
-    @unknown default:
-      break
-    }
-  }
-
-  func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-    currentLocationCoordinate = locations.last?.coordinate
-  }
-
-  func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {}
 }
 
 extension MapExploreLocationSearchController: @preconcurrency MKLocalSearchCompleterDelegate {
@@ -1040,6 +1038,7 @@ struct MapExploreSearchSuggestion: Identifiable {
 
 struct MapExploreResolvedPlace {
   let title: String
+  let location: AdventureLocation
   let region: MKCoordinateRegion
 }
 
@@ -1109,6 +1108,10 @@ struct MapExploreView_Previews: PreviewProvider {
     Group {
       MapExploreView(
         items: MockFixtures.feedItems,
+        scope: FeedScope(
+          center: AdventureLocation(latitude: 37.3349, longitude: -122.0090),
+          radiusMiles: MapExploreRegionHelper.defaultRadiusMiles
+        ),
         adventureService: FixtureAdventureService(),
         runtimeMode: .fixturePreview,
         onOpenDetail: { _ in }
@@ -1169,6 +1172,12 @@ private struct MapExplorePreviewHarness: View {
   var body: some View {
     MapExploreView(
       items: MockFixtures.feedItems,
+      scope: FeedScope(
+        center: AdventureLocation(latitude: 45.5152, longitude: -122.6784),
+        radiusMiles: MapExploreRegionHelper.defaultRadiusMiles
+      ),
+      scopeLabel: "Portland",
+      currentLocation: AdventureLocation(latitude: 45.5152, longitude: -122.6784),
       adventureService: FixtureAdventureService(),
       runtimeMode: .fixturePreview,
       initialState: MapExploreInitialState(

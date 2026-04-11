@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FeedView: View {
   let items: [AdventureCard]
+  let scope: FeedScope?
   let adventureService: AdventureService
   let runtimeMode: AppRuntimeMode
   let onOpenDetail: (String) -> Void
@@ -19,6 +20,7 @@ struct FeedView: View {
           } label: {
             FeedCardView(
               adventure: adventure,
+              scope: scope,
               adventureService: adventureService,
               runtimeMode: runtimeMode
             )
@@ -38,6 +40,7 @@ struct FeedView_Previews: PreviewProvider {
   static var previews: some View {
     FeedView(
       items: MockFixtures.feedItems,
+      scope: nil,
       adventureService: FixtureAdventureService(),
       runtimeMode: .fixturePreview,
       onOpenDetail: { _ in }
@@ -47,6 +50,7 @@ struct FeedView_Previews: PreviewProvider {
 
 private struct FeedCardView: View {
   let adventure: AdventureCard
+  let scope: FeedScope?
   let adventureService: AdventureService
   let runtimeMode: AppRuntimeMode
 
@@ -113,7 +117,14 @@ private struct FeedCardView: View {
 
             Spacer(minLength: 8)
 
-            HStack(spacing: 14) {
+            HStack(spacing: 12) {
+              if scope != nil, let distanceMiles = adventure.distanceMiles {
+                HStack(spacing: 4) {
+                  Image(systemName: "location.north.line")
+                  Text(String(format: "%.1f mi", distanceMiles))
+                }
+              }
+
               HStack(spacing: 4) {
                 Image(systemName: "star.fill")
                 Text(String(format: "%.1f", adventure.stats.averageRating))
