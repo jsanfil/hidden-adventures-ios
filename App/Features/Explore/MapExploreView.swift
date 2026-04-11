@@ -139,7 +139,7 @@ struct MapExploreView: View {
         if let selectedAdventure {
           previewCard(for: selectedAdventure)
             .padding(.horizontal, 16)
-            .padding(.bottom, 106)
+            .padding(.bottom, 30)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .transition(.move(edge: .bottom).combined(with: .opacity))
             .zIndex(3)
