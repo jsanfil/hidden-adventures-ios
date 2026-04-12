@@ -44,7 +44,7 @@ struct ProfileView: View {
     VStack(spacing: 0) {
       ZStack(alignment: .bottomLeading) {
         LinearGradient(
-          colors: [HATheme.Colors.mapForest, HATheme.Colors.primary.opacity(0.8)],
+          colors: [HATheme.Colors.accent, HATheme.Colors.primary],
           startPoint: .topLeading,
           endPoint: .bottomTrailing
         )
@@ -126,6 +126,7 @@ struct ProfileView: View {
       Text("Shared adventures")
         .font(HATheme.Typography.sectionTitle)
         .foregroundStyle(HATheme.Colors.foreground)
+        .padding(.top, 8)
         .padding(.horizontal, 24)
 
       FeedView(
