@@ -50,8 +50,11 @@ struct ProfileView: View {
   private func header(profile: ProfileDetail) -> some View {
     VStack(spacing: 0) {
       ZStack(alignment: .bottomLeading) {
-        Rectangle()
-          .fill(Color(red: 0.353, green: 0.541, blue: 0.478))
+        LinearGradient(
+          colors: [HATheme.Colors.accent, HATheme.Colors.primary],
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
           .frame(height: 220)
           .overlay(alignment: .top) {
             HAStatusBarSpacer()
