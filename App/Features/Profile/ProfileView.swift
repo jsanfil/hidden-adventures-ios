@@ -113,7 +113,7 @@ struct ProfileView: View {
         HStack(spacing: 16) {
           stat(title: "Adventures", value: response?.adventures.count ?? 0)
           stat(title: "Saved", value: 0)
-          stat(title: "Mode", value: runtimeMode == .fixturePreview ? "Preview" : "Live")
+          stat(title: "Sidekicks", value: 10)
         }
       }
       .padding(.horizontal, 24)
