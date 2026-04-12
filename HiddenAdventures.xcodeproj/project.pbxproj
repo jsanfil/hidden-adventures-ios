@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0ACE0DF246E6C9113117D9D2 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54CD3A506F4844D6ADED50F /* APIClientTests.swift */; };
+		0C6B0CE3F06323A7EED7744E /* MediaDataCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 123ADE336B82C5AEFE389FE9 /* MediaDataCache.swift */; };
 		14BA6C2A8C833314C7A48661 /* CreateDetailsScreenUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 878A93B1461049232AB47961 /* CreateDetailsScreenUITests.swift */; };
 		14D0ACE06F9A6B84A86D42E8 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C53BE638AC1AEE1B0EF53F /* AppRuntime.swift */; };
 		1A06676D1FCC7C3735C1B8FF /* ExploreMapScreenUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F6D8A697BBF8A5AF67AE12 /* ExploreMapScreenUITests.swift */; };
@@ -25,7 +26,6 @@
 		5B58C9379D10CC5F756AB455 /* AdventureDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51AEB6FD9CC9D30EC2CC883E /* AdventureDetailView.swift */; };
 		5FF1999DA0CDC78210EAAEC8 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B33EC6D97B65EF29FDCB70C /* RootView.swift */; };
 		62C06078139D3DE7646834ED /* ExploreShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 742712AC53B2228B513E2B06 /* ExploreShellView.swift */; };
-		648A1C093F5F44B792F63531 /* ExploreLocationSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 648A1C083F5F44B792F63531 /* ExploreLocationSearch.swift */; };
 		667E9CB3F5192D2F2618F4F5 /* DetailScreenUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E13547CAFE706BA9FCD8491 /* DetailScreenUITests.swift */; };
 		67B2C8F82886F8611EA41B19 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A85B19635A8492F38A602880 /* WelcomeView.swift */; };
 		6EE6AC8E2576DE9484094829 /* WalkthroughFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FCDFA427313D13A957A8283 /* WalkthroughFlowUITests.swift */; };
@@ -46,6 +46,7 @@
 		B6D4E78A2B750DF065BCF686 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43A73CAE79695A47AF0A128 /* ProfileView.swift */; };
 		BAEF7813756E5167B6B263FE /* ScreenGalleryRegressionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 725134AE2289C5B714A9678B /* ScreenGalleryRegressionUITests.swift */; };
 		BB778F9D50706FEC787C6EB1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8853742130D14660B95AFB3A /* Assets.xcassets */; };
+		C544B94795FC669F66023CF5 /* ExploreLocationSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00470C429BF707C53C64DE21 /* ExploreLocationSearch.swift */; };
 		C9E91AFB760282C44A5742A1 /* HAComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E40A4A859110E763484291F /* HAComponents.swift */; };
 		CBFAE28EBF8C6494CB5ADDD5 /* DetailLayoutRegressionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1456AD27A70CE746F35FB259 /* DetailLayoutRegressionUITests.swift */; };
 		D1D79C7D9E1EBDA25A8F421F /* HiddenAdventuresApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF981AA58002EB9F259A6D6A /* HiddenAdventuresApp.swift */; };
@@ -74,11 +75,13 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		00470C429BF707C53C64DE21 /* ExploreLocationSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreLocationSearch.swift; sourceTree = "<group>"; };
 		04ED8E7C985A6D2822EB21E0 /* AdventurePresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdventurePresentation.swift; sourceTree = "<group>"; };
 		0AC6E797CF0BA0AEC6CD09C5 /* AppSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSessionTests.swift; sourceTree = "<group>"; };
 		0E40A4A859110E763484291F /* HAComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HAComponents.swift; sourceTree = "<group>"; };
 		0FB2EE7B37F2B8D24184BFC1 /* CategoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryTests.swift; sourceTree = "<group>"; };
 		11C94430132D9F87A520CB09 /* CreateAdventureScreenModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateAdventureScreenModel.swift; sourceTree = "<group>"; };
+		123ADE336B82C5AEFE389FE9 /* MediaDataCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDataCache.swift; sourceTree = "<group>"; };
 		1456AD27A70CE746F35FB259 /* DetailLayoutRegressionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailLayoutRegressionUITests.swift; sourceTree = "<group>"; };
 		1FCDFA427313D13A957A8283 /* WalkthroughFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkthroughFlowUITests.swift; sourceTree = "<group>"; };
 		2B33EC6D97B65EF29FDCB70C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -99,7 +102,6 @@
 		7152BCD3FCE7EB6F6DF3D607 /* AppSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSession.swift; sourceTree = "<group>"; };
 		725134AE2289C5B714A9678B /* ScreenGalleryRegressionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenGalleryRegressionUITests.swift; sourceTree = "<group>"; };
 		742712AC53B2228B513E2B06 /* ExploreShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreShellView.swift; sourceTree = "<group>"; };
-		648A1C083F5F44B792F63531 /* ExploreLocationSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreLocationSearch.swift; sourceTree = "<group>"; };
 		7B9C204CDC9CECCE3B5C52BB /* MapExploreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapExploreView.swift; sourceTree = "<group>"; };
 		808A87D5F1BF4CFE8454A0FB /* HiddenAdventuresUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = HiddenAdventuresUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		85DEB3130C9F6520644EA13B /* ProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileService.swift; sourceTree = "<group>"; };
@@ -272,6 +274,7 @@
 				F7ACE178766C7775048192A0 /* AdventureService.swift */,
 				6457D56B398A66AA58579E9B /* AppAuthService.swift */,
 				E6A53E432DA9DAF9850E1E7D /* AuthService.swift */,
+				123ADE336B82C5AEFE389FE9 /* MediaDataCache.swift */,
 				6728D21F886AE321FCB1FCF7 /* MockFixtures.swift */,
 				85DEB3130C9F6520644EA13B /* ProfileService.swift */,
 			);
@@ -347,7 +350,7 @@
 		FC61830ABAC26CE0AB6C717C /* Explore */ = {
 			isa = PBXGroup;
 			children = (
-				648A1C083F5F44B792F63531 /* ExploreLocationSearch.swift */,
+				00470C429BF707C53C64DE21 /* ExploreLocationSearch.swift */,
 				742712AC53B2228B513E2B06 /* ExploreShellView.swift */,
 				DEBD234077F99604B20D3700 /* FeedView.swift */,
 				7B9C204CDC9CECCE3B5C52BB /* MapExploreView.swift */,
@@ -516,13 +519,14 @@
 				9C2079E9659C1A13B754D8DB /* CreateAdventureView.swift in Sources */,
 				9ADA44B142A6FA2CA40C4B42 /* DomainModels.swift in Sources */,
 				9850F8D83B318009FF879E7D /* EmailAuthView.swift in Sources */,
+				C544B94795FC669F66023CF5 /* ExploreLocationSearch.swift in Sources */,
 				62C06078139D3DE7646834ED /* ExploreShellView.swift in Sources */,
-				648A1C093F5F44B792F63531 /* ExploreLocationSearch.swift in Sources */,
 				A8C4B0E9F16AC84BEC0B95E9 /* FeedView.swift in Sources */,
 				C9E91AFB760282C44A5742A1 /* HAComponents.swift in Sources */,
 				AF5F56F417AC628A475C211F /* HATheme.swift in Sources */,
 				D1D79C7D9E1EBDA25A8F421F /* HiddenAdventuresApp.swift in Sources */,
 				7C1BD75A72A2384DDDF4B5E5 /* MapExploreView.swift in Sources */,
+				0C6B0CE3F06323A7EED7744E /* MediaDataCache.swift in Sources */,
 				50405A84C4F24E92D60CFA7B /* MockFixtures.swift in Sources */,
 				297C277C6A85B02B7C78DFB3 /* ProfileService.swift in Sources */,
 				3F49A76E8A480F177CC5E38C /* ProfileSetupView.swift in Sources */,

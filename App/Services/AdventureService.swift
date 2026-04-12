@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import OSLog
 import UIKit
 
 struct CreateAdventurePhotoUpload: Sendable {
@@ -204,7 +205,15 @@ struct FixtureAdventureService: AdventureService {
 }
 
 struct RemoteAdventureService: AdventureService {
+  private static let logger = AppLogger.logger(category: "network.media")
+
   let client: APIClient
+  let cache: MediaDataCache
+
+  init(client: APIClient, cache: MediaDataCache = .shared) {
+    self.client = client
+    self.cache = cache
+  }
 
   func listFeed(
     query: FeedQuery
@@ -259,16 +268,18 @@ struct RemoteAdventureService: AdventureService {
   func loadMediaData(
     id: String
   ) async throws -> Data {
-    if let cached = await MediaDataCache.shared.data(for: id) {
-      return cached
+    switch await cache.lookup(id) {
+    case .fresh(let data):
+      Self.logger.info("Media cache hit (fresh) for mediaID=\(id, privacy: .public)")
+      return data
+    case .stale(let data, let entry):
+      Self.logger.info("Media cache hit (stale) for mediaID=\(id, privacy: .public); starting background revalidation")
+      triggerBackgroundRevalidation(mediaID: id, entry: entry)
+      return data
+    case .missing:
+      Self.logger.info("Media cache miss for mediaID=\(id, privacy: .public); fetching from API")
+      return try await loadOrJoinNetworkFetch(id: id)
     }
-
-    let data = try await client.getData(
-      pathComponents: ["media", id],
-      requiresAuth: true
-    )
-    await MediaDataCache.shared.insert(data, for: id)
-    return data
   }
 
   func createAdventure(
@@ -350,23 +361,96 @@ struct RemoteAdventureService: AdventureService {
       )
     }
   }
+
+  private func loadOrJoinNetworkFetch(
+    id: String
+  ) async throws -> Data {
+    if let existing = await cache.inFlightFetch(for: id) {
+      return try await existing.value
+    }
+
+    let task = Task<Data, Error> {
+      defer {
+        Task {
+          await cache.setInFlightFetch(nil, for: id)
+        }
+      }
+
+      switch try await client.getMedia(
+        pathComponents: ["media", id],
+        requiresAuth: true
+      ) {
+      case .fetched(let response):
+        try await cache.store(
+          response.data,
+          for: id,
+          eTag: response.eTag,
+          maxAgeSeconds: response.maxAgeSeconds,
+          contentType: response.contentType
+        )
+        Self.logger.info("Media cache store for mediaID=\(id, privacy: .public) bytes=\(response.data.count, privacy: .public)")
+        return response.data
+      case .notModified:
+        throw APIError.invalidResponse
+      case .notFound:
+        await cache.remove(id)
+        MediaDataCache.postChange(mediaID: id, action: .invalidated)
+        throw APIError.server(statusCode: 404, message: "Media not found.")
+      }
+    }
+
+    await cache.setInFlightFetch(task, for: id)
+    return try await task.value
+  }
+
+  private func triggerBackgroundRevalidation(
+    mediaID: String,
+    entry: MediaCacheEntry
+  ) {
+    Task {
+      guard await cache.beginRevalidation(for: mediaID) else {
+        return
+      }
+
+      defer {
+        Task {
+          await cache.endRevalidation(for: mediaID)
+        }
+      }
+
+      do {
+        switch try await client.getMedia(
+          pathComponents: ["media", mediaID],
+          ifNoneMatch: entry.eTag,
+          requiresAuth: true
+        ) {
+        case .fetched(let response):
+          try await cache.store(
+            response.data,
+            for: mediaID,
+            eTag: response.eTag,
+            maxAgeSeconds: response.maxAgeSeconds,
+            contentType: response.contentType
+          )
+          MediaDataCache.postChange(mediaID: mediaID, action: .updated)
+        case .notModified(let eTag, let maxAgeSeconds):
+          try await cache.markRevalidated(
+            mediaID,
+            eTag: eTag,
+            maxAgeSeconds: maxAgeSeconds
+          )
+        case .notFound:
+          await cache.remove(mediaID)
+          MediaDataCache.postChange(mediaID: mediaID, action: .invalidated)
+        }
+      } catch {
+        Self.logger.error("Media revalidation failed for mediaID=\(mediaID, privacy: .public): \(error.localizedDescription, privacy: .public)")
+      }
+    }
+  }
 }
 
 enum FixtureServiceError: Error {
   case notFound
   case notSupported
-}
-
-actor MediaDataCache {
-  static let shared = MediaDataCache()
-
-  private var store: [String: Data] = [:]
-
-  func data(for id: String) -> Data? {
-    store[id]
-  }
-
-  func insert(_ data: Data, for id: String) {
-    store[id] = data
-  }
 }

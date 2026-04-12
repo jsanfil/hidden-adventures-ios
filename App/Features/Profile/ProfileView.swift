@@ -275,6 +275,26 @@ private struct ProfileRemoteAvatarImage: View {
     .task(id: mediaID) {
       await loadImage()
     }
+    .onReceive(NotificationCenter.default.publisher(for: .haMediaCacheDidChange)) { notification in
+      guard
+        let changedMediaID = notification.userInfo?[MediaCacheNotifications.mediaIDUserInfoKey] as? String,
+        changedMediaID == mediaID,
+        let rawAction = notification.userInfo?[MediaCacheNotifications.actionUserInfoKey] as? String,
+        let action = MediaCacheChangeAction(rawValue: rawAction)
+      else {
+        return
+      }
+
+      switch action {
+      case .invalidated:
+        image = nil
+        didFail = true
+      case .updated:
+        Task {
+          await loadImage(forceReload: true)
+        }
+      }
+    }
   }
 
   private var fallbackAvatar: some View {
@@ -287,8 +307,8 @@ private struct ProfileRemoteAvatarImage: View {
   }
 
   @MainActor
-  private func loadImage() async {
-    if image != nil {
+  private func loadImage(forceReload: Bool = false) async {
+    if image != nil && forceReload == false {
       return
     }
 
@@ -297,6 +317,7 @@ private struct ProfileRemoteAvatarImage: View {
       image = UIImage(data: data)
       didFail = image == nil
     } catch {
+      image = nil
       didFail = true
     }
   }

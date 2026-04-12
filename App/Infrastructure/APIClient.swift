@@ -1,6 +1,19 @@
 import Foundation
 import OSLog
 
+struct MediaResponse: Sendable {
+  let data: Data
+  let eTag: String?
+  let maxAgeSeconds: Int
+  let contentType: String?
+}
+
+enum MediaRequestResult: Sendable {
+  case fetched(MediaResponse)
+  case notModified(eTag: String?, maxAgeSeconds: Int)
+  case notFound
+}
+
 struct APIClient {
   private static let logger = AppLogger.logger(category: "network.api")
 
@@ -37,6 +50,19 @@ struct APIClient {
     )
 
     return data
+  }
+
+  func getMedia(
+    pathComponents: [String],
+    ifNoneMatch: String? = nil,
+    requiresAuth: Bool = false
+  ) async throws -> MediaRequestResult {
+    try await performMediaRequest(
+      pathComponents: pathComponents,
+      queryItems: [],
+      ifNoneMatch: ifNoneMatch,
+      requiresAuth: requiresAuth
+    )
   }
 
   func post<Body: Encodable, Response: Decodable>(
@@ -103,6 +129,7 @@ struct APIClient {
     allowsAuthRetry: Bool = true
   ) async throws -> (Data, HTTPURLResponse) {
     let requestLabel = self.requestLabel(method: method, pathComponents: pathComponents)
+    let isMediaRequest = method == "GET" && pathComponents.first == "media" && pathComponents.count == 2
     Self.logger.debug("API request started for \(requestLabel, privacy: .public)")
 
     let url: URL
@@ -130,6 +157,15 @@ struct APIClient {
       throw APIError.missingAuthToken
     }
 
+    if isMediaRequest {
+      let ifNoneMatch = request.value(forHTTPHeaderField: "If-None-Match") ?? "<none>"
+      let ifModifiedSince = request.value(forHTTPHeaderField: "If-Modified-Since") ?? "<none>"
+      let cachePolicy = String(describing: request.cachePolicy)
+      Self.logger.info(
+        "Media request diagnostics for \(requestLabel, privacy: .public) ifNoneMatch=\(ifNoneMatch, privacy: .public) ifModifiedSince=\(ifModifiedSince, privacy: .public) cachePolicy=\(cachePolicy, privacy: .public)"
+      )
+    }
+
     let data: Data
     let response: URLResponse
 
@@ -143,6 +179,15 @@ struct APIClient {
     guard let httpResponse = response as? HTTPURLResponse else {
       Self.logger.error("API request returned a non-HTTP response for \(requestLabel, privacy: .public)")
       throw APIError.invalidResponse
+    }
+
+    if isMediaRequest {
+      let responseETag = httpResponse.value(forHTTPHeaderField: "ETag") ?? "<none>"
+      let cacheControl = httpResponse.value(forHTTPHeaderField: "Cache-Control") ?? "<none>"
+      let age = httpResponse.value(forHTTPHeaderField: "Age") ?? "<none>"
+      Self.logger.info(
+        "Media response diagnostics for \(requestLabel, privacy: .public) status=\(httpResponse.statusCode, privacy: .public) etag=\(responseETag, privacy: .public) cacheControl=\(cacheControl, privacy: .public) age=\(age, privacy: .public)"
+      )
     }
 
     guard (200..<300).contains(httpResponse.statusCode) else {
@@ -172,6 +217,113 @@ struct APIClient {
 
     Self.logger.info("API request succeeded for \(requestLabel, privacy: .public) status=\(httpResponse.statusCode, privacy: .public)")
     return (data, httpResponse)
+  }
+
+  private func performMediaRequest(
+    pathComponents: [String],
+    queryItems: [URLQueryItem],
+    ifNoneMatch: String?,
+    requiresAuth: Bool
+  ) async throws -> MediaRequestResult {
+    let requestLabel = self.requestLabel(method: "GET", pathComponents: pathComponents)
+    Self.logger.debug("API request started for \(requestLabel, privacy: .public)")
+
+    let request = try makeRequest(
+      pathComponents: pathComponents,
+      method: "GET",
+      queryItems: queryItems,
+      requiresAuth: requiresAuth,
+      body: nil,
+      extraHeaders: ifNoneMatch.map { ["If-None-Match": $0] } ?? [:]
+    )
+
+    let ifModifiedSince = request.value(forHTTPHeaderField: "If-Modified-Since") ?? "<none>"
+    let requestIfNoneMatch = request.value(forHTTPHeaderField: "If-None-Match") ?? "<none>"
+    let cachePolicy = String(describing: request.cachePolicy)
+    Self.logger.info(
+      "Media request diagnostics for \(requestLabel, privacy: .public) ifNoneMatch=\(requestIfNoneMatch, privacy: .public) ifModifiedSince=\(ifModifiedSince, privacy: .public) cachePolicy=\(cachePolicy, privacy: .public)"
+    )
+
+    let data: Data
+    let response: URLResponse
+
+    do {
+      (data, response) = try await session.data(for: request)
+    } catch {
+      Self.logger.error("API request transport failed for \(requestLabel, privacy: .public): \(self.redactedErrorMessage(error), privacy: .public)")
+      throw APIError.transport(error)
+    }
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+      Self.logger.error("API request returned a non-HTTP response for \(requestLabel, privacy: .public)")
+      throw APIError.invalidResponse
+    }
+
+    let responseETag = httpResponse.value(forHTTPHeaderField: "ETag")
+    let cacheControl = httpResponse.value(forHTTPHeaderField: "Cache-Control") ?? "<none>"
+    let age = httpResponse.value(forHTTPHeaderField: "Age") ?? "<none>"
+    Self.logger.info(
+      "Media response diagnostics for \(requestLabel, privacy: .public) status=\(httpResponse.statusCode, privacy: .public) etag=\(responseETag ?? "<none>", privacy: .public) cacheControl=\(cacheControl, privacy: .public) age=\(age, privacy: .public)"
+    )
+
+    switch httpResponse.statusCode {
+    case 200:
+      Self.logger.info("API request succeeded for \(requestLabel, privacy: .public) status=\(httpResponse.statusCode, privacy: .public)")
+      return .fetched(
+        MediaResponse(
+          data: data,
+          eTag: responseETag,
+          maxAgeSeconds: Self.maxAgeSeconds(from: cacheControl) ?? 0,
+          contentType: httpResponse.value(forHTTPHeaderField: "Content-Type")
+        )
+      )
+    case 304:
+      Self.logger.info("API request succeeded for \(requestLabel, privacy: .public) status=\(httpResponse.statusCode, privacy: .public)")
+      return .notModified(
+        eTag: responseETag,
+        maxAgeSeconds: Self.maxAgeSeconds(from: cacheControl) ?? 0
+      )
+    case 404:
+      Self.logger.info("API request failed for \(requestLabel, privacy: .public) status=404: media not found")
+      return .notFound
+    default:
+      let message = (try? JSONDecoder().decode(APIErrorResponse.self, from: data).error)
+        ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+      Self.logger.error("API request failed for \(requestLabel, privacy: .public) status=\(httpResponse.statusCode, privacy: .public): \(message, privacy: .public)")
+      throw APIError.server(statusCode: httpResponse.statusCode, message: message)
+    }
+  }
+
+  private func makeRequest(
+    pathComponents: [String],
+    method: String,
+    queryItems: [URLQueryItem],
+    requiresAuth: Bool,
+    body: Data?,
+    extraHeaders: [String: String] = [:]
+  ) throws -> URLRequest {
+    let url = try makeURL(pathComponents: pathComponents, queryItems: queryItems)
+    var request = URLRequest(url: url)
+    request.httpMethod = method
+    request.httpBody = body
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+    if body != nil {
+      request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    }
+
+    let authToken = authTokenProvider()
+    if let authToken, authToken.isEmpty == false {
+      request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+    } else if requiresAuth {
+      throw APIError.missingAuthToken
+    }
+
+    for (header, value) in extraHeaders {
+      request.setValue(value, forHTTPHeaderField: header)
+    }
+
+    return request
   }
 
   private func makeURL(
@@ -209,6 +361,19 @@ struct APIClient {
     }
 
     return error.localizedDescription
+  }
+
+  private static func maxAgeSeconds(from cacheControl: String) -> Int? {
+    for directive in cacheControl.split(separator: ",") {
+      let trimmed = directive.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard trimmed.hasPrefix("max-age=") else {
+        continue
+      }
+
+      return Int(trimmed.dropFirst("max-age=".count))
+    }
+
+    return nil
   }
 }
 

@@ -202,6 +202,69 @@ final class APIClientTests: XCTestCase {
     XCTAssertEqual(response.items.first?.placeLabel, "Hidden Falls Trailhead")
   }
 
+  func testGetMediaReturnsFetchedPayloadAndParsesCacheHeaders() async throws {
+    MockURLProtocol.requestHandler = { request in
+      XCTAssertEqual(request.httpMethod, "GET")
+      XCTAssertEqual(request.url?.path, "/api/media/media-1")
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 200,
+        httpVersion: nil,
+        headerFields: [
+          "ETag": "\"media-tag\"",
+          "Cache-Control": "private, max-age=300",
+          "Content-Type": "image/jpeg"
+        ]
+      )!
+
+      return (response, Data("image-bytes".utf8))
+    }
+
+    let client = makeClient()
+    let result = try await client.getMedia(pathComponents: ["media", "media-1"])
+
+    guard case .fetched(let response) = result else {
+      return XCTFail("Expected fetched media response")
+    }
+
+    XCTAssertEqual(response.data, Data("image-bytes".utf8))
+    XCTAssertEqual(response.eTag, "\"media-tag\"")
+    XCTAssertEqual(response.maxAgeSeconds, 300)
+    XCTAssertEqual(response.contentType, "image/jpeg")
+  }
+
+  func testGetMediaReturnsNotModifiedWhenServerRespondsWith304() async throws {
+    MockURLProtocol.requestHandler = { request in
+      XCTAssertEqual(request.value(forHTTPHeaderField: "If-None-Match"), "\"media-tag\"")
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 304,
+        httpVersion: nil,
+        headerFields: [
+          "ETag": "\"media-tag\"",
+          "Cache-Control": "private, max-age=300"
+        ]
+      )!
+
+      return (response, Data())
+    }
+
+    let client = makeClient()
+    let result = try await client.getMedia(
+      pathComponents: ["media", "media-1"],
+      ifNoneMatch: "\"media-tag\""
+    )
+
+    guard case .notModified(let eTag, let maxAgeSeconds) = result else {
+      return XCTFail("Expected 304 media response")
+    }
+
+    XCTAssertEqual(eTag, "\"media-tag\"")
+    XCTAssertEqual(maxAgeSeconds, 300)
+  }
+
   private func makeClient() -> APIClient {
     APIClient(
       baseURL: URL(string: "https://example.com/api")!,

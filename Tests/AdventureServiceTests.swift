@@ -3,8 +3,14 @@ import XCTest
 @testable import HiddenAdventures
 
 final class AdventureServiceTests: XCTestCase {
+  private var tempDirectories: [URL] = []
+
   override func tearDown() {
     MockAdventureURLProtocol.requestHandler = nil
+    for directory in tempDirectories {
+      try? FileManager.default.removeItem(at: directory)
+    }
+    tempDirectories.removeAll()
     super.tearDown()
   }
 
@@ -118,6 +124,264 @@ final class AdventureServiceTests: XCTestCase {
     let requestBody = try XCTUnwrap(requestBox.createAdventureBody, "Expected create adventure body")
     let payload = try JSONDecoder().decode(CreateAdventurePayloadAssertion.self, from: requestBody)
     XCTAssertEqual(payload.visibility, "sidekicks")
+  }
+
+  func testLoadMediaDataUsesFreshCacheWithoutRefetching() async throws {
+    final class RequestCounter {
+      var count = 0
+    }
+
+    let counter = RequestCounter()
+    let mediaID = "media-fresh"
+    MockAdventureURLProtocol.requestHandler = { request in
+      counter.count += 1
+      XCTAssertEqual(request.url?.path, "/api/media/\(mediaID)")
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 200,
+        httpVersion: nil,
+        headerFields: [
+          "ETag": "\"\(mediaID)-tag\"",
+          "Cache-Control": "private, max-age=300",
+          "Content-Type": "image/jpeg"
+        ]
+      )!
+
+      return (response, Data("cached-image".utf8))
+    }
+
+    let service = makeService(cache: makeCache())
+
+    let first = try await service.loadMediaData(id: mediaID)
+    let second = try await service.loadMediaData(id: mediaID)
+
+    XCTAssertEqual(first, Data("cached-image".utf8))
+    XCTAssertEqual(second, Data("cached-image".utf8))
+    XCTAssertEqual(counter.count, 1)
+  }
+
+  func testLoadMediaDataPersistsAcrossServiceInstances() async throws {
+    final class RequestCounter {
+      var count = 0
+    }
+
+    let counter = RequestCounter()
+    let cacheDirectory = makeTempDirectory()
+    let now = Date(timeIntervalSince1970: 1_000)
+
+    MockAdventureURLProtocol.requestHandler = { request in
+      counter.count += 1
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 200,
+        httpVersion: nil,
+        headerFields: [
+          "ETag": "\"media-1-tag\"",
+          "Cache-Control": "private, max-age=300",
+          "Content-Type": "image/jpeg"
+        ]
+      )!
+
+      return (response, Data("persistent-image".utf8))
+    }
+
+    let firstService = makeService(
+      cache: makeCache(directoryURL: cacheDirectory, now: { now })
+    )
+    let secondService = makeService(
+      cache: makeCache(directoryURL: cacheDirectory, now: { now.addingTimeInterval(120) })
+    )
+
+    _ = try await firstService.loadMediaData(id: "media-1")
+    let second = try await secondService.loadMediaData(id: "media-1")
+
+    XCTAssertEqual(second, Data("persistent-image".utf8))
+    XCTAssertEqual(counter.count, 1)
+  }
+
+  func testLoadMediaDataRevalidatesStaleEntriesWithETag() async throws {
+    final class State {
+      var requestCount = 0
+    }
+
+    let state = State()
+    let revalidationExpectation = expectation(description: "stale entry revalidated")
+    let cacheDirectory = makeTempDirectory()
+    let baseDate = Date(timeIntervalSince1970: 1_000)
+
+    MockAdventureURLProtocol.requestHandler = { request in
+      state.requestCount += 1
+
+      if state.requestCount == 1 {
+        let response = HTTPURLResponse(
+          url: request.url!,
+          statusCode: 200,
+          httpVersion: nil,
+          headerFields: [
+            "ETag": "\"media-1-tag\"",
+            "Cache-Control": "private, max-age=300",
+            "Content-Type": "image/jpeg"
+          ]
+        )!
+        return (response, Data("stale-image".utf8))
+      }
+
+      XCTAssertEqual(request.value(forHTTPHeaderField: "If-None-Match"), "\"media-1-tag\"")
+      if state.requestCount == 2 {
+        revalidationExpectation.fulfill()
+      }
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 304,
+        httpVersion: nil,
+        headerFields: [
+          "ETag": "\"media-1-tag\"",
+          "Cache-Control": "private, max-age=300"
+        ]
+      )!
+      return (response, Data())
+    }
+
+    let firstService = makeService(
+      cache: makeCache(directoryURL: cacheDirectory, now: { baseDate })
+    )
+    let staleService = makeService(
+      cache: makeCache(directoryURL: cacheDirectory, now: { baseDate.addingTimeInterval(301) })
+    )
+    let refreshedService = makeService(
+      cache: makeCache(directoryURL: cacheDirectory, now: { baseDate.addingTimeInterval(302) })
+    )
+
+    _ = try await firstService.loadMediaData(id: "media-1")
+    let staleData = try await staleService.loadMediaData(id: "media-1")
+
+    XCTAssertEqual(staleData, Data("stale-image".utf8))
+    await fulfillment(of: [revalidationExpectation], timeout: 1.0)
+    try await Task.sleep(nanoseconds: 100_000_000)
+
+    let refreshedData = try await refreshedService.loadMediaData(id: "media-1")
+    XCTAssertEqual(refreshedData, Data("stale-image".utf8))
+    XCTAssertEqual(state.requestCount, 2)
+  }
+
+  func testLoadMediaDataInvalidatesStaleEntriesWhenServerReturnsNotFound() async throws {
+    final class State {
+      var requestCount = 0
+    }
+
+    let state = State()
+    let invalidationExpectation = expectation(description: "stale entry invalidated")
+    let cacheDirectory = makeTempDirectory()
+    let baseDate = Date(timeIntervalSince1970: 1_000)
+    var observedAction: String?
+    invalidationExpectation.assertForOverFulfill = false
+
+    let observer = NotificationCenter.default.addObserver(
+      forName: .haMediaCacheDidChange,
+      object: nil,
+      queue: nil
+    ) { notification in
+      guard
+        let mediaID = notification.userInfo?[MediaCacheNotifications.mediaIDUserInfoKey] as? String,
+        mediaID == "media-404"
+      else {
+        return
+      }
+
+      guard observedAction == nil else {
+        return
+      }
+
+      observedAction = notification.userInfo?[MediaCacheNotifications.actionUserInfoKey] as? String
+      invalidationExpectation.fulfill()
+    }
+
+    MockAdventureURLProtocol.requestHandler = { request in
+      state.requestCount += 1
+
+      if state.requestCount == 1 {
+        let response = HTTPURLResponse(
+          url: request.url!,
+          statusCode: 200,
+          httpVersion: nil,
+          headerFields: [
+            "ETag": "\"media-404-tag\"",
+            "Cache-Control": "private, max-age=300",
+            "Content-Type": "image/jpeg"
+          ]
+        )!
+        return (response, Data("moderated-image".utf8))
+      }
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 404,
+        httpVersion: nil,
+        headerFields: ["Content-Type": "application/json"]
+      )!
+      return (response, Data(#"{"error":"Media not found."}"#.utf8))
+    }
+
+    defer {
+      NotificationCenter.default.removeObserver(observer)
+    }
+
+    let firstService = makeService(
+      cache: makeCache(directoryURL: cacheDirectory, now: { baseDate })
+    )
+    let staleService = makeService(
+      cache: makeCache(directoryURL: cacheDirectory, now: { baseDate.addingTimeInterval(301) })
+    )
+    let missingService = makeService(
+      cache: makeCache(directoryURL: cacheDirectory, now: { baseDate.addingTimeInterval(302) })
+    )
+
+    _ = try await firstService.loadMediaData(id: "media-404")
+    let staleData = try await staleService.loadMediaData(id: "media-404")
+    XCTAssertEqual(staleData, Data("moderated-image".utf8))
+
+    await fulfillment(of: [invalidationExpectation], timeout: 1.0)
+    XCTAssertEqual(observedAction, MediaCacheChangeAction.invalidated.rawValue)
+
+    do {
+      _ = try await missingService.loadMediaData(id: "media-404")
+      XCTFail("Expected missing media to fail after invalidation")
+    } catch let error as APIError {
+      guard case .server(let statusCode, _) = error else {
+        return XCTFail("Expected server error")
+      }
+
+      XCTAssertEqual(statusCode, 404)
+    }
+  }
+
+  private func makeService(cache: MediaDataCache) -> RemoteAdventureService {
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [MockAdventureURLProtocol.self]
+    let session = URLSession(configuration: configuration)
+
+    let client = APIClient(
+      baseURL: URL(string: "https://example.com/api")!,
+      authTokenProvider: { "token" },
+      session: session
+    )
+
+    return RemoteAdventureService(client: client, cache: cache)
+  }
+
+  private func makeCache(
+    directoryURL: URL? = nil,
+    now: @escaping @Sendable () -> Date = { Date() }
+  ) -> MediaDataCache {
+    MediaDataCache(directoryURL: directoryURL, now: now)
+  }
+
+  private func makeTempDirectory() -> URL {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    tempDirectories.append(url)
+    return url
   }
 }
 
