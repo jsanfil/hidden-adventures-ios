@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ProfileView: View {
   let handle: String?
@@ -68,11 +69,10 @@ struct ProfileView: View {
         }
 
         VStack(alignment: .leading, spacing: 14) {
-          HAAvatarView(
+          ProfileAvatarView(
             initials: initials(for: profile),
-            size: 78,
-            background: .white.opacity(0.18),
-            foreground: .white
+            mediaID: profile.avatar?.id,
+            mediaLoader: adventureService
           )
 
           VStack(alignment: .leading, spacing: 6) {
@@ -213,6 +213,91 @@ struct ProfileView: View {
       return region
     default:
       return nil
+    }
+  }
+}
+
+private struct ProfileAvatarView: View {
+  let initials: String
+  let mediaID: String?
+  let mediaLoader: any AdventureService
+
+  var body: some View {
+    if let mediaID {
+      ProfileRemoteAvatarImage(
+        mediaID: mediaID,
+        mediaLoader: mediaLoader,
+        initials: initials
+      )
+    } else {
+      fallbackAvatar
+    }
+  }
+
+  private var fallbackAvatar: some View {
+    HAAvatarView(
+      initials: initials,
+      size: 78,
+      background: .white.opacity(0.18),
+      foreground: .white
+    )
+  }
+}
+
+private struct ProfileRemoteAvatarImage: View {
+  let mediaID: String
+  let mediaLoader: any AdventureService
+  let initials: String
+
+  @State private var image: UIImage?
+  @State private var didFail = false
+
+  var body: some View {
+    Group {
+      if let image {
+        Image(uiImage: image)
+          .resizable()
+          .scaledToFill()
+      } else if didFail {
+        fallbackAvatar
+      } else {
+        ZStack {
+          Circle()
+            .fill(.white.opacity(0.18))
+
+          ProgressView()
+            .tint(.white)
+        }
+      }
+    }
+    .frame(width: 78, height: 78)
+    .clipShape(Circle())
+    .task(id: mediaID) {
+      await loadImage()
+    }
+  }
+
+  private var fallbackAvatar: some View {
+    HAAvatarView(
+      initials: initials,
+      size: 78,
+      background: .white.opacity(0.18),
+      foreground: .white
+    )
+  }
+
+  @MainActor
+  private func loadImage() async {
+    if image != nil {
+      return
+    }
+
+    do {
+      let data = try await mediaLoader.loadMediaData(id: mediaID)
+      image = UIImage(data: data)
+      didFail = image == nil
+    } catch {
+      didFail = true
     }
   }
 }
