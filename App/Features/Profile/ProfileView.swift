@@ -14,6 +14,11 @@ struct ProfileView: View {
   @State private var isLoading = true
   @State private var errorMessage: String?
 
+  private let stats = MockFixtures.profileStats
+  private let sidekickPreviews = MockFixtures.sidekickPreviews
+  private let sidekickUsers = MockFixtures.sidekickUsers
+  private let initialSidekickIDs = MockFixtures.initialSidekickIDs
+
   var body: some View {
     ZStack {
       HATheme.Colors.background
@@ -32,6 +37,7 @@ struct ProfileView: View {
           }
           .padding(.bottom, 24)
         }
+        .accessibilityIdentifier("profile.scroll")
       }
     }
     .task {
@@ -44,29 +50,26 @@ struct ProfileView: View {
   private func header(profile: ProfileDetail) -> some View {
     VStack(spacing: 0) {
       ZStack(alignment: .bottomLeading) {
-        LinearGradient(
-          colors: [HATheme.Colors.accent, HATheme.Colors.primary],
-          startPoint: .topLeading,
-          endPoint: .bottomTrailing
-        )
-        .frame(height: 220)
-        .overlay(alignment: .top) {
-          HAStatusBarSpacer()
-        }
-        .overlay(alignment: .topTrailing) {
-          Button(action: onLogout) {
-            Image(systemName: "rectangle.portrait.and.arrow.right")
-              .font(.system(size: 16, weight: .semibold))
-              .foregroundStyle(.white)
-              .frame(width: 40, height: 40)
-              .background(.white.opacity(0.18))
-              .clipShape(Circle())
+        Rectangle()
+          .fill(Color(red: 0.353, green: 0.541, blue: 0.478))
+          .frame(height: 220)
+          .overlay(alignment: .top) {
+            HAStatusBarSpacer()
           }
-          .buttonStyle(.plain)
-          .accessibilityIdentifier("profile.logout")
-          .padding(.top, 12)
-          .padding(.trailing, 16)
-        }
+          .overlay(alignment: .topTrailing) {
+            Button(action: onLogout) {
+              Image(systemName: "rectangle.portrait.and.arrow.right")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 40)
+                .background(.white.opacity(0.18))
+                .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("profile.logout")
+            .padding(.top, 12)
+            .padding(.trailing, 16)
+          }
 
         VStack(alignment: .leading, spacing: 14) {
           ProfileAvatarView(
@@ -86,9 +89,9 @@ struct ProfileView: View {
               .accessibilityIdentifier("profile.handle.readonly")
 
             if let locationLabel = locationLabel(for: profile) {
-              Label(locationLabel, systemImage: "mappin.and.ellipse")
+              Label(locationLabel, systemImage: "location.fill")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.white.opacity(0.82))
+                .foregroundStyle(.white.opacity(0.74))
             }
           }
         }
@@ -108,26 +111,95 @@ struct ProfileView: View {
           Text("Add a bio during setup or come back later to tell other explorers what you love to find.")
             .font(HATheme.Typography.body)
             .foregroundStyle(HATheme.Colors.mutedForeground)
+            .accessibilityIdentifier("profile.bio.placeholder")
         }
 
-        HStack(spacing: 16) {
-          stat(title: "Adventures", value: response?.adventures.count ?? 0)
-          stat(title: "Saved", value: 0)
-          stat(title: "Sidekicks", value: 10)
+        HStack(spacing: 12) {
+          profileStatCard(title: "Adventures", value: stats.adventures)
+          profileStatCard(title: "Likes Received", value: stats.likesReceived)
+          profileStatCard(title: "Views", value: stats.views)
         }
+
+        NavigationLink {
+          SidekicksView(
+            allUsers: sidekickUsers,
+            initialSidekickIDs: initialSidekickIDs
+          )
+        } label: {
+          sidekicksCard
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("profile.sidekicksCard")
       }
       .padding(.horizontal, 24)
       .padding(.top, 24)
     }
   }
 
+  private var sidekicksCard: some View {
+    HStack(spacing: 14) {
+      HStack(spacing: -8) {
+        ForEach(Array(sidekickPreviews.prefix(5).enumerated()), id: \.element.id) { _, sidekick in
+          HAAvatarView(
+            initials: sidekick.initials,
+            size: 32,
+            background: HATheme.Colors.primary.opacity(0.14),
+            foreground: HATheme.Colors.primary
+          )
+          .overlay {
+            Circle()
+              .stroke(HATheme.Colors.background, lineWidth: 2)
+          }
+        }
+
+        if sidekickPreviews.count > 5 {
+          Text("+\(sidekickPreviews.count - 5)")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(HATheme.Colors.mutedForeground)
+            .frame(width: 32, height: 32)
+            .background(HATheme.Colors.muted)
+            .clipShape(Circle())
+            .overlay {
+              Circle()
+                .stroke(HATheme.Colors.background, lineWidth: 2)
+            }
+        }
+      }
+
+      VStack(alignment: .leading, spacing: 4) {
+        Text("\(initialSidekickIDs.count) Sidekicks")
+          .font(.system(size: 18, weight: .semibold))
+          .foregroundStyle(HATheme.Colors.foreground)
+
+        Text("Manage your crew")
+          .font(.system(size: 13, weight: .medium))
+          .foregroundStyle(HATheme.Colors.mutedForeground)
+      }
+
+      Spacer()
+
+      Image(systemName: "chevron.right")
+        .font(.system(size: 16, weight: .semibold))
+        .foregroundStyle(HATheme.Colors.mutedForeground)
+    }
+    .padding(.horizontal, 18)
+    .padding(.vertical, 16)
+    .background(HATheme.Colors.card)
+    .overlay {
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .stroke(HATheme.Colors.border, lineWidth: 1)
+    }
+    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+  }
+
   private func authoredSection(adventures: [AdventureCard]) -> some View {
     VStack(alignment: .leading, spacing: 16) {
       Text("Shared adventures")
-        .font(HATheme.Typography.sectionTitle)
+        .font(.system(size: 20, weight: .semibold))
         .foregroundStyle(HATheme.Colors.foreground)
         .padding(.top, 8)
         .padding(.horizontal, 24)
+        .accessibilityIdentifier("profile.sharedAdventuresHeading")
 
       FeedView(
         items: adventures,
@@ -139,20 +211,27 @@ struct ProfileView: View {
     }
   }
 
-  private func stat<T: CustomStringConvertible>(title: String, value: T) -> some View {
-    VStack(alignment: .leading, spacing: 4) {
+  private func profileStatCard<T: CustomStringConvertible>(title: String, value: T) -> some View {
+    VStack(spacing: 8) {
       Text(value.description)
-        .font(.system(size: 18, weight: .semibold))
+        .font(.system(size: 20, weight: .semibold))
         .foregroundStyle(HATheme.Colors.foreground)
 
       Text(title)
-        .font(.system(size: 12, weight: .medium))
+        .font(.system(size: 11, weight: .medium))
         .foregroundStyle(HATheme.Colors.mutedForeground)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(14)
+    .frame(maxWidth: .infinity, minHeight: 96)
+    .padding(.horizontal, 12)
     .background(HATheme.Colors.card)
-    .clipShape(RoundedRectangle(cornerRadius: HATheme.Radius.card, style: .continuous))
+    .overlay {
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .stroke(HATheme.Colors.border, lineWidth: 1)
+    }
+    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .accessibilityIdentifier("profile.stat.\(title.lowercased().replacingOccurrences(of: " ", with: "-"))")
   }
 
   private func errorState(message: String) -> some View {
@@ -241,6 +320,10 @@ private struct ProfileAvatarView: View {
       background: .white.opacity(0.18),
       foreground: .white
     )
+    .overlay {
+      Circle()
+        .stroke(.white.opacity(0.2), lineWidth: 4)
+    }
   }
 }
 
@@ -272,6 +355,10 @@ private struct ProfileRemoteAvatarImage: View {
     }
     .frame(width: 78, height: 78)
     .clipShape(Circle())
+    .overlay {
+      Circle()
+        .stroke(.white.opacity(0.2), lineWidth: 4)
+    }
     .task(id: mediaID) {
       await loadImage()
     }
@@ -325,14 +412,16 @@ private struct ProfileRemoteAvatarImage: View {
 
 struct ProfileView_Previews: PreviewProvider {
   static var previews: some View {
-    ProfileView(
-      handle: MockFixtures.profile.handle,
-      adventureService: FixtureAdventureService(),
-      profileService: FixtureProfileService(),
-      runtimeMode: .fixturePreview,
-      onProfileLoaded: { _ in },
-      onOpenDetail: { _ in },
-      onLogout: {}
-    )
+    NavigationStack {
+      ProfileView(
+        handle: MockFixtures.profile.handle,
+        adventureService: FixtureAdventureService(),
+        profileService: FixtureProfileService(),
+        runtimeMode: .fixturePreview,
+        onProfileLoaded: { _ in },
+        onOpenDetail: { _ in },
+        onLogout: {}
+      )
+    }
   }
 }

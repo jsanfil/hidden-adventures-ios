@@ -48,6 +48,9 @@ final class AppCoordinator: ObservableObject {
     case "explore-feed":
       stage = .explore
       exploreMode = .feed
+    case "explore-profile":
+      stage = .explore
+      exploreMode = .profile
     case "detail":
       stage = .explore
       exploreMode = .feed

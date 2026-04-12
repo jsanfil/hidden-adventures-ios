@@ -34,6 +34,36 @@ enum MockFixtures {
     updatedAt: "2026-03-27T18:00:00Z"
   )
 
+  static let profileStats = ProfileStatsSnapshot(
+    adventures: 20,
+    likesReceived: 87,
+    views: 1240
+  )
+
+  static let sidekickUsers: [SidekickUser] = [
+    SidekickUser(id: "sidekick-sarah", name: "Sarah Chen", handle: "sarahc", location: "Portland, OR", adventuresCount: 45),
+    SidekickUser(id: "sidekick-mike", name: "Mike Rodriguez", handle: "mikerod", location: "Seattle, WA", adventuresCount: 23),
+    SidekickUser(id: "sidekick-emma", name: "Emma Wilson", handle: "emmaw", location: "San Francisco, CA", adventuresCount: 67),
+    SidekickUser(id: "sidekick-alex", name: "Alex Kim", handle: "alexk", location: "Los Angeles, CA", adventuresCount: 12),
+    SidekickUser(id: "sidekick-jordan", name: "Jordan Taylor", handle: "jordant", location: "Denver, CO", adventuresCount: 89),
+    SidekickUser(id: "sidekick-chris", name: "Chris Martinez", handle: "chrism", location: "Austin, TX", adventuresCount: 34),
+    SidekickUser(id: "sidekick-taylor", name: "Taylor Swift", handle: "tswift", location: "Nashville, TN", adventuresCount: 156),
+    SidekickUser(id: "sidekick-jamie", name: "Jamie Lee", handle: "jamiel", location: "San Diego, CA", adventuresCount: 28),
+    SidekickUser(id: "sidekick-morgan", name: "Morgan Davis", handle: "morgand", location: "Phoenix, AZ", adventuresCount: 41),
+    SidekickUser(id: "sidekick-casey", name: "Casey Brown", handle: "caseyb", location: "Las Vegas, NV", adventuresCount: 19),
+    SidekickUser(id: "sidekick-riley", name: "Riley Johnson", handle: "rileyj", location: "Chicago, IL", adventuresCount: 52),
+    SidekickUser(id: "sidekick-quinn", name: "Quinn Parker", handle: "quinnp", location: "Miami, FL", adventuresCount: 73),
+    SidekickUser(id: "sidekick-avery", name: "Avery Thompson", handle: "averyt", location: "Boston, MA", adventuresCount: 31),
+    SidekickUser(id: "sidekick-blake", name: "Blake Williams", handle: "blakew", location: "Atlanta, GA", adventuresCount: 44),
+    SidekickUser(id: "sidekick-drew", name: "Drew Anderson", handle: "drewa", location: "Dallas, TX", adventuresCount: 58)
+  ]
+
+  static let initialSidekickIDs: Set<String> = Set(sidekickUsers.prefix(10).map(\.id))
+
+  static let sidekickPreviews: [SidekickPreview] = Array(sidekickUsers.prefix(6)).map {
+    SidekickPreview(id: $0.id, name: $0.name, initials: $0.initials)
+  }
+
   static let feedItems: [AdventureCard] = [
     AdventureCard(
       id: eagleID,
