@@ -310,6 +310,12 @@ final class ScreenGalleryRegressionUITests: HiddenAdventuresUITestCase {
         in: app,
         screenshotDir: directory
       )
+      self.assertExists(
+        app.buttons["create.visibility.sidekicks"],
+        name: "create-visibility-sidekicks",
+        in: app,
+        screenshotDir: directory
+      )
     }
   }
 

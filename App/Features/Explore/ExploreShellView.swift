@@ -726,7 +726,7 @@ private struct CircleIconButton: View {
 enum VisibilityFilter: CaseIterable, Identifiable {
   case all
   case `public`
-  case connections
+  case sidekicks
   case `private`
 
   var id: Self { self }
@@ -735,7 +735,7 @@ enum VisibilityFilter: CaseIterable, Identifiable {
     switch self {
     case .all: "All"
     case .public: "Public"
-    case .connections: "Connections"
+    case .sidekicks: "Sidekicks"
     case .private: "Private"
     }
   }
@@ -744,7 +744,7 @@ enum VisibilityFilter: CaseIterable, Identifiable {
     switch self {
     case .all: nil
     case .public: "globe"
-    case .connections: "person.2"
+    case .sidekicks: "person.2"
     case .private: "lock"
     }
   }
@@ -753,7 +753,7 @@ enum VisibilityFilter: CaseIterable, Identifiable {
     switch self {
     case .all: "all"
     case .public: "public"
-    case .connections: "connections"
+    case .sidekicks: "sidekicks"
     case .private: "private"
     }
   }
@@ -762,7 +762,7 @@ enum VisibilityFilter: CaseIterable, Identifiable {
     switch self {
     case .all: true
     case .public: visibility == .public
-    case .connections: visibility == .connections
+    case .sidekicks: visibility == .sidekicks
     case .private: visibility == .private
     }
   }

@@ -2,13 +2,13 @@ import Foundation
 
 enum Visibility: String, Codable, CaseIterable, Sendable {
   case `private`
-  case connections
+  case sidekicks
   case `public`
 
   var displayTitle: String {
     switch self {
     case .private: "Only Me"
-    case .connections: "Connections"
+    case .sidekicks: "Sidekicks"
     case .public: "Public"
     }
   }

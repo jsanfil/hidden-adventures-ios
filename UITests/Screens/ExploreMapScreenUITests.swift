@@ -87,8 +87,8 @@ final class ExploreMapScreenUITests: HiddenAdventuresUITestCase {
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.buttons["map.filter.option.connections"],
-      name: "map-filter-connections-option",
+      app.buttons["map.filter.option.sidekicks"],
+      name: "map-filter-sidekicks-option",
       in: app,
       screenshotDir: screenshotDir
     )

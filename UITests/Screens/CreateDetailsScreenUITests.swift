@@ -47,6 +47,12 @@ final class CreateDetailsScreenUITests: HiddenAdventuresUITestCase {
       in: app,
       screenshotDir: screenshotDir
     )
+    assertExists(
+      app.buttons["create.visibility.sidekicks"],
+      name: "create-visibility-sidekicks",
+      in: app,
+      screenshotDir: screenshotDir
+    )
   }
 
   func testCreateDetailsLocation_rendersCoreChrome() throws {

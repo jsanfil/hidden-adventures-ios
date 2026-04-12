@@ -27,7 +27,7 @@ enum AdventurePresentation {
           rating: 4.8,
           category: "Water Spots",
           categorySlug: .waterSpots,
-          visibility: .connections,
+          visibility: .sidekicks,
           imageNames: ["swimming-hole", "hidden-canyon", "hero-mountain"],
           location: AdventureLocation(latitude: 44.3956, longitude: -122.0099),
           markerPoint: CGPoint(x: 0.43, y: 0.37)
@@ -97,7 +97,7 @@ enum AdventurePresentation {
           rating: 4.5,
           category: "Trails",
           categorySlug: .trails,
-          visibility: .connections,
+          visibility: .sidekicks,
           imageNames: ["trail-forest"],
           location: AdventureLocation(latitude: 45.5723, longitude: -122.7614),
           markerPoint: CGPoint(x: 0.48, y: 0.73)

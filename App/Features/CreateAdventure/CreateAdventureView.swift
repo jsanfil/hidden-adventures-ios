@@ -445,7 +445,7 @@ struct CreateAdventureView: View {
   }
 
   private var visibilityOptions: [Visibility] {
-    [.public, .connections, .private]
+    [.public, .sidekicks, .private]
   }
 
   private var coordinatesButton: some View {
@@ -605,8 +605,8 @@ struct CreateAdventureView: View {
     switch visibility {
     case .public:
       return "Public"
-    case .connections:
-      return "Connections"
+    case .sidekicks:
+      return "Sidekicks"
     case .private:
       return "Private"
     }
@@ -616,8 +616,8 @@ struct CreateAdventureView: View {
     switch visibility {
     case .public:
       return "Anyone can see this"
-    case .connections:
-      return "Only people you follow"
+    case .sidekicks:
+      return "Only you and your sidekicks"
     case .private:
       return "Only you"
     }
@@ -627,7 +627,7 @@ struct CreateAdventureView: View {
     switch visibility {
     case .public:
       return "globe"
-    case .connections:
+    case .sidekicks:
       return "person.2"
     case .private:
       return "lock"

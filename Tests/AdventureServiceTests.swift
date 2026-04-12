@@ -11,6 +11,7 @@ final class AdventureServiceTests: XCTestCase {
   func testCreateAdventureAllocatesUploadsThenCreatesAdventure() async throws {
     final class RequestBox {
       var requests: [URLRequest] = []
+      var createAdventureBody: Data?
     }
 
     let requestBox = RequestBox()
@@ -60,6 +61,7 @@ final class AdventureServiceTests: XCTestCase {
         return (response, Data())
 
       case ("POST", "/api/adventures"):
+        requestBox.createAdventureBody = request.bodyData
         let response = HTTPURLResponse(
           url: request.url!,
           statusCode: 201,
@@ -93,7 +95,7 @@ final class AdventureServiceTests: XCTestCase {
         title: "Hidden Falls",
         description: "Bring water and wear good shoes.",
         categorySlug: .waterSpots,
-        visibility: .public,
+        visibility: .sidekicks,
         location: AdventureLocation(latitude: 34.12, longitude: -118.45),
         placeLabel: "Hidden Falls Trailhead",
         photos: [
@@ -112,6 +114,44 @@ final class AdventureServiceTests: XCTestCase {
     XCTAssertEqual(requestBox.requests[0].url?.path, "/api/media/adventure-uploads")
     XCTAssertEqual(requestBox.requests[1].url?.absoluteString, "https://uploads.example.com/media-1")
     XCTAssertEqual(requestBox.requests[2].url?.path, "/api/adventures")
+
+    let requestBody = try XCTUnwrap(requestBox.createAdventureBody, "Expected create adventure body")
+    let payload = try JSONDecoder().decode(CreateAdventurePayloadAssertion.self, from: requestBody)
+    XCTAssertEqual(payload.visibility, "sidekicks")
+  }
+}
+
+private struct CreateAdventurePayloadAssertion: Decodable {
+  let visibility: String
+}
+
+private extension URLRequest {
+  var bodyData: Data? {
+    if let httpBody {
+      return httpBody
+    }
+
+    guard let stream = httpBodyStream else {
+      return nil
+    }
+
+    stream.open()
+    defer { stream.close() }
+
+    let bufferSize = 1024
+    var data = Data()
+    let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+    defer { buffer.deallocate() }
+
+    while stream.hasBytesAvailable {
+      let read = stream.read(buffer, maxLength: bufferSize)
+      guard read > 0 else {
+        break
+      }
+      data.append(buffer, count: read)
+    }
+
+    return data.isEmpty ? nil : data
   }
 }
 
