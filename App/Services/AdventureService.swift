@@ -188,6 +188,14 @@ struct FixtureAdventureService: AdventureService {
   func loadMediaData(
     id: String
   ) async throws -> Data {
+    guard let image = UIImage(named: id) else {
+      throw FixtureServiceError.notSupported
+    }
+
+    if let data = image.jpegData(compressionQuality: 0.92) ?? image.pngData() {
+      return data
+    }
+
     throw FixtureServiceError.notSupported
   }
 

@@ -236,3 +236,50 @@ struct ProfileResponse: Codable, Sendable {
 struct MeProfileResponse: Codable, Sendable {
   let profile: ProfileDetail
 }
+
+struct SidekickProfileSummary: Codable, Hashable, Sendable {
+  let id: String
+  let handle: String
+  let displayName: String?
+  let bio: String?
+  let homeCity: String?
+  let homeRegion: String?
+  let avatar: MediaReference?
+  let cover: MediaReference?
+}
+
+struct SidekickRelationship: Codable, Hashable, Sendable {
+  let isSidekick: Bool
+}
+
+struct SidekickStats: Codable, Hashable, Sendable {
+  let adventuresCount: Int
+}
+
+struct SidekickListItem: Codable, Identifiable, Hashable, Sendable {
+  let profile: SidekickProfileSummary
+  let relationship: SidekickRelationship
+  let stats: SidekickStats
+
+  var id: String { profile.id }
+}
+
+struct MySidekicksResponse: Codable, Sendable {
+  let items: [SidekickListItem]
+  let paging: Paging
+}
+
+struct SidekickDiscoveryResponse: Codable, Sendable {
+  let items: [SidekickListItem]
+  let paging: Paging
+}
+
+struct SidekickSearchResponse: Codable, Sendable {
+  let items: [SidekickListItem]
+  let paging: Paging
+  let query: String
+}
+
+struct SidekickMutationResponse: Codable, Sendable {
+  let item: SidekickListItem
+}

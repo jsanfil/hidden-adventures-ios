@@ -4,6 +4,7 @@ import SwiftUI
 struct ExploreShellView: View {
   let adventureService: AdventureService
   let profileService: ProfileService
+  let sidekickService: SidekickService
   let runtimeMode: AppRuntimeMode
   let viewerHandle: String?
   let viewerDisplayName: String?
@@ -35,6 +36,7 @@ struct ExploreShellView: View {
   init(
     adventureService: AdventureService,
     profileService: ProfileService,
+    sidekickService: SidekickService,
     runtimeMode: AppRuntimeMode,
     viewerHandle: String?,
     viewerDisplayName: String?,
@@ -46,6 +48,7 @@ struct ExploreShellView: View {
   ) {
     self.adventureService = adventureService
     self.profileService = profileService
+    self.sidekickService = sidekickService
     self.runtimeMode = runtimeMode
     self.viewerHandle = viewerHandle
     self.viewerDisplayName = viewerDisplayName
@@ -283,7 +286,9 @@ struct ExploreShellView: View {
       handle: viewerHandle,
       adventureService: adventureService,
       profileService: profileService,
+      sidekickService: sidekickService,
       runtimeMode: runtimeMode,
+      viewerHandle: viewerHandle,
       onProfileLoaded: onViewerProfileLoaded,
       onOpenDetail: onOpenDetail,
       onLogout: onLogout
@@ -844,6 +849,7 @@ private struct ExploreShellPreviewWrapper: View {
     ExploreShellView(
       adventureService: FixtureAdventureService(),
       profileService: FixtureProfileService(),
+      sidekickService: FixtureSidekickService(),
       runtimeMode: .fixturePreview,
       viewerHandle: "jordan",
       viewerDisplayName: "Jordan",

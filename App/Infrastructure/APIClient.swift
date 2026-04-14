@@ -80,6 +80,19 @@ struct APIClient {
     )
   }
 
+  func post<Response: Decodable>(
+    pathComponents: [String],
+    requiresAuth: Bool = false
+  ) async throws -> Response {
+    try await send(
+      pathComponents: pathComponents,
+      method: "POST",
+      queryItems: [],
+      requiresAuth: requiresAuth,
+      body: Optional<Data>.none
+    )
+  }
+
   func put<Body: Encodable, Response: Decodable>(
     pathComponents: [String],
     body: Body,
@@ -92,6 +105,19 @@ struct APIClient {
       queryItems: [],
       requiresAuth: requiresAuth,
       body: bodyData
+    )
+  }
+
+  func delete<Response: Decodable>(
+    pathComponents: [String],
+    requiresAuth: Bool = false
+  ) async throws -> Response {
+    try await send(
+      pathComponents: pathComponents,
+      method: "DELETE",
+      queryItems: [],
+      requiresAuth: requiresAuth,
+      body: Optional<Data>.none
     )
   }
 

@@ -25,6 +25,8 @@
 		578DEF1A228358CEBBE4BE49 /* VerificationCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7D16887C4FBEEAD1AAC53C6 /* VerificationCodeView.swift */; };
 		5B58C9379D10CC5F756AB455 /* AdventureDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51AEB6FD9CC9D30EC2CC883E /* AdventureDetailView.swift */; };
 		5FF1999DA0CDC78210EAAEC8 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B33EC6D97B65EF29FDCB70C /* RootView.swift */; };
+		A11111111111111111111112 /* ProfileAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11111111111111111111111 /* ProfileAvatarView.swift */; };
+		A11111111111111111111116 /* SidekickServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11111111111111111111115 /* SidekickServiceTests.swift */; };
 		62C06078139D3DE7646834ED /* ExploreShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 742712AC53B2228B513E2B06 /* ExploreShellView.swift */; };
 		667E9CB3F5192D2F2618F4F5 /* DetailScreenUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E13547CAFE706BA9FCD8491 /* DetailScreenUITests.swift */; };
 		67B2C8F82886F8611EA41B19 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A85B19635A8492F38A602880 /* WelcomeView.swift */; };
@@ -114,6 +116,8 @@
 		9E13547CAFE706BA9FCD8491 /* DetailScreenUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailScreenUITests.swift; sourceTree = "<group>"; };
 		A2A8856125A0CA6BB1A9B602 /* ProfileSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSetupView.swift; sourceTree = "<group>"; };
 		A54CD3A506F4844D6ADED50F /* APIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientTests.swift; sourceTree = "<group>"; };
+		A11111111111111111111115 /* SidekickServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidekickServiceTests.swift; sourceTree = "<group>"; };
+		A11111111111111111111111 /* ProfileAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarView.swift; sourceTree = "<group>"; };
 		A85B19635A8492F38A602880 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		B17E2F94D2F14E3CA4D7A101 /* SidekicksModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidekicksModels.swift; sourceTree = "<group>"; };
 		B17E2F94D2F14E3CA4D7A102 /* SidekicksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidekicksView.swift; sourceTree = "<group>"; };
@@ -209,6 +213,7 @@
 		5A62201A62CA9E97C131C9B6 /* Profile */ = {
 			isa = PBXGroup;
 			children = (
+				A11111111111111111111111 /* ProfileAvatarView.swift */,
 				F43A73CAE79695A47AF0A128 /* ProfileView.swift */,
 				B17E2F94D2F14E3CA4D7A101 /* SidekicksModels.swift */,
 				B17E2F94D2F14E3CA4D7A102 /* SidekicksView.swift */,
@@ -262,6 +267,7 @@
 				40DD20342AFA48F59E803B89 /* AppAuthServiceTests.swift */,
 				0AC6E797CF0BA0AEC6CD09C5 /* AppSessionTests.swift */,
 				0FB2EE7B37F2B8D24184BFC1 /* CategoryTests.swift */,
+				A11111111111111111111115 /* SidekickServiceTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -503,6 +509,7 @@
 				9E6D7FE6A5B6C4039C4BF53C /* AppAuthServiceTests.swift in Sources */,
 				7AEC3634F2409B8FE515F6FA /* AppSessionTests.swift in Sources */,
 				474FDD68998A13DADD708AD5 /* CategoryTests.swift in Sources */,
+				A11111111111111111111116 /* SidekickServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -535,6 +542,7 @@
 				0C6B0CE3F06323A7EED7744E /* MediaDataCache.swift in Sources */,
 				50405A84C4F24E92D60CFA7B /* MockFixtures.swift in Sources */,
 				297C277C6A85B02B7C78DFB3 /* ProfileService.swift in Sources */,
+				A11111111111111111111112 /* ProfileAvatarView.swift in Sources */,
 				3F49A76E8A480F177CC5E38C /* ProfileSetupView.swift in Sources */,
 				B17E2F94D2F14E3CA4D7A201 /* SidekicksModels.swift in Sources */,
 				B17E2F94D2F14E3CA4D7A202 /* SidekicksView.swift in Sources */,

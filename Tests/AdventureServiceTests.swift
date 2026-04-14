@@ -133,6 +133,7 @@ final class AdventureServiceTests: XCTestCase {
 
     let counter = RequestCounter()
     let mediaID = "media-fresh"
+    let cacheDirectory = makeTempDirectory()
     MockAdventureURLProtocol.requestHandler = { request in
       counter.count += 1
       XCTAssertEqual(request.url?.path, "/api/media/\(mediaID)")
@@ -151,7 +152,7 @@ final class AdventureServiceTests: XCTestCase {
       return (response, Data("cached-image".utf8))
     }
 
-    let service = makeService(cache: makeCache())
+    let service = makeService(cache: makeCache(directoryURL: cacheDirectory))
 
     let first = try await service.loadMediaData(id: mediaID)
     let second = try await service.loadMediaData(id: mediaID)
@@ -159,6 +160,14 @@ final class AdventureServiceTests: XCTestCase {
     XCTAssertEqual(first, Data("cached-image".utf8))
     XCTAssertEqual(second, Data("cached-image".utf8))
     XCTAssertEqual(counter.count, 1)
+  }
+
+  func testFixtureLoadMediaDataReturnsBundledImageBytesForAvatarMedia() async throws {
+    let service = FixtureAdventureService()
+
+    let data = try await service.loadMediaData(id: "hero-mountain")
+
+    XCTAssertFalse(data.isEmpty)
   }
 
   func testLoadMediaDataPersistsAcrossServiceInstances() async throws {

@@ -1,24 +1,36 @@
 import SwiftUI
 
 struct SidekicksView: View {
-  let allUsers: [SidekickUser]
-  let initialSidekickIDs: Set<String>
+  private enum LoadTarget: Hashable {
+    case mySidekicks
+    case discover
+    case search(String)
+  }
+
+  let sidekickService: SidekickService
+  let adventureService: AdventureService
+  let onSidekicksChanged: () -> Void
 
   @Environment(\.dismiss) private var dismiss
   @FocusState private var isSearchFocused: Bool
   @State private var selectedTab: SidekicksTab = .mySidekicks
   @State private var searchText = ""
-  @State private var sidekickIDs: Set<String>
-  @State private var pendingRemovalID: String?
+  @State private var mySidekicks: [SidekickListItem] = []
+  @State private var discoverUsers: [SidekickListItem] = []
+  @State private var searchUsers: [SidekickListItem] = []
+  @State private var isLoadingCurrentTab = true
+  @State private var errorMessage: String?
+  @State private var pendingRemovalHandle: String?
+  @State private var inFlightHandle: String?
 
   init(
-    allUsers: [SidekickUser] = MockFixtures.sidekickUsers,
-    initialSidekickIDs: Set<String> = MockFixtures.initialSidekickIDs
+    sidekickService: SidekickService = FixtureSidekickService(),
+    adventureService: AdventureService = FixtureAdventureService(),
+    onSidekicksChanged: @escaping () -> Void = {}
   ) {
-    self.allUsers = allUsers
-    self.initialSidekickIDs = initialSidekickIDs
-    _sidekickIDs = State(initialValue: initialSidekickIDs)
-    _pendingRemovalID = State(initialValue: nil)
+    self.sidekickService = sidekickService
+    self.adventureService = adventureService
+    self.onSidekicksChanged = onSidekicksChanged
   }
 
   var body: some View {
@@ -39,7 +51,13 @@ struct SidekicksView: View {
 
         ScrollView {
           LazyVStack(spacing: 18) {
-            if displayedUsers.isEmpty {
+            if isLoadingCurrentTab && displayedUsers.isEmpty {
+              loadingState
+                .padding(.top, 48)
+            } else if let errorMessage {
+              errorState(message: errorMessage)
+                .padding(.top, 48)
+            } else if displayedUsers.isEmpty {
               emptyState
                 .padding(.top, 48)
             } else {
@@ -52,6 +70,13 @@ struct SidekicksView: View {
           .padding(.top, 22)
           .padding(.bottom, 120)
         }
+        .overlay(alignment: .top) {
+          if isLoadingCurrentTab && displayedUsers.isEmpty == false {
+            ProgressView()
+              .tint(HATheme.Colors.primary)
+              .padding(.top, 10)
+          }
+        }
         .accessibilityIdentifier("sidekicks.scroll")
       }
     }
@@ -60,32 +85,50 @@ struct SidekicksView: View {
     }
     .navigationBarBackButtonHidden(true)
     .toolbar(.hidden, for: .navigationBar)
+    .task(id: loadTarget) {
+      await loadCurrentTabContent()
+    }
     .onChange(of: selectedTab) {
       searchText = ""
-      pendingRemovalID = nil
+      pendingRemovalHandle = nil
       isSearchFocused = false
     }
   }
 
-  private var currentSidekicks: [SidekickUser] {
-    allUsers.filter { sidekickIDs.contains($0.id) }
-  }
-
-  private var displayedUsers: [SidekickUser] {
-    let source: [SidekickUser]
+  private var loadTarget: LoadTarget {
     switch selectedTab {
     case .mySidekicks:
-      source = currentSidekicks
+      return .mySidekicks
     case .findUsers:
-      source = allUsers
+      let query = trimmedSearchText
+      return query.isEmpty ? .discover : .search(query)
     }
+  }
 
-    let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard query.isEmpty == false else { return source }
+  private var trimmedSearchText: String {
+    searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
 
-    return source.filter { user in
-      user.name.localizedCaseInsensitiveContains(query) ||
-      user.handle.localizedCaseInsensitiveContains(query)
+  private var currentSidekicksCount: Int {
+    mySidekicks.filter { $0.relationship.isSidekick }.count
+  }
+
+  private var displayedUsers: [SidekickListItem] {
+    switch selectedTab {
+    case .mySidekicks:
+      guard trimmedSearchText.isEmpty == false else {
+        return mySidekicks
+      }
+
+      return mySidekicks.filter { item in
+        matchesSearch(item, query: trimmedSearchText)
+      }
+    case .findUsers:
+      if trimmedSearchText.isEmpty {
+        return discoverUsers
+      }
+
+      return searchUsers
     }
   }
 
@@ -109,7 +152,7 @@ struct SidekicksView: View {
           .font(.system(size: 26, weight: .semibold))
           .foregroundStyle(HATheme.Colors.foreground)
 
-        Text("\(currentSidekicks.count) connections")
+        Text("\(currentSidekicksCount) connections")
           .font(.system(size: 14, weight: .medium))
           .foregroundStyle(HATheme.Colors.mutedForeground)
           .accessibilityIdentifier("sidekicks.connectionCount")
@@ -154,56 +197,68 @@ struct SidekicksView: View {
     }
   }
 
-  private func sidekickRow(for user: SidekickUser) -> some View {
-    let isSidekick = sidekickIDs.contains(user.id)
-    let isPendingRemoval = pendingRemovalID == user.id
+  private func sidekickRow(for user: SidekickListItem) -> some View {
+    let handle = user.profile.handle
+    let isSidekick = user.relationship.isSidekick
+    let isPendingRemoval = pendingRemovalHandle == handle
+    let isBusy = inFlightHandle == handle
 
     return HStack(spacing: 16) {
-      HAAvatarView(
-        initials: user.initials,
+      ProfileAvatarView(
+        initials: initials(for: user.profile),
+        mediaID: user.profile.avatar?.id,
+        mediaLoader: adventureService,
         size: 48,
         background: HATheme.Colors.primary.opacity(0.14),
-        foreground: HATheme.Colors.primary
+        foreground: HATheme.Colors.primary,
+        borderColor: nil,
+        borderWidth: 0,
+        loadingTint: HATheme.Colors.primary
       )
 
       VStack(alignment: .leading, spacing: 2) {
-        Text(user.name)
+        Text(user.profile.displayName ?? handle)
           .font(.system(size: 18, weight: .medium))
           .foregroundStyle(HATheme.Colors.foreground)
           .lineLimit(1)
 
-        Text("@\(user.handle)")
+        Text("@\(handle)")
           .font(.system(size: 14, weight: .medium))
           .foregroundStyle(HATheme.Colors.mutedForeground)
 
-        Text("\(user.location) · \(user.adventuresCount) adventures")
+        Text("\(locationLabel(for: user.profile)) · \(user.stats.adventuresCount) adventures")
           .font(.system(size: 14, weight: .medium))
           .foregroundStyle(HATheme.Colors.mutedForeground)
+          .lineLimit(1)
       }
 
       Spacer(minLength: 12)
 
-      if isPendingRemoval {
+      if isBusy {
+        ProgressView()
+          .tint(HATheme.Colors.primary)
+          .frame(width: 42, height: 42)
+      } else if isPendingRemoval {
         HStack(spacing: 8) {
           Button {
-            confirmRemoval(for: user.id)
+            confirmRemoval(for: handle)
           } label: {
             Image(systemName: "checkmark.circle.fill")
               .font(.system(size: 24))
               .foregroundStyle(HATheme.Colors.primary)
           }
           .buttonStyle(.plain)
-          .accessibilityIdentifier("sidekicks.confirmRemove.\(user.handle)")
+          .accessibilityIdentifier("sidekicks.confirmRemove.\(handle)")
 
           Button {
-            pendingRemovalID = nil
+            pendingRemovalHandle = nil
           } label: {
             Image(systemName: "xmark.circle.fill")
               .font(.system(size: 24))
               .foregroundStyle(HATheme.Colors.mutedForeground)
           }
           .buttonStyle(.plain)
-          .accessibilityIdentifier("sidekicks.cancelRemove.\(user.handle)")
+          .accessibilityIdentifier("sidekicks.cancelRemove.\(handle)")
         }
       } else if isSidekick {
         sidekickActionButton(
@@ -211,9 +266,9 @@ struct SidekicksView: View {
           systemImage: "person.badge.minus",
           fill: HATheme.Colors.secondary,
           foreground: HATheme.Colors.mutedForeground,
-          identifier: "sidekicks.remove.\(user.handle)"
+          identifier: "sidekicks.remove.\(handle)"
         ) {
-          pendingRemovalID = user.id
+          pendingRemovalHandle = handle
         }
       } else {
         sidekickActionButton(
@@ -221,10 +276,11 @@ struct SidekicksView: View {
           systemImage: "person.badge.plus",
           fill: HATheme.Colors.primary,
           foreground: .white,
-          identifier: "sidekicks.add.\(user.handle)"
+          identifier: "sidekicks.add.\(handle)"
         ) {
-          sidekickIDs.insert(user.id)
-          pendingRemovalID = nil
+          Task {
+            await addSidekick(handle: handle)
+          }
         }
       }
     }
@@ -237,7 +293,7 @@ struct SidekicksView: View {
     }
     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     .accessibilityElement(children: .contain)
-    .accessibilityIdentifier("sidekicks.row.\(user.handle)")
+    .accessibilityIdentifier("sidekicks.row.\(handle)")
   }
 
   private func sidekickActionButton(
@@ -261,15 +317,16 @@ struct SidekicksView: View {
     .accessibilityIdentifier(identifier)
   }
 
-  private func confirmRemoval(for userID: String) {
-    sidekickIDs.remove(userID)
-    pendingRemovalID = nil
+  private func confirmRemoval(for handle: String) {
+    Task {
+      await removeSidekick(handle: handle)
+    }
   }
 
   @ViewBuilder
   private var emptyState: some View {
-    if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
-      ContentUnavailableView.search(text: searchText)
+    if trimmedSearchText.isEmpty == false {
+      ContentUnavailableView.search(text: trimmedSearchText)
         .accessibilityIdentifier("sidekicks.empty.search")
     } else if selectedTab == .mySidekicks {
       ContentUnavailableView {
@@ -288,6 +345,37 @@ struct SidekicksView: View {
     }
   }
 
+  private func errorState(message: String) -> some View {
+    VStack(spacing: 14) {
+      Image(systemName: "person.crop.circle.badge.exclamationmark")
+        .font(.system(size: 32, weight: .medium))
+        .foregroundStyle(HATheme.Colors.primary)
+
+      Text("We couldn't load sidekicks right now.")
+        .font(HATheme.Typography.sectionTitle)
+        .foregroundStyle(HATheme.Colors.foreground)
+
+      Text(message)
+        .font(HATheme.Typography.body)
+        .foregroundStyle(HATheme.Colors.mutedForeground)
+        .multilineTextAlignment(.center)
+    }
+    .padding(24)
+  }
+
+  private var loadingState: some View {
+    VStack(spacing: 12) {
+      ProgressView()
+        .tint(HATheme.Colors.primary)
+
+      Text("Loading sidekicks...")
+        .font(.system(size: 14, weight: .medium))
+        .foregroundStyle(HATheme.Colors.mutedForeground)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 32)
+  }
+
   private var footer: some View {
     Text("Sidekicks can view your \"Sidekicks-only\" adventures. They cannot edit or delete them.")
       .font(.system(size: 14, weight: .medium))
@@ -304,12 +392,169 @@ struct SidekicksView: View {
       }
       .accessibilityIdentifier("sidekicks.footer")
   }
+
+  @MainActor
+  private func loadCurrentTabContent() async {
+    let target = loadTarget
+    isLoadingCurrentTab = true
+    errorMessage = nil
+    pendingRemovalHandle = nil
+
+    do {
+      switch target {
+      case .mySidekicks:
+        mySidekicks = try await sidekickService.getMySidekicks(limit: 50, offset: 0).items
+      case .discover:
+        discoverUsers = try await sidekickService.getDiscoveredProfiles(limit: 50, offset: 0).items
+      case .search(let query):
+        if query.isEmpty == false {
+          try? await Task.sleep(nanoseconds: 250_000_000)
+        }
+
+        guard Task.isCancelled == false else {
+          isLoadingCurrentTab = false
+          return
+        }
+
+        searchUsers = try await sidekickService.searchProfiles(query: query, limit: 50, offset: 0).items
+      }
+    } catch {
+      guard Task.isCancelled == false else {
+        isLoadingCurrentTab = false
+        return
+      }
+
+      errorMessage = error.localizedDescription
+      switch target {
+      case .mySidekicks:
+        mySidekicks = []
+      case .discover:
+        discoverUsers = []
+      case .search:
+        searchUsers = []
+      }
+    }
+
+    isLoadingCurrentTab = false
+  }
+
+  @MainActor
+  private func refreshCachesAfterMutation() async {
+    do {
+      errorMessage = nil
+      mySidekicks = try await sidekickService.getMySidekicks(limit: 50, offset: 0).items
+      if selectedTab != .mySidekicks {
+        await loadCurrentTabContentWithoutSpinner()
+      }
+
+      onSidekicksChanged()
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  @MainActor
+  private func loadCurrentTabContentWithoutSpinner() async {
+    let target = loadTarget
+
+    do {
+      errorMessage = nil
+      switch target {
+      case .mySidekicks:
+        mySidekicks = try await sidekickService.getMySidekicks(limit: 50, offset: 0).items
+      case .discover:
+        discoverUsers = try await sidekickService.getDiscoveredProfiles(limit: 50, offset: 0).items
+      case .search(let query):
+        if query.isEmpty == false {
+          searchUsers = try await sidekickService.searchProfiles(query: query, limit: 50, offset: 0).items
+        } else {
+          discoverUsers = try await sidekickService.getDiscoveredProfiles(limit: 50, offset: 0).items
+        }
+      }
+    } catch {
+      guard Task.isCancelled == false else {
+        return
+      }
+
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  @MainActor
+  private func addSidekick(handle: String) async {
+    guard inFlightHandle == nil else { return }
+    inFlightHandle = handle
+    defer {
+      inFlightHandle = nil
+    }
+
+    do {
+      _ = try await sidekickService.addSidekick(handle: handle)
+      pendingRemovalHandle = nil
+      await refreshCachesAfterMutation()
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  @MainActor
+  private func removeSidekick(handle: String) async {
+    guard inFlightHandle == nil else { return }
+    inFlightHandle = handle
+    defer {
+      inFlightHandle = nil
+    }
+
+    do {
+      _ = try await sidekickService.removeSidekick(handle: handle)
+      pendingRemovalHandle = nil
+      await refreshCachesAfterMutation()
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  private func initials(for profile: SidekickProfileSummary) -> String {
+    let source = profile.displayName ?? profile.handle
+    let letters = source
+      .split(separator: " ")
+      .prefix(2)
+      .compactMap(\.first)
+      .map { String($0).uppercased() }
+      .joined()
+
+    return letters.isEmpty ? "HA" : letters
+  }
+
+  private func locationLabel(for profile: SidekickProfileSummary) -> String {
+    switch (profile.homeCity, profile.homeRegion) {
+    case let (city?, region?) where city.isEmpty == false && region.isEmpty == false:
+      return "\(city), \(region)"
+    case let (city?, _) where city.isEmpty == false:
+      return city
+    case let (_, region?) where region.isEmpty == false:
+      return region
+    default:
+      return "Somewhere out there"
+    }
+  }
+
+  private func matchesSearch(_ user: SidekickListItem, query: String) -> Bool {
+    user.profile.handle.localizedCaseInsensitiveContains(query)
+      || user.profile.displayName?.localizedCaseInsensitiveContains(query) == true
+      || user.profile.homeCity?.localizedCaseInsensitiveContains(query) == true
+      || user.profile.homeRegion?.localizedCaseInsensitiveContains(query) == true
+  }
 }
 
 struct SidekicksView_Previews: PreviewProvider {
   static var previews: some View {
     NavigationStack {
-      SidekicksView()
+      SidekicksView(
+        sidekickService: FixtureSidekickService(),
+        adventureService: FixtureAdventureService(),
+        onSidekicksChanged: {}
+      )
     }
   }
 }

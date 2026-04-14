@@ -5,7 +5,9 @@ struct ProfileView: View {
   let handle: String?
   let adventureService: AdventureService
   let profileService: ProfileService
+  let sidekickService: SidekickService
   let runtimeMode: AppRuntimeMode
+  let viewerHandle: String?
   let onProfileLoaded: (ProfileDetail) -> Void
   let onOpenDetail: (String) -> Void
   let onLogout: () -> Void
@@ -13,11 +15,8 @@ struct ProfileView: View {
   @State private var response: ProfileResponse?
   @State private var isLoading = true
   @State private var errorMessage: String?
-
-  private let stats = MockFixtures.profileStats
-  private let sidekickPreviews = MockFixtures.sidekickPreviews
-  private let sidekickUsers = MockFixtures.sidekickUsers
-  private let initialSidekickIDs = MockFixtures.initialSidekickIDs
+  @State private var sidekickSummaryItems: [SidekickListItem] = []
+  @State private var isLoadingSidekickSummary = false
 
   var body: some View {
     ZStack {
@@ -45,6 +44,12 @@ struct ProfileView: View {
       await loadProfile()
     }
     .toolbar(.hidden, for: .navigationBar)
+  }
+
+  private var showsSidekicksCard: Bool {
+    guard let viewerHandle else { return false }
+    guard let response else { return false }
+    return response.profile.handle == viewerHandle
   }
 
   private func header(profile: ProfileDetail) -> some View {
@@ -118,21 +123,28 @@ struct ProfileView: View {
         }
 
         HStack(spacing: 12) {
-          profileStatCard(title: "Adventures", value: stats.adventures)
-          profileStatCard(title: "Likes Received", value: stats.likesReceived)
-          profileStatCard(title: "Views", value: stats.views)
+          profileStatCard(title: "Adventures", value: MockFixtures.profileStats.adventures)
+          profileStatCard(title: "Likes Received", value: MockFixtures.profileStats.likesReceived)
+          profileStatCard(title: "Views", value: MockFixtures.profileStats.views)
         }
 
-        NavigationLink {
-          SidekicksView(
-            allUsers: sidekickUsers,
-            initialSidekickIDs: initialSidekickIDs
-          )
-        } label: {
-          sidekicksCard
+        if showsSidekicksCard {
+          NavigationLink {
+            SidekicksView(
+              sidekickService: sidekickService,
+              adventureService: adventureService,
+              onSidekicksChanged: {
+                Task {
+                  await loadSidekickSummary()
+                }
+              }
+            )
+          } label: {
+            sidekicksCard
+          }
+          .buttonStyle(.plain)
+          .accessibilityIdentifier("profile.sidekicksCard")
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("profile.sidekicksCard")
       }
       .padding(.horizontal, 24)
       .padding(.top, 24)
@@ -142,21 +154,28 @@ struct ProfileView: View {
   private var sidekicksCard: some View {
     HStack(spacing: 14) {
       HStack(spacing: -8) {
-        ForEach(Array(sidekickPreviews.prefix(5).enumerated()), id: \.element.id) { _, sidekick in
-          HAAvatarView(
-            initials: sidekick.initials,
-            size: 32,
-            background: HATheme.Colors.primary.opacity(0.14),
-            foreground: HATheme.Colors.primary
-          )
-          .overlay {
-            Circle()
-              .stroke(HATheme.Colors.background, lineWidth: 2)
+        if isLoadingSidekickSummary && sidekickSummaryItems.isEmpty {
+          ProgressView()
+            .tint(HATheme.Colors.mutedForeground)
+            .frame(width: 32, height: 32)
+        } else {
+          ForEach(Array(sidekickSummaryItems.prefix(5).enumerated()), id: \.element.id) { _, sidekick in
+            ProfileAvatarView(
+              initials: initials(for: sidekick.profile),
+              mediaID: sidekick.profile.avatar?.id,
+              mediaLoader: adventureService,
+              size: 32,
+              background: HATheme.Colors.primary.opacity(0.14),
+              foreground: HATheme.Colors.primary,
+              borderColor: HATheme.Colors.background,
+              borderWidth: 2,
+              loadingTint: HATheme.Colors.primary
+            )
           }
         }
 
-        if sidekickPreviews.count > 5 {
-          Text("+\(sidekickPreviews.count - 5)")
+        if sidekickSummaryItems.count > 5 {
+          Text("+\(sidekickSummaryItems.count - 5)")
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(HATheme.Colors.mutedForeground)
             .frame(width: 32, height: 32)
@@ -170,7 +189,7 @@ struct ProfileView: View {
       }
 
       VStack(alignment: .leading, spacing: 4) {
-        Text("\(initialSidekickIDs.count) Sidekicks")
+        Text(sidekicksCardTitle)
           .font(.system(size: 18, weight: .semibold))
           .foregroundStyle(HATheme.Colors.foreground)
 
@@ -193,6 +212,14 @@ struct ProfileView: View {
         .stroke(HATheme.Colors.border, lineWidth: 1)
     }
     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+  }
+
+  private var sidekicksCardTitle: String {
+    if isLoadingSidekickSummary && sidekickSummaryItems.isEmpty {
+      return "Sidekicks"
+    }
+
+    return "\(sidekickSummaryItems.count) Sidekicks"
   }
 
   private func authoredSection(adventures: [AdventureCard]) -> some View {
@@ -255,6 +282,7 @@ struct ProfileView: View {
     .padding(24)
   }
 
+  @MainActor
   private func loadProfile() async {
     guard let handle else {
       errorMessage = "A linked handle is required before the live profile path can load."
@@ -266,6 +294,12 @@ struct ProfileView: View {
       let response = try await profileService.getProfile(handle: handle, limit: 20, offset: 0)
       self.response = response
       onProfileLoaded(response.profile)
+      isLoading = false
+
+      if showsSidekicksCard {
+        await loadSidekickSummary()
+      }
+      return
     } catch {
       errorMessage = error.localizedDescription
     }
@@ -273,7 +307,38 @@ struct ProfileView: View {
     isLoading = false
   }
 
+  @MainActor
+  private func loadSidekickSummary() async {
+    guard showsSidekicksCard else {
+      sidekickSummaryItems = []
+      isLoadingSidekickSummary = false
+      return
+    }
+
+    isLoadingSidekickSummary = true
+    defer { isLoadingSidekickSummary = false }
+
+    do {
+      let summary = try await sidekickService.getMySidekicks(limit: 50, offset: 0)
+      sidekickSummaryItems = summary.items
+    } catch {
+      sidekickSummaryItems = []
+    }
+  }
+
   private func initials(for profile: ProfileDetail) -> String {
+    let source = profile.displayName ?? profile.handle
+    let letters = source
+      .split(separator: " ")
+      .prefix(2)
+      .compactMap(\.first)
+      .map { String($0).uppercased() }
+      .joined()
+
+    return letters.isEmpty ? "HA" : letters
+  }
+
+  private func initials(for profile: SidekickProfileSummary) -> String {
     let source = profile.displayName ?? profile.handle
     let letters = source
       .split(separator: " ")
@@ -297,118 +362,17 @@ struct ProfileView: View {
       return nil
     }
   }
-}
 
-private struct ProfileAvatarView: View {
-  let initials: String
-  let mediaID: String?
-  let mediaLoader: any AdventureService
-
-  var body: some View {
-    if let mediaID {
-      ProfileRemoteAvatarImage(
-        mediaID: mediaID,
-        mediaLoader: mediaLoader,
-        initials: initials
-      )
-    } else {
-      fallbackAvatar
-    }
-  }
-
-  private var fallbackAvatar: some View {
-    HAAvatarView(
-      initials: initials,
-      size: 78,
-      background: .white.opacity(0.18),
-      foreground: .white
-    )
-    .overlay {
-      Circle()
-        .stroke(.white.opacity(0.2), lineWidth: 4)
-    }
-  }
-}
-
-private struct ProfileRemoteAvatarImage: View {
-  let mediaID: String
-  let mediaLoader: any AdventureService
-  let initials: String
-
-  @State private var image: UIImage?
-  @State private var didFail = false
-
-  var body: some View {
-    Group {
-      if let image {
-        Image(uiImage: image)
-          .resizable()
-          .scaledToFill()
-      } else if didFail {
-        fallbackAvatar
-      } else {
-        ZStack {
-          Circle()
-            .fill(.white.opacity(0.18))
-
-          ProgressView()
-            .tint(.white)
-        }
-      }
-    }
-    .frame(width: 78, height: 78)
-    .clipShape(Circle())
-    .overlay {
-      Circle()
-        .stroke(.white.opacity(0.2), lineWidth: 4)
-    }
-    .task(id: mediaID) {
-      await loadImage()
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .haMediaCacheDidChange)) { notification in
-      guard
-        let changedMediaID = notification.userInfo?[MediaCacheNotifications.mediaIDUserInfoKey] as? String,
-        changedMediaID == mediaID,
-        let rawAction = notification.userInfo?[MediaCacheNotifications.actionUserInfoKey] as? String,
-        let action = MediaCacheChangeAction(rawValue: rawAction)
-      else {
-        return
-      }
-
-      switch action {
-      case .invalidated:
-        image = nil
-        didFail = true
-      case .updated:
-        Task {
-          await loadImage(forceReload: true)
-        }
-      }
-    }
-  }
-
-  private var fallbackAvatar: some View {
-    HAAvatarView(
-      initials: initials,
-      size: 78,
-      background: .white.opacity(0.18),
-      foreground: .white
-    )
-  }
-
-  @MainActor
-  private func loadImage(forceReload: Bool = false) async {
-    if image != nil && forceReload == false {
-      return
-    }
-
-    do {
-      let data = try await mediaLoader.loadMediaData(id: mediaID)
-      image = UIImage(data: data)
-      didFail = image == nil
-    } catch {
-      image = nil
-      didFail = true
+  private func locationLabel(for profile: SidekickProfileSummary) -> String? {
+    switch (profile.homeCity, profile.homeRegion) {
+    case let (city?, region?) where city.isEmpty == false && region.isEmpty == false:
+      return "\(city), \(region)"
+    case let (city?, _) where city.isEmpty == false:
+      return city
+    case let (_, region?) where region.isEmpty == false:
+      return region
+    default:
+      return nil
     }
   }
 }
@@ -420,7 +384,9 @@ struct ProfileView_Previews: PreviewProvider {
         handle: MockFixtures.profile.handle,
         adventureService: FixtureAdventureService(),
         profileService: FixtureProfileService(),
+        sidekickService: FixtureSidekickService(),
         runtimeMode: .fixturePreview,
+        viewerHandle: MockFixtures.profile.handle,
         onProfileLoaded: { _ in },
         onOpenDetail: { _ in },
         onLogout: {}

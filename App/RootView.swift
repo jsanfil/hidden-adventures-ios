@@ -5,6 +5,7 @@ struct RootView: View {
   private let runtime: AppRuntime
   private let adventureService: AdventureService
   private let profileService: ProfileService
+  private let sidekickService: SidekickService
 
   @Environment(\.scenePhase) private var scenePhase
   @StateObject private var coordinator: AppCoordinator
@@ -15,6 +16,7 @@ struct RootView: View {
     runtime: AppRuntime,
     adventureService: AdventureService,
     profileService: ProfileService,
+    sidekickService: SidekickService,
     backendAuthService: AuthService?,
     appAuthService: AppAuthService?,
     authState: AuthStateStore
@@ -22,6 +24,7 @@ struct RootView: View {
     self.runtime = runtime
     self.adventureService = adventureService
     self.profileService = profileService
+    self.sidekickService = sidekickService
     _coordinator = StateObject(wrappedValue: AppCoordinator())
     _session = StateObject(
       wrappedValue: AppSession(
@@ -72,6 +75,7 @@ struct RootView: View {
           ExploreShellView(
             adventureService: adventureService,
             profileService: profileService,
+            sidekickService: sidekickService,
             runtimeMode: runtime.mode,
             viewerHandle: session.viewerHandle,
             viewerDisplayName: session.viewerDisplayName,
@@ -232,6 +236,7 @@ struct RootView_Previews: PreviewProvider {
       runtime: previewRuntime,
       adventureService: FixtureAdventureService(),
       profileService: FixtureProfileService(),
+      sidekickService: FixtureSidekickService(),
       backendAuthService: nil,
       appAuthService: nil,
       authState: AuthStateStore()

@@ -152,6 +152,27 @@ final class APIClientTests: XCTestCase {
     XCTAssertEqual(counterBox.value, 2)
   }
 
+  func testDeleteDecodesSuccessResponse() async throws {
+    MockURLProtocol.requestHandler = { request in
+      XCTAssertEqual(request.httpMethod, "DELETE")
+      XCTAssertEqual(request.url?.path, "/api/me/sidekicks/maya")
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 200,
+        httpVersion: nil,
+        headerFields: ["Content-Type": "application/json"]
+      )!
+
+      return (response, Data(#"{"value":"deleted"}"#.utf8))
+    }
+
+    let client = makeClient()
+    let response: TestResponse = try await client.delete(pathComponents: ["me", "sidekicks", "maya"])
+
+    XCTAssertEqual(response, TestResponse(value: "deleted"))
+  }
+
   func testFeedResponseDecodesPlaceLabelFromServerPayload() throws {
     let payload = Data(
       #"""
