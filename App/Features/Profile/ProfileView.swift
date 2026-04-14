@@ -122,10 +122,10 @@ struct ProfileView: View {
             .accessibilityIdentifier("profile.bio.placeholder")
         }
 
-        HStack(spacing: 12) {
-          profileStatCard(title: "Adventures", value: MockFixtures.profileStats.adventures)
-          profileStatCard(title: "Likes Received", value: MockFixtures.profileStats.likesReceived)
-          profileStatCard(title: "Views", value: MockFixtures.profileStats.views)
+        profileStatRow {
+          profileStatItem(title: "Adventures", value: MockFixtures.profileStats.adventures, showsDivider: true)
+          profileStatItem(title: "Likes", value: MockFixtures.profileStats.likesReceived, showsDivider: true)
+          profileStatItem(title: "Views", value: MockFixtures.profileStats.views, showsDivider: false)
         }
 
         if showsSidekicksCard {
@@ -241,26 +241,47 @@ struct ProfileView: View {
     }
   }
 
-  private func profileStatCard<T: CustomStringConvertible>(title: String, value: T) -> some View {
+  private func profileStatRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    HStack(spacing: 0) {
+      content()
+    }
+    .padding(.vertical, 14)
+    .padding(.horizontal, 10)
+    .background(HATheme.Colors.card)
+    .overlay {
+      RoundedRectangle(cornerRadius: 24, style: .continuous)
+        .stroke(HATheme.Colors.border.opacity(0.55), lineWidth: 1)
+    }
+    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    .shadow(color: HATheme.Colors.shadow.opacity(0.08), radius: 10, x: 0, y: 3)
+  }
+
+  private func profileStatItem<T: CustomStringConvertible>(
+    title: String,
+    value: T,
+    showsDivider: Bool
+  ) -> some View {
     VStack(spacing: 8) {
       Text(value.description)
-        .font(.system(size: 20, weight: .semibold))
+        .font(.system(size: 26, weight: .semibold))
+        .monospacedDigit()
         .foregroundStyle(HATheme.Colors.foreground)
 
       Text(title)
-        .font(.system(size: 11, weight: .medium))
+        .font(.system(size: 13, weight: .medium))
         .foregroundStyle(HATheme.Colors.mutedForeground)
         .multilineTextAlignment(.center)
-        .frame(maxWidth: .infinity)
     }
-    .frame(maxWidth: .infinity, minHeight: 96)
-    .padding(.horizontal, 12)
-    .background(HATheme.Colors.card)
-    .overlay {
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .stroke(HATheme.Colors.border, lineWidth: 1)
+    .frame(maxWidth: .infinity)
+    .overlay(alignment: .trailing) {
+      if showsDivider {
+        Rectangle()
+          .fill(HATheme.Colors.border.opacity(0.55))
+          .frame(width: 1)
+          .padding(.vertical, 10)
+      }
     }
-    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .accessibilityElement(children: .combine)
     .accessibilityIdentifier("profile.stat.\(title.lowercased().replacingOccurrences(of: " ", with: "-"))")
   }
 
