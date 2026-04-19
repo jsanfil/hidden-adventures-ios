@@ -82,6 +82,9 @@ struct RootView: View {
             mode: coordinator.exploreModeBinding,
             createAdventureVariant: coordinator.createAdventureBinding,
             onViewerProfileLoaded: session.seedViewerProfile,
+            onOpenProfile: { handle in
+              coordinator.path.append(.profile(handle))
+            },
             onOpenDetail: { adventureID in
               coordinator.path.append(.detail(adventureID))
             },
@@ -97,6 +100,23 @@ struct RootView: View {
             adventureService: adventureService,
             profileService: profileService,
             runtimeMode: runtime.mode
+          )
+        case .profile(let handle):
+          ProfileView(
+            handle: handle,
+            adventureService: adventureService,
+            profileService: profileService,
+            sidekickService: sidekickService,
+            runtimeMode: runtime.mode,
+            viewerHandle: session.viewerHandle,
+            onProfileLoaded: session.seedViewerProfile,
+            onOpenProfile: { nextHandle in
+              coordinator.path.append(.profile(nextHandle))
+            },
+            onOpenDetail: { adventureID in
+              coordinator.path.append(.detail(adventureID))
+            },
+            onLogout: logout
           )
         }
       }

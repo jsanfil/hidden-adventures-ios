@@ -24,7 +24,7 @@ final class ProfileScreenUITests: HiddenAdventuresUITestCase {
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.staticTexts["profile.stat.likes-received"].firstMatch,
+      app.staticTexts["profile.stat.likes"].firstMatch,
       name: "profile-stat-likes",
       in: app,
       screenshotDir: screenshotDir
@@ -81,8 +81,14 @@ final class ProfileScreenUITests: HiddenAdventuresUITestCase {
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.otherElements["sidekicks.row.sarahc"],
+      app.buttons["sidekicks.row.sarahc"],
       name: "sidekicks-row-sarah",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertHittable(
+      app.buttons["sidekicks.row.sarahc"],
+      name: "sidekicks-row-open-sarah",
       in: app,
       screenshotDir: screenshotDir
     )
@@ -92,19 +98,19 @@ final class ProfileScreenUITests: HiddenAdventuresUITestCase {
     searchField.typeText("mi")
 
     assertExists(
-      app.otherElements["sidekicks.row.mikerod"],
+      app.buttons["sidekicks.row.mikerod"],
       name: "sidekicks-row-mike",
       in: app,
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.otherElements["sidekicks.row.jamiel"],
+      app.buttons["sidekicks.row.jamiel"],
       name: "sidekicks-row-jamie",
       in: app,
       screenshotDir: screenshotDir
     )
     assertNotExists(
-      app.otherElements["sidekicks.row.sarahc"],
+      app.buttons["sidekicks.row.sarahc"],
       name: "sidekicks-row-sarah-filtered-out",
       in: app,
       screenshotDir: screenshotDir
@@ -145,6 +151,61 @@ final class ProfileScreenUITests: HiddenAdventuresUITestCase {
     assertExists(
       app.buttons["sidekicks.remove.mikerod"],
       name: "sidekicks-remove-mike-restored",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+  }
+
+  func testSidekicks_rowMainContentOpensProfileAndHidesSelfOnlyActions() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "sidekicks-row-profile-navigation")
+    let app = launchApp(startScreen: "explore-profile")
+
+    app.buttons["profile.sidekicksCard"].tap()
+
+    let rowButton = app.buttons["sidekicks.row.sarahc"]
+    assertHittable(
+      rowButton,
+      name: "sidekicks-row-open-sarah",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    rowButton.tap()
+
+    assertExists(
+      app.buttons["profile.back"],
+      name: "other-profile-back",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertNotExists(
+      app.buttons["profile.logout"],
+      name: "other-profile-logout-hidden",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertNotExists(
+      app.buttons["profile.sidekicksCard"],
+      name: "other-profile-sidekicks-card-hidden",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.staticTexts["profile.sharedAdventuresHeading"],
+      name: "other-profile-shared-adventures-heading",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.buttons["feed.card.adventure-sarah-cliffs"],
+      name: "other-profile-public-adventure-card",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+
+    app.buttons["profile.back"].tap()
+    assertExists(
+      app.buttons["profile.sidekicksCard"],
+      name: "self-profile-sidekicks-card-restored",
       in: app,
       screenshotDir: screenshotDir
     )

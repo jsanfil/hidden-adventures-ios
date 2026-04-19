@@ -11,6 +11,7 @@ struct ExploreShellView: View {
   @Binding var mode: ExploreMode
   @Binding var createAdventureVariant: CreateAdventureFixtureVariant?
   let onViewerProfileLoaded: (ProfileDetail) -> Void
+  let onOpenProfile: (String) -> Void
   let onOpenDetail: (String) -> Void
   let onLogout: () -> Void
 
@@ -43,6 +44,7 @@ struct ExploreShellView: View {
     mode: Binding<ExploreMode>,
     createAdventureVariant: Binding<CreateAdventureFixtureVariant?>,
     onViewerProfileLoaded: @escaping (ProfileDetail) -> Void,
+    onOpenProfile: @escaping (String) -> Void,
     onOpenDetail: @escaping (String) -> Void,
     onLogout: @escaping () -> Void
   ) {
@@ -55,6 +57,7 @@ struct ExploreShellView: View {
     self._mode = mode
     self._createAdventureVariant = createAdventureVariant
     self.onViewerProfileLoaded = onViewerProfileLoaded
+    self.onOpenProfile = onOpenProfile
     self.onOpenDetail = onOpenDetail
     self.onLogout = onLogout
     _locationSearchController = StateObject(
@@ -290,6 +293,7 @@ struct ExploreShellView: View {
       runtimeMode: runtimeMode,
       viewerHandle: viewerHandle,
       onProfileLoaded: onViewerProfileLoaded,
+      onOpenProfile: onOpenProfile,
       onOpenDetail: onOpenDetail,
       onLogout: onLogout
     )
@@ -856,6 +860,7 @@ private struct ExploreShellPreviewWrapper: View {
       mode: $mode,
       createAdventureVariant: $createAdventureVariant,
       onViewerProfileLoaded: { _ in },
+      onOpenProfile: { _ in },
       onOpenDetail: { _ in },
       onLogout: {}
     )

@@ -75,6 +75,7 @@ SwiftUI iOS client for the Hidden Adventures rebuild.
 - `App/`: app entrypoint and root composition
 - `Packages/`: local Swift packages or extracted modules
 - `Docs/`: repo-local architecture and implementation notes
+- [`Docs/manual-qa-results.md`](/Users/josephsanfilippo/Documents/projects/hidden-adventures-rebuild/hidden-adventures-ios/Docs/manual-qa-results.md): running log for manual QA results tied to plan-based features
 - `Resources/`: shared non-generated assets
 - `project.yml`: source of truth for the generated Xcode project
 

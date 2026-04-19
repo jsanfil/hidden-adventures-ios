@@ -20,6 +20,7 @@ enum ExploreMode: String, CaseIterable, Identifiable {
 
 enum AppRoute: Hashable {
   case detail(String)
+  case profile(String)
 }
 
 final class AppCoordinator: ObservableObject {

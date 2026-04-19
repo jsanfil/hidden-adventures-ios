@@ -9,6 +9,7 @@ struct SidekicksView: View {
 
   let sidekickService: SidekickService
   let adventureService: AdventureService
+  let onOpenProfile: (String) -> Void
   let onSidekicksChanged: () -> Void
 
   @Environment(\.dismiss) private var dismiss
@@ -26,10 +27,12 @@ struct SidekicksView: View {
   init(
     sidekickService: SidekickService = FixtureSidekickService(),
     adventureService: AdventureService = FixtureAdventureService(),
+    onOpenProfile: @escaping (String) -> Void = { _ in },
     onSidekicksChanged: @escaping () -> Void = {}
   ) {
     self.sidekickService = sidekickService
     self.adventureService = adventureService
+    self.onOpenProfile = onOpenProfile
     self.onSidekicksChanged = onSidekicksChanged
   }
 
@@ -204,35 +207,48 @@ struct SidekicksView: View {
     let isBusy = inFlightHandle == handle
 
     return HStack(spacing: 16) {
-      ProfileAvatarView(
-        initials: initials(for: user.profile),
-        mediaID: user.profile.avatar?.id,
-        mediaLoader: adventureService,
-        size: 48,
-        background: HATheme.Colors.primary.opacity(0.14),
-        foreground: HATheme.Colors.primary,
-        borderColor: nil,
-        borderWidth: 0,
-        loadingTint: HATheme.Colors.primary
-      )
+      Button {
+        onOpenProfile(handle)
+      } label: {
+        HStack(spacing: 16) {
+          ProfileAvatarView(
+            initials: initials(for: user.profile),
+            mediaID: user.profile.avatar?.id,
+            mediaLoader: adventureService,
+            size: 48,
+            background: HATheme.Colors.primary.opacity(0.14),
+            foreground: HATheme.Colors.primary,
+            borderColor: nil,
+            borderWidth: 0,
+            loadingTint: HATheme.Colors.primary
+          )
 
-      VStack(alignment: .leading, spacing: 2) {
-        Text(user.profile.displayName ?? handle)
-          .font(.system(size: 18, weight: .medium))
-          .foregroundStyle(HATheme.Colors.foreground)
-          .lineLimit(1)
+          VStack(alignment: .leading, spacing: 2) {
+            Text(user.profile.displayName ?? handle)
+              .font(.system(size: 18, weight: .medium))
+              .foregroundStyle(HATheme.Colors.foreground)
+              .lineLimit(1)
 
-        Text("@\(handle)")
-          .font(.system(size: 14, weight: .medium))
-          .foregroundStyle(HATheme.Colors.mutedForeground)
+            Text("@\(handle)")
+              .font(.system(size: 14, weight: .medium))
+              .foregroundStyle(HATheme.Colors.mutedForeground)
 
-        Text("\(locationLabel(for: user.profile)) · \(user.stats.adventuresCount) adventures")
-          .font(.system(size: 14, weight: .medium))
-          .foregroundStyle(HATheme.Colors.mutedForeground)
-          .lineLimit(1)
+            Text("\(locationLabel(for: user.profile)) · \(user.stats.adventuresCount) adventures")
+              .font(.system(size: 14, weight: .medium))
+              .foregroundStyle(HATheme.Colors.mutedForeground)
+              .lineLimit(1)
+          }
+
+          Spacer(minLength: 12)
+
+          Image(systemName: "chevron.right")
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(HATheme.Colors.mutedForeground)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
       }
-
-      Spacer(minLength: 12)
+      .buttonStyle(.plain)
+      .accessibilityIdentifier("sidekicks.row.\(handle)")
 
       if isBusy {
         ProgressView()
@@ -292,8 +308,6 @@ struct SidekicksView: View {
         .stroke(isPendingRemoval ? HATheme.Colors.primary.opacity(0.28) : HATheme.Colors.border, lineWidth: 1)
     }
     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-    .accessibilityElement(children: .contain)
-    .accessibilityIdentifier("sidekicks.row.\(handle)")
   }
 
   private func sidekickActionButton(
@@ -553,6 +567,7 @@ struct SidekicksView_Previews: PreviewProvider {
       SidekicksView(
         sidekickService: FixtureSidekickService(),
         adventureService: FixtureAdventureService(),
+        onOpenProfile: { _ in },
         onSidekicksChanged: {}
       )
     }

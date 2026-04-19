@@ -2,6 +2,13 @@ import SwiftUI
 import UIKit
 
 struct ProfileView: View {
+  private enum Layout {
+    static let contentSectionSpacing: CGFloat = 18
+    static let contentTopPadding: CGFloat = 14
+  }
+
+  @Environment(\.dismiss) private var dismiss
+
   let handle: String?
   let adventureService: AdventureService
   let profileService: ProfileService
@@ -9,6 +16,7 @@ struct ProfileView: View {
   let runtimeMode: AppRuntimeMode
   let viewerHandle: String?
   let onProfileLoaded: (ProfileDetail) -> Void
+  let onOpenProfile: (String) -> Void
   let onOpenDetail: (String) -> Void
   let onLogout: () -> Void
 
@@ -52,103 +60,169 @@ struct ProfileView: View {
     return response.profile.handle == viewerHandle
   }
 
-  private func header(profile: ProfileDetail) -> some View {
-    VStack(spacing: 0) {
-      ZStack(alignment: .bottomLeading) {
-        LinearGradient(
-          colors: [HATheme.Colors.accent, HATheme.Colors.primary],
-          startPoint: .topLeading,
-          endPoint: .bottomTrailing
-        )
-          .frame(height: 220)
-          .overlay(alignment: .top) {
-            HAStatusBarSpacer()
-          }
-          .overlay(alignment: .topTrailing) {
-            Button(action: onLogout) {
-              Image(systemName: "rectangle.portrait.and.arrow.right")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 40, height: 40)
-                .background(.white.opacity(0.18))
-                .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("profile.logout")
-            .padding(.top, 12)
-            .padding(.trailing, 16)
-          }
-
-        VStack(alignment: .leading, spacing: 14) {
-          ProfileAvatarView(
-            initials: initials(for: profile),
-            mediaID: profile.avatar?.id,
-            mediaLoader: adventureService
+  private var showsBackButton: Bool {
+    guard let response else { return false }
+    guard let viewerHandle else { return true }
+    return response.profile.handle != viewerHandle
+  }
+    
+    private func header(profile: ProfileDetail) -> some View {
+      VStack(spacing: 0) {
+        ZStack(alignment: .topLeading) {
+          LinearGradient(
+            gradient: Gradient(stops: [
+              .init(color: Color(red: 0.56, green: 0.77, blue: 0.80), location: 0.0),
+              .init(color: Color(red: 0.37, green: 0.65, blue: 0.61), location: 0.42),
+              .init(color: HATheme.Colors.primary, location: 1.0)
+            ]),
+            startPoint: .leading,
+            endPoint: .trailing
           )
 
-          VStack(alignment: .leading, spacing: 6) {
-            Text(profile.displayName ?? profile.handle)
-              .font(.system(size: 28, weight: .semibold))
-              .foregroundStyle(.white)
+          VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center) {
+              if showsBackButton {
+                plainHeaderBackButton
+              } else {
+                Color.clear
+                  .frame(width: 40, height: 40)
+                  .accessibilityHidden(true)
+              }
 
-            Text("@\(profile.handle)")
-              .font(.system(size: 14, weight: .medium))
-              .foregroundStyle(.white.opacity(0.82))
-              .accessibilityIdentifier("profile.handle.readonly")
+              Spacer(minLength: 0)
 
-            if let locationLabel = locationLabel(for: profile) {
-              Label(locationLabel, systemImage: "location.fill")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.white.opacity(0.74))
+              if showsSidekicksCard {
+                circularHeaderButton(
+                  systemImage: "rectangle.portrait.and.arrow.right",
+                  accessibilityID: "profile.logout",
+                  action: onLogout
+                )
+              } else {
+                Color.clear
+                  .frame(width: 40, height: 40)
+                  .accessibilityHidden(true)
+              }
             }
+            .padding(.horizontal, 24)
+            .padding(.top, 12)
+
+            HStack(alignment: .center, spacing: 16) {
+              ProfileAvatarView(
+                initials: initials(for: profile),
+                mediaID: profile.avatar?.id,
+                mediaLoader: adventureService,
+                size: 80
+              )
+
+              VStack(alignment: .leading, spacing: 2) {
+                Text(profile.displayName ?? profile.handle)
+                  .font(.system(size: 28, weight: .semibold))
+                  .foregroundStyle(.white)
+                  .lineLimit(2)
+                  .minimumScaleFactor(0.85)
+
+                Text("@\(profile.handle)")
+                  .font(.system(size: 16, weight: .semibold))
+                  .foregroundStyle(.white.opacity(0.86))
+                  .accessibilityIdentifier("profile.handle.readonly")
+
+                if let locationLabel = locationLabel(for: profile) {
+                  Label {
+                    Text(locationLabel)
+                  } icon: {
+                    Image(systemName: "location.fill")
+                  }
+                  .font(.system(size: 16, weight: .medium))
+                  .foregroundStyle(.white.opacity(0.80))
+                }
+              }
+              .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 8)
+            .padding(.bottom, 16)
+          }
+        }
+        .frame(height: 172)
+
+        VStack(alignment: .leading, spacing: Layout.contentSectionSpacing) {
+          Group {
+            if let bio = profile.bio, bio.isEmpty == false {
+              Text(bio)
+                .font(HATheme.Typography.body)
+                .foregroundStyle(HATheme.Colors.mutedForeground)
+                .lineSpacing(3)
+                .accessibilityIdentifier("profile.bio.readonly")
+            } else {
+              Text("Add a bio during setup or come back later to tell other explorers what you love to find.")
+                .font(HATheme.Typography.body)
+                .foregroundStyle(HATheme.Colors.mutedForeground)
+                .accessibilityIdentifier("profile.bio.placeholder")
+            }
+          }
+          .fixedSize(horizontal: false, vertical: true)
+
+          profileStatRow {
+            profileStatItem(title: "Adventures", value: MockFixtures.profileStats.adventures, showsDivider: true)
+            profileStatItem(title: "Likes", value: MockFixtures.profileStats.likesReceived, showsDivider: true)
+            profileStatItem(title: "Views", value: MockFixtures.profileStats.views, showsDivider: false)
+          }
+
+          if showsSidekicksCard {
+            NavigationLink {
+              SidekicksView(
+                sidekickService: sidekickService,
+                adventureService: adventureService,
+                onOpenProfile: onOpenProfile,
+                onSidekicksChanged: {
+                  Task {
+                    await loadSidekickSummary()
+                  }
+                }
+              )
+            } label: {
+              sidekicksCard
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("profile.sidekicksCard")
           }
         }
         .padding(.horizontal, 24)
-        .padding(.bottom, 26)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, Layout.contentTopPadding)
       }
-
-      VStack(alignment: .leading, spacing: 20) {
-        if let bio = profile.bio, bio.isEmpty == false {
-          Text(bio)
-            .font(HATheme.Typography.body)
-            .foregroundStyle(HATheme.Colors.mutedForeground)
-            .lineSpacing(3)
-            .accessibilityIdentifier("profile.bio.readonly")
-        } else {
-          Text("Add a bio during setup or come back later to tell other explorers what you love to find.")
-            .font(HATheme.Typography.body)
-            .foregroundStyle(HATheme.Colors.mutedForeground)
-            .accessibilityIdentifier("profile.bio.placeholder")
-        }
-
-        profileStatRow {
-          profileStatItem(title: "Adventures", value: MockFixtures.profileStats.adventures, showsDivider: true)
-          profileStatItem(title: "Likes", value: MockFixtures.profileStats.likesReceived, showsDivider: true)
-          profileStatItem(title: "Views", value: MockFixtures.profileStats.views, showsDivider: false)
-        }
-
-        if showsSidekicksCard {
-          NavigationLink {
-            SidekicksView(
-              sidekickService: sidekickService,
-              adventureService: adventureService,
-              onSidekicksChanged: {
-                Task {
-                  await loadSidekickSummary()
-                }
-              }
-            )
-          } label: {
-            sidekicksCard
-          }
-          .buttonStyle(.plain)
-          .accessibilityIdentifier("profile.sidekicksCard")
-        }
-      }
-      .padding(.horizontal, 24)
-      .padding(.top, 24)
     }
+    
+    private func circularHeaderButton(
+    systemImage: String,
+    accessibilityID: String,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Image(systemName: systemImage)
+        .font(.system(size: 16, weight: .semibold))
+        .foregroundStyle(.white)
+        .frame(width: 40, height: 40)
+        .background(.white.opacity(0.16))
+        .overlay {
+          Circle()
+            .stroke(.white.opacity(0.14), lineWidth: 1)
+        }
+        .clipShape(Circle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityIdentifier(accessibilityID)
+  }
+
+  private var plainHeaderBackButton: some View {
+    Button(action: { dismiss() }) {
+      Image(systemName: "chevron.left")
+        .font(.system(size: 26, weight: .semibold))
+        .foregroundStyle(.white)
+        .frame(width: 40, height: 40, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityIdentifier("profile.back")
   }
 
   private var sidekicksCard: some View {
@@ -227,7 +301,7 @@ struct ProfileView: View {
       Text("Shared adventures")
         .font(.system(size: 20, weight: .semibold))
         .foregroundStyle(HATheme.Colors.foreground)
-        .padding(.top, 8)
+        .padding(.top, Layout.contentSectionSpacing)
         .padding(.horizontal, 24)
         .accessibilityIdentifier("profile.sharedAdventuresHeading")
 
@@ -409,6 +483,7 @@ struct ProfileView_Previews: PreviewProvider {
         runtimeMode: .fixturePreview,
         viewerHandle: MockFixtures.profile.handle,
         onProfileLoaded: { _ in },
+        onOpenProfile: { _ in },
         onOpenDetail: { _ in },
         onLogout: {}
       )

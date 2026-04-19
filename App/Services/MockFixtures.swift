@@ -11,6 +11,10 @@ enum MockFixtures {
   static let oneontaID = "adventure-oneonta-gorge"
   static let multnomahID = "adventure-multnomah-falls"
   static let forestParkID = "adventure-forest-park-loop"
+  static let jordanHiddenRidgeID = "adventure-jordan-hidden-ridge"
+  static let sarahCliffsID = "adventure-sarah-cliffs"
+  static let sarahSecretSpringsID = "adventure-sarah-secret-springs"
+  static let sarahQuietQuarryID = "adventure-sarah-quiet-quarry"
 
   static let bootstrapDraft = ProfileBootstrapDraft(
     displayName: "Jordan",
@@ -33,6 +37,39 @@ enum MockFixtures {
     createdAt: "2026-03-27T18:00:00Z",
     updatedAt: "2026-03-27T18:00:00Z"
   )
+
+  static func profileDetail(for handle: String) -> ProfileDetail? {
+    if handle == profile.handle {
+      return profile
+    }
+
+    guard let sidekick = sidekickUsers.first(where: { $0.handle == handle }) else {
+      return nil
+    }
+
+    return ProfileDetail(
+      id: sidekick.id,
+      handle: sidekick.handle,
+      displayName: sidekick.name,
+      bio: "Exploring one hidden trail at a time.",
+      homeCity: sidekick.location.components(separatedBy: ",").first.map {
+        $0.trimmingCharacters(in: .whitespacesAndNewlines)
+      },
+      homeRegion: sidekick.location.components(separatedBy: ",").dropFirst().first.map {
+        $0.trimmingCharacters(in: .whitespacesAndNewlines)
+      },
+      avatar: sidekick.avatarMediaID.map { MediaReference(id: $0, storageKey: $0) },
+      cover: nil,
+      createdAt: "2026-03-01T18:00:00Z",
+      updatedAt: "2026-04-01T18:00:00Z"
+    )
+  }
+
+  static func visibleProfileAdventures(for handle: String) -> [AdventureCard] {
+    feedItems.filter { adventure in
+      adventure.author.handle == handle && adventure.visibility != .private
+    }
+  }
 
   static let profileStats = ProfileStatsSnapshot(
     adventures: 20,
@@ -172,6 +209,70 @@ enum MockFixtures {
       primaryMedia: MediaReference(id: "media-forest-park", storageKey: "trail-forest"),
       stats: AdventureStats(favoriteCount: 642, commentCount: 18, ratingCount: 105, averageRating: 4.5),
       distanceMiles: nil
+    ),
+    AdventureCard(
+      id: jordanHiddenRidgeID,
+      title: "Hidden Ridge Overlook",
+      description: "A quieter ridge line with a wide view and just enough scramble to feel like a secret.",
+      categorySlug: .viewpoints,
+      categoryLabel: "Secret View",
+      visibility: .sidekicks,
+      createdAt: "2026-03-12T08:30:00Z",
+      publishedAt: "2026-03-12T08:30:00Z",
+      location: AdventureLocation(latitude: 45.5532, longitude: -122.6921),
+      placeLabel: "Portland, OR",
+      author: AdventureAuthor(handle: "jordan", displayName: "Jordan", homeCity: "Portland", homeRegion: "OR"),
+      primaryMedia: MediaReference(id: "media-scenic-overlook", storageKey: "scenic-overlook"),
+      stats: AdventureStats(favoriteCount: 418, commentCount: 11, ratingCount: 67, averageRating: 4.6),
+      distanceMiles: nil
+    ),
+    AdventureCard(
+      id: sarahCliffsID,
+      title: "Ridge Line at Rowena Cliffs",
+      description: "Wide canyon views, wildflower color, and the kind of sunset that makes you stay longer than planned.",
+      categorySlug: .viewpoints,
+      categoryLabel: "Scenic View",
+      visibility: .public,
+      createdAt: "2026-03-11T08:30:00Z",
+      publishedAt: "2026-03-11T08:30:00Z",
+      location: AdventureLocation(latitude: 45.6872, longitude: -121.3292),
+      placeLabel: "Rowena, OR",
+      author: AdventureAuthor(handle: "sarahc", displayName: "Sarah Chen", homeCity: "Portland", homeRegion: "OR"),
+      primaryMedia: MediaReference(id: "media-hero-mountain", storageKey: "hero-mountain"),
+      stats: AdventureStats(favoriteCount: 721, commentCount: 31, ratingCount: 108, averageRating: 4.8),
+      distanceMiles: nil
+    ),
+    AdventureCard(
+      id: sarahSecretSpringsID,
+      title: "Secret Springs Spur",
+      description: "A side route to a tucked-away pool with mossy rock walls and a long, quiet approach.",
+      categorySlug: .waterSpots,
+      categoryLabel: "Hidden Gem",
+      visibility: .sidekicks,
+      createdAt: "2026-03-10T08:30:00Z",
+      publishedAt: "2026-03-10T08:30:00Z",
+      location: AdventureLocation(latitude: 45.6310, longitude: -121.2872),
+      placeLabel: "Columbia River Gorge, OR",
+      author: AdventureAuthor(handle: "sarahc", displayName: "Sarah Chen", homeCity: "Portland", homeRegion: "OR"),
+      primaryMedia: MediaReference(id: "media-hidden-canyon", storageKey: "hidden-canyon"),
+      stats: AdventureStats(favoriteCount: 384, commentCount: 19, ratingCount: 77, averageRating: 4.7),
+      distanceMiles: nil
+    ),
+    AdventureCard(
+      id: sarahQuietQuarryID,
+      title: "Quiet Quarry",
+      description: "A tucked-away climb with a steep final stretch and a view that never makes it into the public feed.",
+      categorySlug: .trails,
+      categoryLabel: "Private",
+      visibility: .private,
+      createdAt: "2026-03-09T08:30:00Z",
+      publishedAt: "2026-03-09T08:30:00Z",
+      location: AdventureLocation(latitude: 45.6222, longitude: -121.2741),
+      placeLabel: "Hood River, OR",
+      author: AdventureAuthor(handle: "sarahc", displayName: "Sarah Chen", homeCity: "Portland", homeRegion: "OR"),
+      primaryMedia: MediaReference(id: "media-trail-forest", storageKey: "trail-forest"),
+      stats: AdventureStats(favoriteCount: 12, commentCount: 1, ratingCount: 4, averageRating: 4.2),
+      distanceMiles: nil
     )
   ]
 
@@ -182,7 +283,11 @@ enum MockFixtures {
     capeID: ["coastal-path", "hero-mountain"],
     oneontaID: ["hidden-canyon", "swimming-hole", "scenic-overlook"],
     multnomahID: ["hero-mountain", "scenic-overlook"],
-    forestParkID: ["trail-forest", "coastal-path"]
+    forestParkID: ["trail-forest", "coastal-path"],
+    jordanHiddenRidgeID: ["scenic-overlook", "hero-mountain"],
+    sarahCliffsID: ["hero-mountain", "scenic-overlook"],
+    sarahSecretSpringsID: ["hidden-canyon", "trail-forest"],
+    sarahQuietQuarryID: ["trail-forest"]
   ]
 
   static let createAdventureAvailablePhotos = [
@@ -260,6 +365,21 @@ enum MockFixtures {
     forestParkID: [
       AdventureMediaItem(id: "media-trail-forest", sortOrder: 0, isPrimary: true, width: 1600, height: 1200),
       AdventureMediaItem(id: "media-coastal-path", sortOrder: 1, isPrimary: false, width: 1600, height: 1200)
+    ],
+    jordanHiddenRidgeID: [
+      AdventureMediaItem(id: "media-scenic-overlook", sortOrder: 0, isPrimary: true, width: 1600, height: 1200),
+      AdventureMediaItem(id: "media-hero-mountain", sortOrder: 1, isPrimary: false, width: 1600, height: 1200)
+    ],
+    sarahCliffsID: [
+      AdventureMediaItem(id: "media-hero-mountain", sortOrder: 0, isPrimary: true, width: 1600, height: 1200),
+      AdventureMediaItem(id: "media-coastal-path", sortOrder: 1, isPrimary: false, width: 1600, height: 1200)
+    ],
+    sarahSecretSpringsID: [
+      AdventureMediaItem(id: "media-hidden-canyon", sortOrder: 0, isPrimary: true, width: 1600, height: 1200),
+      AdventureMediaItem(id: "media-trail-forest", sortOrder: 1, isPrimary: false, width: 1600, height: 1200)
+    ],
+    sarahQuietQuarryID: [
+      AdventureMediaItem(id: "media-trail-forest", sortOrder: 0, isPrimary: true, width: 1600, height: 1200)
     ]
   ]
 
@@ -375,6 +495,70 @@ enum MockFixtures {
       stats: feedItems[6].stats,
       placeLabel: "Portland, OR",
       updatedAt: "2026-03-13T08:30:00Z"
+    ),
+    jordanHiddenRidgeID: AdventureDetail(
+      id: jordanHiddenRidgeID,
+      title: feedItems[7].title,
+      description: feedItems[7].description,
+      categorySlug: feedItems[7].categorySlug,
+      categoryLabel: feedItems[7].categoryLabel,
+      visibility: feedItems[7].visibility,
+      createdAt: feedItems[7].createdAt,
+      publishedAt: feedItems[7].publishedAt,
+      location: feedItems[7].location,
+      author: feedItems[7].author,
+      primaryMedia: feedItems[7].primaryMedia,
+      stats: feedItems[7].stats,
+      placeLabel: feedItems[7].placeLabel,
+      updatedAt: "2026-03-12T08:30:00Z"
+    ),
+    sarahCliffsID: AdventureDetail(
+      id: sarahCliffsID,
+      title: feedItems[8].title,
+      description: feedItems[8].description,
+      categorySlug: feedItems[8].categorySlug,
+      categoryLabel: feedItems[8].categoryLabel,
+      visibility: feedItems[8].visibility,
+      createdAt: feedItems[8].createdAt,
+      publishedAt: feedItems[8].publishedAt,
+      location: feedItems[8].location,
+      author: feedItems[8].author,
+      primaryMedia: feedItems[8].primaryMedia,
+      stats: feedItems[8].stats,
+      placeLabel: feedItems[8].placeLabel,
+      updatedAt: "2026-03-11T08:30:00Z"
+    ),
+    sarahSecretSpringsID: AdventureDetail(
+      id: sarahSecretSpringsID,
+      title: feedItems[9].title,
+      description: feedItems[9].description,
+      categorySlug: feedItems[9].categorySlug,
+      categoryLabel: feedItems[9].categoryLabel,
+      visibility: feedItems[9].visibility,
+      createdAt: feedItems[9].createdAt,
+      publishedAt: feedItems[9].publishedAt,
+      location: feedItems[9].location,
+      author: feedItems[9].author,
+      primaryMedia: feedItems[9].primaryMedia,
+      stats: feedItems[9].stats,
+      placeLabel: feedItems[9].placeLabel,
+      updatedAt: "2026-03-10T08:30:00Z"
+    ),
+    sarahQuietQuarryID: AdventureDetail(
+      id: sarahQuietQuarryID,
+      title: feedItems[10].title,
+      description: feedItems[10].description,
+      categorySlug: feedItems[10].categorySlug,
+      categoryLabel: feedItems[10].categoryLabel,
+      visibility: feedItems[10].visibility,
+      createdAt: feedItems[10].createdAt,
+      publishedAt: feedItems[10].publishedAt,
+      location: feedItems[10].location,
+      author: feedItems[10].author,
+      primaryMedia: feedItems[10].primaryMedia,
+      stats: feedItems[10].stats,
+      placeLabel: feedItems[10].placeLabel,
+      updatedAt: "2026-03-09T08:30:00Z"
     )
   ]
 
