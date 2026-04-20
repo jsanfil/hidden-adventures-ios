@@ -46,6 +46,49 @@ final class AppAuthServiceTests: XCTestCase {
     XCTAssertNil(challenge.session)
   }
 
+  func testGetStartedResumesExistingUnconfirmedSignup() async throws {
+    CognitoMockURLProtocol.requestQueue = [
+      { request in
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-Amz-Target"), "AWSCognitoIdentityProviderService.SignUp")
+
+        let payload = try XCTUnwrap(Self.jsonPayload(from: request))
+        XCTAssertEqual(payload["Username"] as? String, "new_1853b7412ac94d75cb23e033")
+
+        return Self.errorResponse(
+          request: request,
+          code: 400,
+          body: #"{"__type":"UsernameExistsException","message":"User already exists"}"#
+        )
+      },
+      { request in
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-Amz-Target"), "AWSCognitoIdentityProviderService.ResendConfirmationCode")
+
+        let payload = try XCTUnwrap(Self.jsonPayload(from: request))
+        XCTAssertEqual(payload["ClientId"] as? String, "client-id")
+        XCTAssertEqual(payload["Username"] as? String, "new_1853b7412ac94d75cb23e033")
+
+        return Self.successResponse(
+          request: request,
+          body: #"{"CodeDeliveryDetails":{"Destination":"ne•••@example.com"}}"#
+        )
+      }
+    ]
+
+    let service = makeService()
+
+    let result = try await service.start(email: "new@example.com", intent: .onboarding)
+
+    guard case .challenge(let challenge) = result else {
+      return XCTFail("Expected resumed signup challenge")
+    }
+
+    XCTAssertEqual(challenge.kind, .signUp)
+    XCTAssertEqual(challenge.cognitoUsername, "new_1853b7412ac94d75cb23e033")
+    XCTAssertEqual(challenge.email, "new@example.com")
+    XCTAssertEqual(challenge.deliveryDestination, "ne•••@example.com")
+    XCTAssertTrue(challenge.isResumed)
+  }
+
   func testSignupResendUsesResendConfirmationCode() async throws {
     CognitoMockURLProtocol.requestHandler = { request in
       XCTAssertEqual(request.value(forHTTPHeaderField: "X-Amz-Target"), "AWSCognitoIdentityProviderService.ResendConfirmationCode")
@@ -291,6 +334,33 @@ final class AppAuthServiceTests: XCTestCase {
     } catch {
       XCTFail("Unexpected error: \(error)")
     }
+  }
+
+  func testResumedSignupChallengeUsesDistinctHelperCopy() {
+    let freshChallenge = PendingAuthChallenge(
+      kind: .signUp,
+      cognitoUsername: "signup_username",
+      email: "new@example.com",
+      deliveryDestination: "n•••@example.com",
+      session: nil
+    )
+    let resumedChallenge = PendingAuthChallenge(
+      kind: .signUp,
+      cognitoUsername: "signup_username",
+      email: "new@example.com",
+      deliveryDestination: "ne•••@example.com",
+      session: nil,
+      isResumed: true
+    )
+
+    XCTAssertEqual(
+      freshChallenge.codeEntryHelperText,
+      "We sent a confirmation code to n•••@example.com."
+    )
+    XCTAssertEqual(
+      resumedChallenge.codeEntryHelperText,
+      "We found your in-progress sign-up and sent a fresh confirmation code to ne•••@example.com."
+    )
   }
 
   private func makeService() -> CognitoAppAuthService {

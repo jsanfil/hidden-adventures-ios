@@ -83,12 +83,7 @@ struct VerificationCodeView: View {
       return "We sent a one-time code to your email."
     }
 
-    switch challenge.kind {
-    case .signIn:
-      return "We sent a sign-in code to \(challenge.deliveryDestination)."
-    case .signUp:
-      return "We sent a confirmation code to \(challenge.deliveryDestination)."
-    }
+    return challenge.codeEntryHelperText
   }
 }
 

@@ -448,6 +448,47 @@ final class AppSessionTests: XCTestCase {
     XCTAssertEqual(pendingChallenge?.deliveryDestination, "ne•••@example.com")
   }
 
+  func testRequestEmailCodeRoutesResumedSignupToCodeEntryWithoutAlert() async {
+    let appAuthService = AppAuthServiceStub()
+    appAuthService.startResult = .challenge(
+      PendingAuthChallenge(
+        kind: .signUp,
+        cognitoUsername: "new_1853b7412ac94d75cb23e033",
+        email: "new@example.com",
+        deliveryDestination: "ne•••@example.com",
+        session: nil,
+        isResumed: true
+      )
+    )
+
+    let session = await makeSession(
+      runtime: AppRuntime(
+        environment: [
+          "HA_RUNTIME_MODE": "live",
+          "HA_SERVER_MODE": "local_manual_qa"
+        ]
+      ),
+      backendAuthService: BackendAuthServiceStub(),
+      appAuthService: appAuthService,
+      profileService: ProfileServiceStub(),
+      authState: AuthStateStore()
+    )
+
+    await MainActor.run {
+      session.beginAuth(intent: .onboarding)
+    }
+    let nextStage = await session.requestEmailCode(for: "new@example.com")
+    let pendingChallenge = await MainActor.run { session.pendingAuthChallenge }
+    let alertMessage = await MainActor.run { session.alertMessage }
+
+    XCTAssertEqual(nextStage, .codeEntry)
+    XCTAssertEqual(appAuthService.startInvocations.count, 1)
+    XCTAssertEqual(pendingChallenge?.kind, .signUp)
+    XCTAssertTrue(pendingChallenge?.isResumed == true)
+    XCTAssertEqual(pendingChallenge?.deliveryDestination, "ne•••@example.com")
+    XCTAssertNil(alertMessage)
+  }
+
   func testVerifyEmailCodeShowsErrorWhenSignupAliasAlreadyExists() async {
     let appAuthService = AppAuthServiceStub()
     appAuthService.startResult = .challenge(

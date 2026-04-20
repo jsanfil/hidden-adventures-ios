@@ -105,6 +105,35 @@ struct PendingAuthChallenge: Equatable, Sendable {
   let email: String
   let deliveryDestination: String
   let session: String?
+  let isResumed: Bool
+
+  init(
+    kind: PendingAuthChallengeKind,
+    cognitoUsername: String,
+    email: String,
+    deliveryDestination: String,
+    session: String?,
+    isResumed: Bool = false
+  ) {
+    self.kind = kind
+    self.cognitoUsername = cognitoUsername
+    self.email = email
+    self.deliveryDestination = deliveryDestination
+    self.session = session
+    self.isResumed = isResumed
+  }
+
+  var codeEntryHelperText: String {
+    switch kind {
+    case .signIn:
+      return "We sent a sign-in code to \(deliveryDestination)."
+    case .signUp:
+      if isResumed {
+        return "We found your in-progress sign-up and sent a fresh confirmation code to \(deliveryDestination)."
+      }
+      return "We sent a confirmation code to \(deliveryDestination)."
+    }
+  }
 }
 
 enum AuthFlowResult: Sendable {
@@ -211,8 +240,8 @@ final class CognitoAppAuthService: AppAuthService {
       return try await initiateSignIn(email: normalizedEmail)
 
     case .onboarding:
+      let cognitoUsername = signUpUsername(for: normalizedEmail)
       do {
-        let cognitoUsername = signUpUsername(for: normalizedEmail)
         Self.logger.debug("Cognito auth flow selected sign-up challenge")
         let response = try await signUp(email: normalizedEmail, username: cognitoUsername)
         return .challenge(
@@ -225,6 +254,13 @@ final class CognitoAppAuthService: AppAuthService {
           )
         )
       } catch let error as AppAuthError {
+        if case .service(let code, _) = error, code == "UsernameExistsException" {
+          Self.logger.info("Cognito onboarding sign-up already exists; resuming unconfirmed challenge")
+          return try await resumeUnconfirmedSignUp(
+            email: normalizedEmail,
+            username: cognitoUsername
+          )
+        }
         Self.logger.error("Cognito auth sign-up failed: \(self.redactedErrorMessage(error), privacy: .public)")
         throw error
       }
@@ -426,6 +462,23 @@ final class CognitoAppAuthService: AppAuthService {
     )
 
     return response
+  }
+
+  private func resumeUnconfirmedSignUp(
+    email: String,
+    username: String
+  ) async throws -> AuthFlowResult {
+    let response = try await resendConfirmationCode(username: username)
+    return .challenge(
+      PendingAuthChallenge(
+        kind: .signUp,
+        cognitoUsername: username,
+        email: email,
+        deliveryDestination: response.codeDeliveryDetails?.destination ?? email,
+        session: nil,
+        isResumed: true
+      )
+    )
   }
 
   private func authFlowResult(from response: CognitoAuthResponse, email: String) async throws -> AuthFlowResult {
