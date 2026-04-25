@@ -122,8 +122,8 @@ final class ScreenGalleryRegressionUITests: HiddenAdventuresUITestCase {
         screenshotDir: directory
       )
       self.assertExists(
-        app.buttons["tab.saved"],
-        name: "feed-saved-tab",
+        app.buttons["tab.discover"],
+        name: "feed-discover-tab",
         in: app,
         screenshotDir: directory
       )
@@ -223,6 +223,52 @@ final class ScreenGalleryRegressionUITests: HiddenAdventuresUITestCase {
       self.assertExists(
         app.buttons["map.sheet.modeButton"],
         name: "map-sheet-mode-button",
+        in: app,
+        screenshotDir: directory
+      )
+    }
+  }
+
+  func testDiscover_galleryCapturesScreenshot() throws {
+    try captureScreen(
+      named: "gallery-discover",
+      startScreen: "discover",
+      expectedIdentifier: "tab.discover"
+    ) { app, directory in
+      self.assertExists(
+        app.textFields["discover.searchField"],
+        name: "discover-search-field",
+        in: app,
+        screenshotDir: directory
+      )
+      self.assertExists(
+        app.staticTexts["discover.section.exploreAdventurers"],
+        name: "discover-explore-adventurers-section",
+        in: app,
+        screenshotDir: directory
+      )
+      self.assertExists(
+        app.staticTexts["discover.section.popularAdventures"],
+        name: "discover-popular-adventures-section",
+        in: app,
+        screenshotDir: directory
+      )
+      self.assertExists(
+        app.buttons["discover.adventurerCard.adventurer-maya-reyes"],
+        name: "discover-maya-card",
+        in: app,
+        screenshotDir: directory
+      )
+      self.assertExists(
+        app.buttons["discover.adventureCard.adventure-eagle-creek"],
+        name: "discover-eagle-card",
+        in: app,
+        screenshotDir: directory
+      )
+      self.assertValue(
+        app.buttons["tab.discover"],
+        equals: "selected",
+        name: "discover-tab-selected",
         in: app,
         screenshotDir: directory
       )

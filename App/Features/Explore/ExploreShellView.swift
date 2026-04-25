@@ -145,6 +145,8 @@ struct ExploreShellView: View {
           feedScreen
         case .map:
           mapScreen
+        case .discover:
+          discoverScreen
         case .profile:
           profileScreen
         }
@@ -241,6 +243,8 @@ struct ExploreShellView: View {
       return .home
     case .map:
       return .explore
+    case .discover:
+      return .discover
     case .profile:
       return .profile
     }
@@ -280,6 +284,14 @@ struct ExploreShellView: View {
       onUseCurrentLocation: useCurrentLocationScope,
       onSelectDiscoveryPlace: selectDiscoveryPlace,
       onClearSelectedDiscoveryPlace: clearSelectedDiscoveryPlace,
+      onOpenDetail: onOpenDetail
+    )
+  }
+
+  private var discoverScreen: some View {
+    DiscoverView(
+      model: MockFixtures.discoverScreenModel(for: DiscoverFixtureVariant.resolve()),
+      onOpenProfile: onOpenProfile,
       onOpenDetail: onOpenDetail
     )
   }
@@ -519,8 +531,8 @@ struct ExploreShellView: View {
       createAdventureVariant = .photos
     case .profile:
       mode = .profile
-    case .saved:
-      break
+    case .discover:
+      mode = .discover
     }
   }
 

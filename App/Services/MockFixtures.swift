@@ -43,6 +43,10 @@ enum MockFixtures {
       return profile
     }
 
+    if let discoverProfile = discoverProfileDetail(for: handle) {
+      return discoverProfile
+    }
+
     guard let sidekick = sidekickUsers.first(where: { $0.handle == handle }) else {
       return nil
     }
@@ -66,9 +70,92 @@ enum MockFixtures {
   }
 
   static func visibleProfileAdventures(for handle: String) -> [AdventureCard] {
-    feedItems.filter { adventure in
+    if let discoverAdventures = discoverProfileAdventures(for: handle) {
+      return discoverAdventures
+    }
+
+    return feedItems.filter { adventure in
       adventure.author.handle == handle && adventure.visibility != .private
     }
+  }
+
+  private static func discoverProfileDetail(for handle: String) -> ProfileDetail? {
+    guard let adventurer = discoverAdventurers.first(where: { $0.handle == handle }) else {
+      return nil
+    }
+
+    let locationComponents = adventurer.location?.components(separatedBy: ",") ?? []
+
+    return ProfileDetail(
+      id: adventurer.id,
+      handle: adventurer.handle,
+      displayName: adventurer.name,
+      bio: "Mapping hidden places and sharing public adventures from the trail.",
+      homeCity: locationComponents.first.map {
+        $0.trimmingCharacters(in: .whitespacesAndNewlines)
+      },
+      homeRegion: locationComponents.dropFirst().first.map {
+        $0.trimmingCharacters(in: .whitespacesAndNewlines)
+      },
+      avatar: adventurer.avatarImageName.map { MediaReference(id: $0, storageKey: $0) },
+      cover: adventurer.coverImageNames.first.map { MediaReference(id: $0, storageKey: $0) },
+      createdAt: "2026-03-18T18:00:00Z",
+      updatedAt: "2026-04-18T18:00:00Z"
+    )
+  }
+
+  private static func discoverProfileAdventures(for handle: String) -> [AdventureCard]? {
+    switch handle {
+    case "mayaexplores":
+      return [
+        discoverProfileAdventure(
+          id: eagleID,
+          author: AdventureAuthor(
+            handle: "mayaexplores",
+            displayName: "Maya Reyes",
+            homeCity: "Portland",
+            homeRegion: "OR"
+          )
+        )
+      ].compactMap { $0 }
+    case "theo.outdoors":
+      return [
+        discoverProfileAdventure(
+          id: bluePoolID,
+          author: AdventureAuthor(
+            handle: "theo.outdoors",
+            displayName: "Theo Nakamura",
+            homeCity: "Bend",
+            homeRegion: "OR"
+          )
+        )
+      ].compactMap { $0 }
+    default:
+      return nil
+    }
+  }
+
+  private static func discoverProfileAdventure(id: String, author: AdventureAuthor) -> AdventureCard? {
+    guard let adventure = feedItems.first(where: { $0.id == id }) else {
+      return nil
+    }
+
+    return AdventureCard(
+      id: adventure.id,
+      title: adventure.title,
+      description: adventure.description,
+      categorySlug: adventure.categorySlug,
+      categoryLabel: adventure.categoryLabel,
+      visibility: .public,
+      createdAt: adventure.createdAt,
+      publishedAt: adventure.publishedAt,
+      location: adventure.location,
+      placeLabel: adventure.placeLabel,
+      author: author,
+      primaryMedia: adventure.primaryMedia,
+      stats: adventure.stats,
+      distanceMiles: adventure.distanceMiles
+    )
   }
 
   static let profileStats = ProfileStatsSnapshot(
@@ -288,6 +375,114 @@ enum MockFixtures {
     sarahCliffsID: ["hero-mountain", "scenic-overlook"],
     sarahSecretSpringsID: ["hidden-canyon", "trail-forest"],
     sarahQuietQuarryID: ["trail-forest"]
+  ]
+
+  static func discoverScreenModel(
+    for variant: DiscoverFixtureVariant = .happy
+  ) -> DiscoverScreenModel {
+    switch variant {
+    case .happy:
+      return DiscoverScreenModel(
+        adventurers: discoverAdventurers,
+        popularAdventures: discoverPopularAdventures
+      )
+    case .longText:
+      var longAdventurers = discoverAdventurers
+      longAdventurers.append(
+        DiscoverScreenModel.Adventurer(
+          id: "adventurer-long-text",
+          name: "Alexandria Marisol Evergreen-Waters",
+          handle: "alexandria.evergreen.waters",
+          location: "Truth or Consequences, NM",
+          adventureCount: 128,
+          topCategories: ["Abandoned Places", "Roadside Stops"],
+          coverImageNames: ["coastal-path", "trail-forest"],
+          avatarImageName: nil
+        )
+      )
+
+      var longAdventures = discoverPopularAdventures
+      longAdventures.append(
+        DiscoverScreenModel.Adventure(
+          id: "adventure-long-text",
+          title: "A Very Long Ridge Walk Past Three Overlooks and One Windy Fire Road",
+          authorName: "Alexandria Evergreen-Waters",
+          location: "Columbia River Gorge Scenic Area, OR",
+          category: "Roadside Stop",
+          rating: 4.6,
+          favoriteCount: 781,
+          imageNames: ["coastal-path", "scenic-overlook"]
+        )
+      )
+
+      return DiscoverScreenModel(
+        adventurers: longAdventurers,
+        popularAdventures: longAdventures
+      )
+    case .empty:
+      return DiscoverScreenModel(
+        adventurers: [],
+        popularAdventures: [],
+        emptyStateTitle: "No matches",
+        emptyStateSubtitle: "Search names, handles, or adventure titles."
+      )
+    }
+  }
+
+  static let discoverAdventurers: [DiscoverScreenModel.Adventurer] = [
+    DiscoverScreenModel.Adventurer(
+      id: "adventurer-maya-reyes",
+      name: "Maya Reyes",
+      handle: "mayaexplores",
+      location: "Portland, OR",
+      adventureCount: 62,
+      topCategories: ["Waterfall Hikes", "Canyon"],
+      coverImageNames: ["hero-mountain", "hidden-canyon"],
+      avatarImageName: nil
+    ),
+    DiscoverScreenModel.Adventurer(
+      id: "adventurer-theo-nakamura",
+      name: "Theo Nakamura",
+      handle: "theo.outdoors",
+      location: "Bend, OR",
+      adventureCount: 38,
+      topCategories: ["Viewpoints", "Geology"],
+      coverImageNames: ["scenic-overlook", "trail-forest"],
+      avatarImageName: nil
+    )
+  ]
+
+  static let discoverPopularAdventures: [DiscoverScreenModel.Adventure] = [
+    DiscoverScreenModel.Adventure(
+      id: eagleID,
+      title: "Eagle Creek Trail to Tunnel Falls",
+      authorName: "Maya Reyes",
+      location: "Columbia River Gorge, OR",
+      category: "Waterfall Hike",
+      rating: 4.9,
+      favoriteCount: 3104,
+      imageNames: ["hero-mountain", "scenic-overlook", "trail-forest"]
+    ),
+    DiscoverScreenModel.Adventure(
+      id: oneontaID,
+      title: "Oneonta Gorge Slot Canyon",
+      authorName: "Maya Reyes",
+      location: "Columbia River Gorge, OR",
+      category: "Canyon",
+      rating: 4.9,
+      favoriteCount: 2847,
+      imageNames: ["hidden-canyon", "swimming-hole"]
+    ),
+    DiscoverScreenModel.Adventure(
+      id: bluePoolID,
+      title: "Blue Pool at Terwilliger Hot Springs",
+      authorName: "Theo Nakamura",
+      location: "Willamette National Forest, OR",
+      category: "Hidden Gem",
+      rating: 4.8,
+      favoriteCount: 1523,
+      imageNames: ["swimming-hole"]
+    )
   ]
 
   static let createAdventureAvailablePhotos = [

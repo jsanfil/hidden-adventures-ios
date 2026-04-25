@@ -96,8 +96,8 @@ final class WalkthroughFlowUITests: HiddenAdventuresUITestCase {
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.buttons["tab.saved"],
-      name: "feed-saved-tab",
+      app.buttons["tab.discover"],
+      name: "feed-discover-tab",
       in: app,
       screenshotDir: screenshotDir
     )

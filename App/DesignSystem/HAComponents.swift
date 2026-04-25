@@ -192,7 +192,7 @@ enum HAAppTab {
   case home
   case explore
   case post
-  case saved
+  case discover
   case profile
 }
 
@@ -274,7 +274,7 @@ struct HABottomTabBar: View {
       tabItem(title: "Home", tab: .home)
       tabItem(title: "Explore", tab: .explore)
       postItem
-      tabItem(title: "Saved", tab: .saved)
+      tabItem(title: "Discover", tab: .discover)
       tabItem(title: "Profile", tab: .profile)
     }
   }
@@ -316,8 +316,8 @@ struct HABottomTabBar: View {
       return "map"
     case .post:
       return "plus"
-    case .saved:
-      return "bookmark"
+    case .discover:
+      return selectedTab == .discover ? "binoculars.fill" : "binoculars"
     case .profile:
       return "person"
     }
@@ -357,7 +357,7 @@ extension HAAppTab {
     case .home: "home"
     case .explore: "explore"
     case .post: "post"
-    case .saved: "saved"
+    case .discover: "discover"
     case .profile: "profile"
     }
   }

@@ -20,4 +20,20 @@ final class ProfileServiceTests: XCTestCase {
     ])
     XCTAssertFalse(sidekickProfile.adventures.contains(where: { $0.id == MockFixtures.sarahQuietQuarryID }))
   }
+
+  func testFixtureServiceReturnsDiscoverProfilesWithVisibleAdventures() async throws {
+    let service = FixtureProfileService()
+
+    let mayaProfile = try await service.getProfile(handle: "mayaexplores", limit: 20, offset: 0)
+    XCTAssertEqual(mayaProfile.profile.handle, "mayaexplores")
+    XCTAssertEqual(mayaProfile.profile.displayName, "Maya Reyes")
+    XCTAssertEqual(mayaProfile.adventures.map(\.id), [MockFixtures.eagleID])
+    XCTAssertTrue(mayaProfile.adventures.allSatisfy { $0.visibility == .public })
+
+    let theoProfile = try await service.getProfile(handle: "theo.outdoors", limit: 20, offset: 0)
+    XCTAssertEqual(theoProfile.profile.handle, "theo.outdoors")
+    XCTAssertEqual(theoProfile.profile.displayName, "Theo Nakamura")
+    XCTAssertEqual(theoProfile.adventures.map(\.id), [MockFixtures.bluePoolID])
+    XCTAssertTrue(theoProfile.adventures.allSatisfy { $0.visibility == .public })
+  }
 }

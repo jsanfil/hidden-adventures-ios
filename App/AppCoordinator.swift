@@ -13,6 +13,7 @@ enum AppStage: Equatable {
 enum ExploreMode: String, CaseIterable, Identifiable {
   case feed = "Feed"
   case map = "Map"
+  case discover = "Discover"
   case profile = "Profile"
 
   var id: Self { self }
@@ -46,6 +47,9 @@ final class AppCoordinator: ObservableObject {
     case "explore-map":
       stage = .explore
       exploreMode = .map
+    case "discover":
+      stage = .explore
+      exploreMode = .discover
     case "explore-feed":
       stage = .explore
       exploreMode = .feed
