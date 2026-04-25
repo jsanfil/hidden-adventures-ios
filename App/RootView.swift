@@ -6,6 +6,7 @@ struct RootView: View {
   private let adventureService: AdventureService
   private let profileService: ProfileService
   private let sidekickService: SidekickService
+  private let discoverService: DiscoverService
 
   @Environment(\.scenePhase) private var scenePhase
   @StateObject private var coordinator: AppCoordinator
@@ -17,6 +18,7 @@ struct RootView: View {
     adventureService: AdventureService,
     profileService: ProfileService,
     sidekickService: SidekickService,
+    discoverService: DiscoverService,
     backendAuthService: AuthService?,
     appAuthService: AppAuthService?,
     authState: AuthStateStore
@@ -25,6 +27,7 @@ struct RootView: View {
     self.adventureService = adventureService
     self.profileService = profileService
     self.sidekickService = sidekickService
+    self.discoverService = discoverService
     _coordinator = StateObject(wrappedValue: AppCoordinator())
     _session = StateObject(
       wrappedValue: AppSession(
@@ -76,6 +79,7 @@ struct RootView: View {
             adventureService: adventureService,
             profileService: profileService,
             sidekickService: sidekickService,
+            discoverService: discoverService,
             runtimeMode: runtime.mode,
             viewerHandle: session.viewerHandle,
             viewerDisplayName: session.viewerDisplayName,
@@ -257,6 +261,7 @@ struct RootView_Previews: PreviewProvider {
       adventureService: FixtureAdventureService(),
       profileService: FixtureProfileService(),
       sidekickService: FixtureSidekickService(),
+      discoverService: FixtureDiscoverService(),
       backendAuthService: nil,
       appAuthService: nil,
       authState: AuthStateStore()

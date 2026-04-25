@@ -46,6 +46,32 @@ struct DiscoverScreenModel: Equatable, Sendable {
     let topCategories: [String]
     let coverImageNames: [String]
     let avatarImageName: String?
+    let coverMediaIDs: [String]
+    let avatarMediaID: String?
+
+    init(
+      id: String,
+      name: String,
+      handle: String,
+      location: String?,
+      adventureCount: Int,
+      topCategories: [String],
+      coverImageNames: [String],
+      avatarImageName: String?,
+      coverMediaIDs: [String] = [],
+      avatarMediaID: String? = nil
+    ) {
+      self.id = id
+      self.name = name
+      self.handle = handle
+      self.location = location
+      self.adventureCount = adventureCount
+      self.topCategories = topCategories
+      self.coverImageNames = coverImageNames
+      self.avatarImageName = avatarImageName
+      self.coverMediaIDs = coverMediaIDs
+      self.avatarMediaID = avatarMediaID
+    }
 
     var initials: String {
       name
@@ -71,6 +97,29 @@ struct DiscoverScreenModel: Equatable, Sendable {
     let rating: Double?
     let favoriteCount: Int
     let imageNames: [String]
+    let mediaIDs: [String]
+
+    init(
+      id: String,
+      title: String,
+      authorName: String,
+      location: String?,
+      category: String,
+      rating: Double?,
+      favoriteCount: Int,
+      imageNames: [String],
+      mediaIDs: [String] = []
+    ) {
+      self.id = id
+      self.title = title
+      self.authorName = authorName
+      self.location = location
+      self.category = category
+      self.rating = rating
+      self.favoriteCount = favoriteCount
+      self.imageNames = imageNames
+      self.mediaIDs = mediaIDs
+    }
   }
 
   struct SearchResults: Equatable, Sendable {

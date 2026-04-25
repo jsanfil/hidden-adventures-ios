@@ -1,24 +1,40 @@
 import SwiftUI
 
 struct DiscoverView: View {
-  let model: DiscoverScreenModel
+  let initialModel: DiscoverScreenModel
   var initialSearchQuery: String = ""
+  let discoverService: (any DiscoverService)?
+  let adventureService: any AdventureService
+  let runtimeMode: AppRuntimeMode
   let onOpenProfile: (String) -> Void
   let onOpenDetail: (String) -> Void
 
+  @State private var model: DiscoverScreenModel
   @State private var searchQuery: String
+  @State private var remoteSearchResults: DiscoverScreenModel.SearchResults?
+  @State private var isLoadingHome = false
+  @State private var isLoadingSearch = false
+  @State private var errorMessage: String?
+  @State private var searchTask: Task<Void, Never>?
   @FocusState private var isSearchFocused: Bool
 
   init(
     model: DiscoverScreenModel,
     initialSearchQuery: String = "",
+    discoverService: (any DiscoverService)? = nil,
+    adventureService: any AdventureService = FixtureAdventureService(),
+    runtimeMode: AppRuntimeMode = .fixturePreview,
     onOpenProfile: @escaping (String) -> Void,
     onOpenDetail: @escaping (String) -> Void
   ) {
-    self.model = model
+    self.initialModel = model
     self.initialSearchQuery = initialSearchQuery
+    self.discoverService = discoverService
+    self.adventureService = adventureService
+    self.runtimeMode = runtimeMode
     self.onOpenProfile = onOpenProfile
     self.onOpenDetail = onOpenDetail
+    _model = State(initialValue: model)
     _searchQuery = State(initialValue: initialSearchQuery)
   }
 
@@ -27,7 +43,11 @@ struct DiscoverView: View {
   }
 
   private var searchResults: DiscoverScreenModel.SearchResults {
-    model.searchResults(for: searchQuery)
+    remoteSearchResults ?? model.searchResults(for: searchQuery)
+  }
+
+  private var normalizedSearchQuery: String {
+    searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 
   var body: some View {
@@ -36,7 +56,11 @@ struct DiscoverView: View {
 
       header
 
-      if isSearching {
+      if let errorMessage {
+        errorState(message: errorMessage)
+      } else if isLoadingHome && model.adventurers.isEmpty && model.popularAdventures.isEmpty {
+        loadingState
+      } else if isSearching {
         searchResultsContent
       } else {
         homeContent
@@ -44,6 +68,14 @@ struct DiscoverView: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .background(HATheme.Colors.background.ignoresSafeArea())
+    .task {
+      await loadHome()
+      await refreshSearchIfNeeded()
+    }
+    .onChange(of: normalizedSearchQuery) {
+      remoteSearchResults = nil
+      scheduleSearch()
+    }
   }
 
   private var header: some View {
@@ -78,6 +110,9 @@ struct DiscoverView: View {
         Button {
           searchQuery = ""
           isSearchFocused = false
+          searchTask?.cancel()
+          remoteSearchResults = nil
+          isLoadingSearch = false
         } label: {
           Image(systemName: "xmark")
             .font(.system(size: 14, weight: .semibold))
@@ -101,6 +136,14 @@ struct DiscoverView: View {
   private var homeContent: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 28) {
+        if isLoadingHome {
+          ProgressView()
+            .tint(HATheme.Colors.primary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .accessibilityIdentifier("discover.homeLoading")
+        }
+
         DiscoverSectionHeader(title: "Explore Adventurers")
           .accessibilityIdentifier("discover.section.exploreAdventurers")
 
@@ -125,6 +168,8 @@ struct DiscoverView: View {
             onOpenProfile(adventurer.handle)
           } label: {
             DiscoverAdventurerCard(adventurer: adventurer)
+              .environment(\.discoverMediaSource, adventurerMediaSource(for: adventurer))
+              .environment(\.discoverMediaLoader, adventureService)
           }
           .buttonStyle(.plain)
           .accessibilityIdentifier("discover.adventurerCard.\(adventurer.id)")
@@ -142,6 +187,8 @@ struct DiscoverView: View {
             onOpenDetail(adventure.id)
           } label: {
             DiscoverAdventureCard(adventure: adventure)
+              .environment(\.discoverMediaSource, adventureMediaSource(for: adventure))
+              .environment(\.discoverMediaLoader, adventureService)
           }
           .buttonStyle(.plain)
           .accessibilityIdentifier("discover.adventureCard.\(adventure.id)")
@@ -154,6 +201,14 @@ struct DiscoverView: View {
   private var searchResultsContent: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
+        if isLoadingSearch {
+          ProgressView()
+            .tint(HATheme.Colors.primary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .accessibilityIdentifier("discover.searchLoading")
+        }
+
         if searchResults.people.isEmpty == false {
           searchSectionTitle("People")
             .accessibilityIdentifier("discover.search.peopleSection")
@@ -164,6 +219,7 @@ struct DiscoverView: View {
                 onOpenProfile(person.handle)
               } label: {
                 DiscoverPersonRow(person: person)
+                  .environment(\.discoverMediaLoader, adventureService)
               }
               .buttonStyle(.plain)
               .accessibilityIdentifier("discover.personRow.\(person.id)")
@@ -181,6 +237,8 @@ struct DiscoverView: View {
                 onOpenDetail(adventure.id)
               } label: {
                 DiscoverAdventureRow(adventure: adventure)
+                  .environment(\.discoverMediaSource, adventureMediaSource(for: adventure))
+                  .environment(\.discoverMediaLoader, adventureService)
               }
               .buttonStyle(.plain)
               .accessibilityIdentifier("discover.adventureRow.\(adventure.id)")
@@ -210,6 +268,137 @@ struct DiscoverView: View {
       .font(.system(size: 12, weight: .semibold))
       .foregroundStyle(HATheme.Colors.mutedForeground)
   }
+
+  private var loadingState: some View {
+    VStack(spacing: 12) {
+      ProgressView()
+        .tint(HATheme.Colors.primary)
+      Text("Loading Discover")
+        .font(.system(size: 14, weight: .medium))
+        .foregroundStyle(HATheme.Colors.mutedForeground)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .accessibilityIdentifier("discover.loading")
+  }
+
+  private func errorState(message: String) -> some View {
+    VStack(spacing: 14) {
+      Image(systemName: "wifi.exclamationmark")
+        .font(.system(size: 34, weight: .medium))
+        .foregroundStyle(HATheme.Colors.mutedForeground.opacity(0.65))
+
+      Text("Discover is unavailable")
+        .font(.system(size: 16, weight: .semibold))
+        .foregroundStyle(HATheme.Colors.foreground)
+
+      Text(message)
+        .font(.system(size: 12, weight: .regular))
+        .foregroundStyle(HATheme.Colors.mutedForeground)
+        .multilineTextAlignment(.center)
+        .lineLimit(3)
+
+      Button {
+        Task { await loadHome() }
+      } label: {
+        Text("Retry")
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(.white)
+          .padding(.horizontal, 18)
+          .padding(.vertical, 10)
+          .background(HATheme.Colors.primary)
+          .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      }
+      .buttonStyle(.plain)
+      .accessibilityIdentifier("discover.retry")
+    }
+    .padding(.horizontal, 28)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .accessibilityIdentifier("discover.error")
+  }
+
+  private func loadHome() async {
+    guard let discoverService else {
+      return
+    }
+
+    isLoadingHome = true
+    defer { isLoadingHome = false }
+
+    do {
+      model = try await discoverService.home()
+      errorMessage = nil
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  private func scheduleSearch() {
+    searchTask?.cancel()
+    searchTask = Task {
+      try? await Task.sleep(nanoseconds: 250_000_000)
+      guard Task.isCancelled == false else { return }
+      await refreshSearchIfNeeded()
+    }
+  }
+
+  private func refreshSearchIfNeeded() async {
+    guard let discoverService else {
+      return
+    }
+
+    let query = normalizedSearchQuery
+    guard query.isEmpty == false else {
+      remoteSearchResults = nil
+      return
+    }
+
+    isLoadingSearch = true
+    defer { isLoadingSearch = false }
+
+    do {
+      remoteSearchResults = try await discoverService.search(query: query, limit: 20, offset: 0)
+      errorMessage = nil
+    } catch {
+      remoteSearchResults = DiscoverScreenModel.SearchResults(people: [], adventures: [], query: query)
+      errorMessage = nil
+    }
+  }
+
+  private func adventurerMediaSource(for adventurer: DiscoverScreenModel.Adventurer) -> HAMediaSource {
+    if runtimeMode == .fixturePreview {
+      return .fixture(adventurer.coverImageNames)
+    }
+
+    return .remote(adventurer.coverMediaIDs, adventureService)
+  }
+
+  private func adventureMediaSource(for adventure: DiscoverScreenModel.Adventure) -> HAMediaSource {
+    if runtimeMode == .fixturePreview {
+      return .fixture(adventure.imageNames)
+    }
+
+    return .remote(adventure.mediaIDs, adventureService)
+  }
+}
+
+private struct DiscoverMediaSourceKey: EnvironmentKey {
+  static let defaultValue: HAMediaSource = .fixture([])
+}
+
+private struct DiscoverMediaLoaderKey: EnvironmentKey {
+  static let defaultValue: any AdventureService = FixtureAdventureService()
+}
+
+private extension EnvironmentValues {
+  var discoverMediaSource: HAMediaSource {
+    get { self[DiscoverMediaSourceKey.self] }
+    set { self[DiscoverMediaSourceKey.self] = newValue }
+  }
+
+  var discoverMediaLoader: any AdventureService {
+    get { self[DiscoverMediaLoaderKey.self] }
+    set { self[DiscoverMediaLoaderKey.self] = newValue }
+  }
 }
 
 private struct DiscoverSectionHeader: View {
@@ -225,15 +414,17 @@ private struct DiscoverSectionHeader: View {
 
 private struct DiscoverAdventurerCard: View {
   let adventurer: DiscoverScreenModel.Adventurer
+  @Environment(\.discoverMediaSource) private var mediaSource
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       ZStack(alignment: .bottomLeading) {
-        HAImageCarousel(
-          imageNames: adventurer.coverImageNames,
+        HAMediaCarouselOrPlaceholder(
+          source: mediaSource,
           aspectRatio: nil,
           cornerRadius: 0,
-          dotsInside: true
+          dotsInside: true,
+          title: adventurer.name
         )
         .frame(height: 112)
         .overlay {
@@ -326,15 +517,17 @@ private struct DiscoverAdventurerCard: View {
 
 private struct DiscoverAdventureCard: View {
   let adventure: DiscoverScreenModel.Adventure
+  @Environment(\.discoverMediaSource) private var mediaSource
 
   var body: some View {
     VStack(spacing: 0) {
       ZStack(alignment: .topLeading) {
-        HAImageCarousel(
-          imageNames: adventure.imageNames,
+        HAMediaCarouselOrPlaceholder(
+          source: mediaSource,
           aspectRatio: 4 / 3,
           cornerRadius: 0,
-          dotsInside: true
+          dotsInside: true,
+          title: adventure.title
         )
         .overlay {
           LinearGradient(
@@ -482,14 +675,18 @@ private struct DiscoverPersonRow: View {
 
 private struct DiscoverAdventureRow: View {
   let adventure: DiscoverScreenModel.Adventure
+  @Environment(\.discoverMediaSource) private var mediaSource
 
   var body: some View {
     HStack(spacing: 14) {
-      Image(adventure.imageNames.first ?? "hero-mountain")
-        .resizable()
-        .scaledToFill()
+      HAMediaCarouselOrPlaceholder(
+        source: mediaSource,
+        aspectRatio: nil,
+        cornerRadius: 12,
+        dotsInside: false,
+        title: adventure.title
+      )
         .frame(width: 56, height: 56)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
       VStack(alignment: .leading, spacing: 5) {
         Text(adventure.title)
@@ -567,6 +764,9 @@ private struct DiscoverPreviewWrapper: View {
     DiscoverView(
       model: MockFixtures.discoverScreenModel(for: variant),
       initialSearchQuery: variant == .empty ? "zzzz" : "",
+      discoverService: FixtureDiscoverService(variant: variant),
+      adventureService: FixtureAdventureService(),
+      runtimeMode: .fixturePreview,
       onOpenProfile: { _ in },
       onOpenDetail: { _ in }
     )

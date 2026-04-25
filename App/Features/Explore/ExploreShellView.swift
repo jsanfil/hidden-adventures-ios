@@ -5,6 +5,7 @@ struct ExploreShellView: View {
   let adventureService: AdventureService
   let profileService: ProfileService
   let sidekickService: SidekickService
+  let discoverService: DiscoverService
   let runtimeMode: AppRuntimeMode
   let viewerHandle: String?
   let viewerDisplayName: String?
@@ -38,6 +39,7 @@ struct ExploreShellView: View {
     adventureService: AdventureService,
     profileService: ProfileService,
     sidekickService: SidekickService,
+    discoverService: DiscoverService,
     runtimeMode: AppRuntimeMode,
     viewerHandle: String?,
     viewerDisplayName: String?,
@@ -51,6 +53,7 @@ struct ExploreShellView: View {
     self.adventureService = adventureService
     self.profileService = profileService
     self.sidekickService = sidekickService
+    self.discoverService = discoverService
     self.runtimeMode = runtimeMode
     self.viewerHandle = viewerHandle
     self.viewerDisplayName = viewerDisplayName
@@ -291,6 +294,9 @@ struct ExploreShellView: View {
   private var discoverScreen: some View {
     DiscoverView(
       model: MockFixtures.discoverScreenModel(for: DiscoverFixtureVariant.resolve()),
+      discoverService: discoverService,
+      adventureService: adventureService,
+      runtimeMode: runtimeMode,
       onOpenProfile: onOpenProfile,
       onOpenDetail: onOpenDetail
     )
@@ -866,6 +872,7 @@ private struct ExploreShellPreviewWrapper: View {
       adventureService: FixtureAdventureService(),
       profileService: FixtureProfileService(),
       sidekickService: FixtureSidekickService(),
+      discoverService: FixtureDiscoverService(),
       runtimeMode: .fixturePreview,
       viewerHandle: "jordan",
       viewerDisplayName: "Jordan",

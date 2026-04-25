@@ -1,6 +1,91 @@
 import XCTest
 
 final class DiscoverScreenUITests: HiddenAdventuresUITestCase {
+  func testDiscoverLiveAutomationRendersServerHomeAndSearchResults() throws {
+    let token = ProcessInfo.processInfo.environment["HA_DISCOVER_E2E_AUTH_TOKEN"]
+      ?? ProcessInfo.processInfo.environment["HA_TEST_AUTH_TOKEN"]
+      ?? Self.readLiveAutomationTokenFromTempFile()
+    guard let token, token.isEmpty == false else {
+      throw XCTSkip("Provide HA_DISCOVER_E2E_AUTH_TOKEN, HA_TEST_AUTH_TOKEN, or /tmp/hidden_adventures_discover_e2e_token to run live Discover automation.")
+    }
+
+    let screenshotDir = try preparedScreenshotDirectory(named: "discover-live-automation")
+    let app = launchApp(
+      startScreen: "discover",
+      extraEnv: [
+        "HA_RUNTIME_MODE": "live",
+        "HA_SERVER_MODE": "local_automation",
+        "HA_API_BASE_URL": ProcessInfo.processInfo.environment["HA_API_BASE_URL"] ?? "http://127.0.0.1:3000/api",
+        "HA_TEST_AUTH_TOKEN": token
+      ]
+    )
+
+    assertExists(
+      app.staticTexts["discover.section.exploreAdventurers"],
+      name: "discover-live-explore-adventurers-section",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.staticTexts["discover.section.popularAdventures"],
+      name: "discover-live-popular-adventures-section",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.staticTexts["Fixture Author"],
+      name: "discover-live-fixture-author",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.staticTexts["Fixture Falls"],
+      name: "discover-live-fixture-falls",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+
+    app.textFields["discover.searchField"].tap()
+    app.textFields["discover.searchField"].typeText("Fixture")
+
+    assertExists(
+      app.staticTexts["discover.search.peopleSection"],
+      name: "discover-live-search-people-section",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.staticTexts["discover.search.adventuresSection"],
+      name: "discover-live-search-adventures-section",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.staticTexts["Fixture Author"],
+      name: "discover-live-search-fixture-author",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.staticTexts["Fixture Falls"],
+      name: "discover-live-search-fixture-falls",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+
+    saveScreenshot(named: "discover-live-automation", to: screenshotDir)
+  }
+
+  private static func readLiveAutomationTokenFromTempFile() -> String? {
+    let tokenURL = URL(fileURLWithPath: "/tmp/hidden_adventures_discover_e2e_token")
+    guard let token = try? String(contentsOf: tokenURL, encoding: .utf8) else {
+      return nil
+    }
+
+    let trimmedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmedToken.isEmpty ? nil : trimmedToken
+  }
+
   func testDiscoverHomeRendersFixtureModulesAndSearchResults() throws {
     let screenshotDir = try preparedScreenshotDirectory(named: "discover-home")
     let app = launchApp(startScreen: "discover")
