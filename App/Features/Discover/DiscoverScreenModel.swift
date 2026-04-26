@@ -38,6 +38,10 @@ struct DiscoverScreenModel: Equatable, Sendable {
   }
 
   struct Adventurer: Identifiable, Equatable, Sendable {
+    enum FallbackAvatarStyle: Equatable, Sendable {
+      case secondaryField
+    }
+
     let id: String
     let name: String
     let handle: String
@@ -85,6 +89,18 @@ struct DiscoverScreenModel: Equatable, Sendable {
 
     var displayHandle: String {
       handle.hasPrefix("@") ? handle : "@\(handle)"
+    }
+
+    var avatarAccessibilityIdentifier: String {
+      if let avatarMediaID, avatarMediaID.isEmpty == false {
+        return "discover.avatar.remote.\(avatarMediaID)"
+      }
+
+      return "discover.avatar.fallback.\(id)"
+    }
+
+    var fallbackAvatarStyle: FallbackAvatarStyle {
+      .secondaryField
     }
   }
 

@@ -2,6 +2,38 @@ import XCTest
 @testable import HiddenAdventures
 
 final class DiscoverScreenModelTests: XCTestCase {
+  func testAdventurerAvatarAccessibilityIdentifierUsesRemoteVariantWhenMediaExists() {
+    let adventurer = DiscoverScreenModel.Adventurer(
+      id: "adventurer-maya",
+      name: "Maya Reyes",
+      handle: "mayaexplores",
+      location: "Portland, OR",
+      adventureCount: 4,
+      topCategories: ["Trails"],
+      coverImageNames: [],
+      avatarImageName: nil,
+      coverMediaIDs: [],
+      avatarMediaID: "media-avatar"
+    )
+
+    XCTAssertEqual(adventurer.avatarAccessibilityIdentifier, "discover.avatar.remote.media-avatar")
+  }
+
+  func testAdventurerAvatarFallbackUsesSecondaryBackgroundAndForegroundText() {
+    let adventurer = DiscoverScreenModel.Adventurer(
+      id: "adventurer-theo",
+      name: "Theo Nakamura",
+      handle: "theo.outdoors",
+      location: "Bend, OR",
+      adventureCount: 8,
+      topCategories: ["Viewpoints"],
+      coverImageNames: [],
+      avatarImageName: nil
+    )
+
+    XCTAssertEqual(adventurer.fallbackAvatarStyle, .secondaryField)
+  }
+
   func testSearchMatchesPeopleByNameAndHandleOnly() {
     let model = MockFixtures.discoverScreenModel()
 

@@ -415,6 +415,7 @@ private struct DiscoverSectionHeader: View {
 private struct DiscoverAdventurerCard: View {
   let adventurer: DiscoverScreenModel.Adventurer
   @Environment(\.discoverMediaSource) private var mediaSource
+  @Environment(\.discoverMediaLoader) private var mediaLoader
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -435,11 +436,10 @@ private struct DiscoverAdventurerCard: View {
           )
         }
 
-        HAAvatarView(
-          initials: adventurer.initials,
-          size: 48,
-          background: HATheme.Colors.primary.opacity(0.16),
-          foreground: HATheme.Colors.primary
+        DiscoverAvatarView(
+          adventurer: adventurer,
+          mediaLoader: mediaLoader,
+          size: 48
         )
         .overlay {
           Circle()
@@ -619,14 +619,14 @@ private struct DiscoverAdventureCard: View {
 
 private struct DiscoverPersonRow: View {
   let person: DiscoverScreenModel.Adventurer
+  @Environment(\.discoverMediaLoader) private var mediaLoader
 
   var body: some View {
     HStack(spacing: 14) {
-      HAAvatarView(
-        initials: person.initials,
-        size: 40,
-        background: HATheme.Colors.primary.opacity(0.14),
-        foreground: HATheme.Colors.primary
+      DiscoverAvatarView(
+        adventurer: person,
+        mediaLoader: mediaLoader,
+        size: 40
       )
 
       VStack(alignment: .leading, spacing: 3) {
@@ -670,6 +670,41 @@ private struct DiscoverPersonRow: View {
     }
 
     return person.displayHandle
+  }
+}
+
+private struct DiscoverAvatarView: View {
+  let adventurer: DiscoverScreenModel.Adventurer
+  let mediaLoader: any AdventureService
+  let size: CGFloat
+
+  var body: some View {
+    ProfileAvatarView(
+      initials: adventurer.initials,
+      mediaID: adventurer.avatarMediaID,
+      mediaLoader: mediaLoader,
+      size: size,
+      background: fallbackBackground,
+      foreground: fallbackForeground,
+      borderColor: nil,
+      borderWidth: 0,
+      loadingTint: HATheme.Colors.primary
+    )
+    .accessibilityIdentifier(adventurer.avatarAccessibilityIdentifier)
+  }
+
+  private var fallbackBackground: Color {
+    switch adventurer.fallbackAvatarStyle {
+    case .secondaryField:
+      HATheme.Colors.secondary
+    }
+  }
+
+  private var fallbackForeground: Color {
+    switch adventurer.fallbackAvatarStyle {
+    case .secondaryField:
+      HATheme.Colors.foreground
+    }
   }
 }
 
