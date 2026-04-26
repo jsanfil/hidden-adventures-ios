@@ -38,6 +38,10 @@ struct DiscoverScreenModel: Equatable, Sendable {
   }
 
   struct Adventurer: Identifiable, Equatable, Sendable {
+    enum FallbackAvatarStyle: Equatable, Sendable {
+      case secondaryField
+    }
+
     let id: String
     let name: String
     let handle: String
@@ -95,8 +99,8 @@ struct DiscoverScreenModel: Equatable, Sendable {
       return "discover.avatar.fallback.\(id)"
     }
 
-    var fallbackAvatarBackgroundOpacity: Double {
-      0.28
+    var fallbackAvatarStyle: FallbackAvatarStyle {
+      .secondaryField
     }
   }
 

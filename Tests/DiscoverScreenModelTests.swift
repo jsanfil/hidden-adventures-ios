@@ -19,7 +19,7 @@ final class DiscoverScreenModelTests: XCTestCase {
     XCTAssertEqual(adventurer.avatarAccessibilityIdentifier, "discover.avatar.remote.media-avatar")
   }
 
-  func testAdventurerAvatarFallbackUsesStrongerContrastTreatment() {
+  func testAdventurerAvatarFallbackUsesSecondaryBackgroundAndForegroundText() {
     let adventurer = DiscoverScreenModel.Adventurer(
       id: "adventurer-theo",
       name: "Theo Nakamura",
@@ -31,7 +31,7 @@ final class DiscoverScreenModelTests: XCTestCase {
       avatarImageName: nil
     )
 
-    XCTAssertEqual(adventurer.fallbackAvatarBackgroundOpacity, 0.28)
+    XCTAssertEqual(adventurer.fallbackAvatarStyle, .secondaryField)
   }
 
   func testSearchMatchesPeopleByNameAndHandleOnly() {

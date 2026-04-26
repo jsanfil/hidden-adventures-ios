@@ -684,13 +684,27 @@ private struct DiscoverAvatarView: View {
       mediaID: adventurer.avatarMediaID,
       mediaLoader: mediaLoader,
       size: size,
-      background: HATheme.Colors.primary.opacity(adventurer.fallbackAvatarBackgroundOpacity),
-      foreground: HATheme.Colors.primary,
+      background: fallbackBackground,
+      foreground: fallbackForeground,
       borderColor: nil,
       borderWidth: 0,
       loadingTint: HATheme.Colors.primary
     )
     .accessibilityIdentifier(adventurer.avatarAccessibilityIdentifier)
+  }
+
+  private var fallbackBackground: Color {
+    switch adventurer.fallbackAvatarStyle {
+    case .secondaryField:
+      HATheme.Colors.secondary
+    }
+  }
+
+  private var fallbackForeground: Color {
+    switch adventurer.fallbackAvatarStyle {
+    case .secondaryField:
+      HATheme.Colors.foreground
+    }
   }
 }
 
