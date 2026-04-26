@@ -86,6 +86,18 @@ struct DiscoverScreenModel: Equatable, Sendable {
     var displayHandle: String {
       handle.hasPrefix("@") ? handle : "@\(handle)"
     }
+
+    var avatarAccessibilityIdentifier: String {
+      if let avatarMediaID, avatarMediaID.isEmpty == false {
+        return "discover.avatar.remote.\(avatarMediaID)"
+      }
+
+      return "discover.avatar.fallback.\(id)"
+    }
+
+    var fallbackAvatarBackgroundOpacity: Double {
+      0.28
+    }
   }
 
   struct Adventure: Identifiable, Equatable, Sendable {

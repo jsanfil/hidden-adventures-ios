@@ -150,6 +150,24 @@ final class DiscoverScreenUITests: HiddenAdventuresUITestCase {
     )
   }
 
+  func testDiscoverHomeShowsRemoteAndFallbackAvatars() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "discover-avatar-rendering")
+    let app = launchApp(startScreen: "discover")
+
+    assertExists(
+      app.images["discover.avatar.remote.hero-mountain"],
+      name: "discover-remote-avatar",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.staticTexts["discover.avatar.fallback.adventurer-theo-nakamura"],
+      name: "discover-fallback-avatar",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+  }
+
   func testDiscoverEmptyFixtureRendersNoResultsState() throws {
     let screenshotDir = try preparedScreenshotDirectory(named: "discover-empty")
     let app = launchApp(

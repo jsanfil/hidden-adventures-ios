@@ -438,7 +438,8 @@ enum MockFixtures {
       adventureCount: 62,
       topCategories: ["Waterfall Hikes", "Canyon"],
       coverImageNames: ["hero-mountain", "hidden-canyon"],
-      avatarImageName: nil
+      avatarImageName: nil,
+      avatarMediaID: "hero-mountain"
     ),
     DiscoverScreenModel.Adventurer(
       id: "adventurer-theo-nakamura",
