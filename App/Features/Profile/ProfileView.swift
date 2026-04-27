@@ -21,10 +21,13 @@ struct ProfileView: View {
   let onLogout: () -> Void
 
   @State private var response: ProfileResponse?
+  @State private var favoritesResponse: ProfileFavoritesResponse?
   @State private var isLoading = true
   @State private var errorMessage: String?
   @State private var sidekickSummaryItems: [SidekickListItem] = []
   @State private var isLoadingSidekickSummary = false
+  @State private var isLoadingFavorites = false
+  @State private var selectedCollection: ProfileAdventureCollection = .shared
 
   var body: some View {
     ZStack {
@@ -40,7 +43,16 @@ struct ProfileView: View {
         ScrollView {
           VStack(spacing: 0) {
             header(profile: response.profile)
-            authoredSection(adventures: response.adventures)
+            if isViewingOwnProfile {
+              collectionSegment
+            }
+
+            switch selectedCollection {
+            case .shared:
+              authoredSection(adventures: response.adventures)
+            case .favorites:
+              favoritesSection(adventures: favoritesResponse?.items ?? [])
+            }
           }
           .padding(.bottom, 24)
         }
@@ -51,13 +63,22 @@ struct ProfileView: View {
       guard response == nil, errorMessage == nil else { return }
       await loadProfile()
     }
+    .onReceive(NotificationCenter.default.publisher(for: FavoriteStateChange.notificationName)) { notification in
+      guard let change = FavoriteStateChange(notification: notification) else { return }
+      guard isViewingOwnProfile else { return }
+      handleFavoriteStateChange(change)
+    }
     .toolbar(.hidden, for: .navigationBar)
   }
 
-  private var showsSidekicksCard: Bool {
+  private var isViewingOwnProfile: Bool {
     guard let viewerHandle else { return false }
     guard let response else { return false }
     return response.profile.handle == viewerHandle
+  }
+
+  private var showsSidekicksCard: Bool {
+    isViewingOwnProfile
   }
 
   private var showsBackButton: Bool {
@@ -296,6 +317,41 @@ struct ProfileView: View {
     return "\(sidekickSummaryItems.count) Sidekicks"
   }
 
+  private var collectionSegment: some View {
+    HStack(spacing: 8) {
+      collectionSegmentButton(.shared)
+      collectionSegmentButton(.favorites)
+    }
+    .padding(.horizontal, 24)
+    .padding(.top, Layout.contentSectionSpacing)
+  }
+
+  private func collectionSegmentButton(_ collection: ProfileAdventureCollection) -> some View {
+    Button {
+      selectedCollection = collection
+      if collection == .favorites, favoritesResponse == nil {
+        Task {
+          await loadFavoriteAdventures()
+        }
+      }
+    } label: {
+      Text(collection.title)
+        .font(.system(size: 14, weight: .semibold))
+        .foregroundStyle(selectedCollection == collection ? .white : HATheme.Colors.foreground)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 11)
+        .background(selectedCollection == collection ? HATheme.Colors.primary : HATheme.Colors.card)
+        .overlay {
+          RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .stroke(HATheme.Colors.border.opacity(0.7), lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+    .buttonStyle(.plain)
+    .accessibilityValue(selectedCollection == collection ? "selected" : "not selected")
+    .accessibilityIdentifier("profile.segment.\(collection.accessibilityKey)")
+  }
+
   private func authoredSection(adventures: [AdventureCard]) -> some View {
     VStack(alignment: .leading, spacing: 16) {
       Text("Shared adventures")
@@ -312,6 +368,59 @@ struct ProfileView: View {
         runtimeMode: runtimeMode,
         onOpenDetail: onOpenDetail
       )
+    }
+  }
+
+  private func favoritesSection(adventures: [AdventureCard]) -> some View {
+    VStack(alignment: .leading, spacing: 16) {
+      Text("Favorite adventures")
+        .font(.system(size: 20, weight: .semibold))
+        .foregroundStyle(HATheme.Colors.foreground)
+        .padding(.top, Layout.contentSectionSpacing)
+        .padding(.horizontal, 24)
+        .accessibilityIdentifier("profile.favoriteAdventuresHeading")
+
+      if isLoadingFavorites {
+        ProgressView()
+          .tint(HATheme.Colors.primary)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 24)
+      } else if adventures.isEmpty {
+        VStack(spacing: 10) {
+          Image(systemName: "bookmark")
+            .font(.system(size: 24, weight: .semibold))
+            .foregroundStyle(HATheme.Colors.primary)
+
+          Text("No favorites yet")
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(HATheme.Colors.foreground)
+
+          Text("Save adventures from the feed or detail screen, and they will show up here.")
+            .font(HATheme.Typography.body)
+            .foregroundStyle(HATheme.Colors.mutedForeground)
+            .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 28)
+        .background(HATheme.Colors.card)
+        .overlay {
+          RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .stroke(HATheme.Colors.border, lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(.horizontal, 24)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("profile.favorites.empty")
+      } else {
+        FeedView(
+          items: adventures,
+          scope: nil,
+          adventureService: adventureService,
+          runtimeMode: runtimeMode,
+          onOpenDetail: onOpenDetail
+        )
+      }
     }
   }
 
@@ -393,6 +502,7 @@ struct ProfileView: View {
 
       if showsSidekicksCard {
         await loadSidekickSummary()
+        await loadFavoriteAdventures()
       }
       return
     } catch {
@@ -419,6 +529,47 @@ struct ProfileView: View {
     } catch {
       sidekickSummaryItems = []
     }
+  }
+
+  @MainActor
+  private func loadFavoriteAdventures() async {
+    guard isViewingOwnProfile, let handle = response?.profile.handle else {
+      favoritesResponse = nil
+      isLoadingFavorites = false
+      return
+    }
+
+    isLoadingFavorites = true
+    defer { isLoadingFavorites = false }
+
+    do {
+      favoritesResponse = try await profileService.getProfileFavorites(handle: handle, limit: 20, offset: 0)
+    } catch {
+      favoritesResponse = ProfileFavoritesResponse(
+        items: [],
+        paging: Paging(limit: 20, offset: 0, returned: 0)
+      )
+    }
+  }
+
+  private func handleFavoriteStateChange(_ change: FavoriteStateChange) {
+    if change.isFavorited {
+      Task {
+        await loadFavoriteAdventures()
+      }
+      return
+    }
+
+    guard let favoritesResponse else { return }
+    let items = favoritesResponse.items.filter { $0.id != change.adventureID }
+    self.favoritesResponse = ProfileFavoritesResponse(
+      items: items,
+      paging: Paging(
+        limit: favoritesResponse.paging.limit,
+        offset: favoritesResponse.paging.offset,
+        returned: items.count
+      )
+    )
   }
 
   private func initials(for profile: ProfileDetail) -> String {
@@ -468,6 +619,29 @@ struct ProfileView: View {
       return region
     default:
       return nil
+    }
+  }
+}
+
+private enum ProfileAdventureCollection {
+  case shared
+  case favorites
+
+  var title: String {
+    switch self {
+    case .shared:
+      return "Shared"
+    case .favorites:
+      return "Favorites"
+    }
+  }
+
+  var accessibilityKey: String {
+    switch self {
+    case .shared:
+      return "shared"
+    case .favorites:
+      return "favorites"
     }
   }
 }

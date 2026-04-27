@@ -3,6 +3,7 @@ import XCTest
 class HiddenAdventuresUITestCase: XCTestCase {
   let eagleID = "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA"
   let bluePoolID = "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB"
+  let jordanHiddenRidgeID = "adventure-jordan-hidden-ridge"
 
   override func setUpWithError() throws {
     continueAfterFailure = false

@@ -88,6 +88,43 @@ final class ExploreFeedScreenUITests: HiddenAdventuresUITestCase {
     XCTAssertEqual(categoryChips.count, 8, "Expected exactly 8 category chips in Explore.")
   }
 
+  func testExploreFeed_bookmarkButtonReflectsAndTogglesFavoriteState() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "explore-feed-favorite-toggle")
+    let app = launchApp(startScreen: "explore-feed")
+
+    app.buttons["header.search"].tap()
+    let searchField = app.textFields["feed.searchField"]
+    assertExists(searchField, name: "feed-search-field-for-favorite", in: app, screenshotDir: screenshotDir)
+    searchField.tap()
+    searchField.typeText("Port")
+    app.buttons["feed.searchSuggestion.portland-oregon"].tap()
+
+    let favoriteButton = app.buttons["feed.card.favorite.\(jordanHiddenRidgeID)"]
+    assertExists(
+      favoriteButton,
+      name: "feed-favorite-button",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertValue(
+      favoriteButton,
+      equals: "not favorited",
+      name: "feed-favorite-button-initial-state",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+
+    favoriteButton.tap()
+
+    assertValue(
+      favoriteButton,
+      equals: "favorited",
+      name: "feed-favorite-button-toggled-state",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+  }
+
   func testExploreFeed_returningFromDetailPreservesHomeTabChrome() throws {
     let screenshotDir = try preparedScreenshotDirectory(named: "explore-feed-detail-return")
     let app = launchApp(startScreen: "explore-feed")

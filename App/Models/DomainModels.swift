@@ -139,6 +139,25 @@ struct AdventureStats: Codable, Hashable, Sendable {
   let commentCount: Int
   let ratingCount: Int
   let averageRating: Double
+
+  func favoriteCountAdjusted(isFavorited: Bool, wasFavorited: Bool) -> AdventureStats {
+    let delta: Int
+    switch (wasFavorited, isFavorited) {
+    case (false, true):
+      delta = 1
+    case (true, false):
+      delta = -1
+    default:
+      delta = 0
+    }
+
+    return AdventureStats(
+      favoriteCount: max(0, favoriteCount + delta),
+      commentCount: commentCount,
+      ratingCount: ratingCount,
+      averageRating: averageRating
+    )
+  }
 }
 
 struct AdventureCard: Codable, Identifiable, Hashable, Sendable {
@@ -156,6 +175,61 @@ struct AdventureCard: Codable, Identifiable, Hashable, Sendable {
   let primaryMedia: MediaReference?
   let stats: AdventureStats
   let distanceMiles: Double?
+  let isFavorited: Bool
+
+  init(
+    id: String,
+    title: String,
+    description: String?,
+    categorySlug: Category?,
+    categoryLabel: String?,
+    visibility: Visibility,
+    createdAt: String,
+    publishedAt: String?,
+    location: AdventureLocation?,
+    placeLabel: String?,
+    author: AdventureAuthor,
+    primaryMedia: MediaReference?,
+    stats: AdventureStats,
+    distanceMiles: Double?,
+    isFavorited: Bool = false
+  ) {
+    self.id = id
+    self.title = title
+    self.description = description
+    self.categorySlug = categorySlug
+    self.categoryLabel = categoryLabel
+    self.visibility = visibility
+    self.createdAt = createdAt
+    self.publishedAt = publishedAt
+    self.location = location
+    self.placeLabel = placeLabel
+    self.author = author
+    self.primaryMedia = primaryMedia
+    self.stats = stats
+    self.distanceMiles = distanceMiles
+    self.isFavorited = isFavorited
+  }
+
+  func applyingFavoriteState(_ isFavorited: Bool) -> AdventureCard {
+    AdventureCard(
+      id: id,
+      title: title,
+      description: description,
+      categorySlug: categorySlug,
+      categoryLabel: categoryLabel,
+      visibility: visibility,
+      createdAt: createdAt,
+      publishedAt: publishedAt,
+      location: location,
+      placeLabel: placeLabel,
+      author: author,
+      primaryMedia: primaryMedia,
+      stats: stats.favoriteCountAdjusted(isFavorited: isFavorited, wasFavorited: self.isFavorited),
+      distanceMiles: distanceMiles,
+      isFavorited: isFavorited
+    )
+  }
 }
 
 struct AdventureDetail: Codable, Identifiable, Hashable, Sendable {
@@ -173,6 +247,61 @@ struct AdventureDetail: Codable, Identifiable, Hashable, Sendable {
   let stats: AdventureStats
   let placeLabel: String?
   let updatedAt: String
+  let isFavorited: Bool
+
+  init(
+    id: String,
+    title: String,
+    description: String?,
+    categorySlug: Category?,
+    categoryLabel: String?,
+    visibility: Visibility,
+    createdAt: String,
+    publishedAt: String?,
+    location: AdventureLocation?,
+    author: AdventureAuthor,
+    primaryMedia: MediaReference?,
+    stats: AdventureStats,
+    placeLabel: String?,
+    updatedAt: String,
+    isFavorited: Bool = false
+  ) {
+    self.id = id
+    self.title = title
+    self.description = description
+    self.categorySlug = categorySlug
+    self.categoryLabel = categoryLabel
+    self.visibility = visibility
+    self.createdAt = createdAt
+    self.publishedAt = publishedAt
+    self.location = location
+    self.author = author
+    self.primaryMedia = primaryMedia
+    self.stats = stats
+    self.placeLabel = placeLabel
+    self.updatedAt = updatedAt
+    self.isFavorited = isFavorited
+  }
+
+  func applyingFavoriteState(_ isFavorited: Bool) -> AdventureDetail {
+    AdventureDetail(
+      id: id,
+      title: title,
+      description: description,
+      categorySlug: categorySlug,
+      categoryLabel: categoryLabel,
+      visibility: visibility,
+      createdAt: createdAt,
+      publishedAt: publishedAt,
+      location: location,
+      author: author,
+      primaryMedia: primaryMedia,
+      stats: stats.favoriteCountAdjusted(isFavorited: isFavorited, wasFavorited: self.isFavorited),
+      placeLabel: placeLabel,
+      updatedAt: updatedAt,
+      isFavorited: isFavorited
+    )
+  }
 }
 
 struct ProfileDetail: Codable, Identifiable, Hashable, Sendable {
@@ -230,6 +359,11 @@ struct AdventureMediaListResponse: Codable, Sendable {
 struct ProfileResponse: Codable, Sendable {
   let profile: ProfileDetail
   let adventures: [AdventureCard]
+  let paging: Paging
+}
+
+struct ProfileFavoritesResponse: Codable, Sendable {
+  let items: [AdventureCard]
   let paging: Paging
 }
 

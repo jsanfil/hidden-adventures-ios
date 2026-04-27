@@ -820,6 +820,10 @@ private final class ProfileServiceStub: ProfileService {
     ProfileResponse(profile: updatedProfile, adventures: [], paging: Paging(limit: limit, offset: offset, returned: 0))
   }
 
+  func getProfileFavorites(handle: String, limit: Int, offset: Int) async throws -> ProfileFavoritesResponse {
+    ProfileFavoritesResponse(items: [], paging: Paging(limit: limit, offset: offset, returned: 0))
+  }
+
   func getMyProfile() async throws -> MeProfileResponse {
     MeProfileResponse(profile: updatedProfile)
   }

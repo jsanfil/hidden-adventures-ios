@@ -95,14 +95,106 @@ protocol AdventureService {
   func createAdventure(
     request: CreateAdventureRequest
   ) async throws -> CreateAdventureResponse
+
+  func favoriteAdventure(id: String) async throws
+  func unfavoriteAdventure(id: String) async throws
+}
+
+struct FavoriteStateChange: Sendable {
+  static let notificationName = Notification.Name("HiddenAdventuresFavoriteStateDidChange")
+  static let adventureIDKey = "adventureID"
+  static let isFavoritedKey = "isFavorited"
+
+  let adventureID: String
+  let isFavorited: Bool
+
+  init?(notification: Notification) {
+    guard
+      let adventureID = notification.userInfo?[Self.adventureIDKey] as? String,
+      let isFavorited = notification.userInfo?[Self.isFavoritedKey] as? Bool
+    else {
+      return nil
+    }
+
+    self.adventureID = adventureID
+    self.isFavorited = isFavorited
+  }
+
+  static func post(adventureID: String, isFavorited: Bool) {
+    NotificationCenter.default.post(
+      name: notificationName,
+      object: nil,
+      userInfo: [
+        adventureIDKey: adventureID,
+        isFavoritedKey: isFavorited
+      ]
+    )
+  }
+}
+
+actor FavoriteFixtureStore {
+  private var storedFavoriteIDs: Set<String>
+
+  init(initialFavoriteIDs: Set<String>) {
+    self.storedFavoriteIDs = initialFavoriteIDs
+  }
+
+  init(initialFavoriteIDs: [String]) {
+    self.storedFavoriteIDs = Set(initialFavoriteIDs)
+  }
+
+  static func fromEnvironment(_ environment: [String: String] = ProcessInfo.processInfo.environment) -> FavoriteFixtureStore {
+    switch environment["UITEST_PROFILE_FAVORITES"]?.lowercased() {
+    case "empty":
+      return FavoriteFixtureStore(initialFavoriteIDs: [])
+    case "populated":
+      return FavoriteFixtureStore(initialFavoriteIDs: [MockFixtures.bluePoolID])
+    default:
+      return FavoriteFixtureStore(initialFavoriteIDs: [MockFixtures.eagleID])
+    }
+  }
+
+  func favoriteIDs() -> Set<String> {
+    storedFavoriteIDs
+  }
+
+  func contains(_ id: String) -> Bool {
+    storedFavoriteIDs.contains(id)
+  }
+
+  func favorite(id: String) throws {
+    guard MockFixtures.adventureDetails[id] != nil else {
+      throw FixtureServiceError.notFound
+    }
+
+    storedFavoriteIDs.insert(id)
+    FavoriteStateChange.post(adventureID: id, isFavorited: true)
+  }
+
+  func unfavorite(id: String) throws {
+    guard MockFixtures.adventureDetails[id] != nil else {
+      throw FixtureServiceError.notFound
+    }
+
+    storedFavoriteIDs.remove(id)
+    FavoriteStateChange.post(adventureID: id, isFavorited: false)
+  }
 }
 
 struct FixtureAdventureService: AdventureService {
+  let favoriteStore: FavoriteFixtureStore
+
+  init(favoriteStore: FavoriteFixtureStore = FavoriteFixtureStore.fromEnvironment()) {
+    self.favoriteStore = favoriteStore
+  }
+
   func listFeed(
     query: FeedQuery
   ) async throws -> FeedResponse {
+    let favoriteIDs = await favoriteStore.favoriteIDs()
     let filteredItems = MockFixtures.feedItems
       .compactMap { item -> AdventureCard? in
+        let item = item.applyingFavoriteState(favoriteIDs.contains(item.id))
         guard
           let scope = query.scope,
           let location = item.location
@@ -135,7 +227,8 @@ struct FixtureAdventureService: AdventureService {
           author: item.author,
           primaryMedia: item.primaryMedia,
           stats: item.stats,
-          distanceMiles: Double(round(distanceMiles * 10) / 10)
+          distanceMiles: Double(round(distanceMiles * 10) / 10),
+          isFavorited: item.isFavorited
         )
       }
 
@@ -173,7 +266,9 @@ struct FixtureAdventureService: AdventureService {
   ) async throws -> AdventureDetailResponse {
     let resolvedID = MockFixtures.resolvedAdventureID(for: id)
     if let detail = MockFixtures.adventureDetails[resolvedID] {
-      return AdventureDetailResponse(item: detail)
+      return AdventureDetailResponse(
+        item: detail.applyingFavoriteState(await favoriteStore.contains(resolvedID))
+      )
     }
 
     throw FixtureServiceError.notFound
@@ -209,6 +304,14 @@ struct FixtureAdventureService: AdventureService {
         status: "pending_moderation"
       )
     )
+  }
+
+  func favoriteAdventure(id: String) async throws {
+    try await favoriteStore.favorite(id: MockFixtures.resolvedAdventureID(for: id))
+  }
+
+  func unfavoriteAdventure(id: String) async throws {
+    try await favoriteStore.unfavorite(id: MockFixtures.resolvedAdventureID(for: id))
   }
 }
 
@@ -340,6 +443,22 @@ struct RemoteAdventureService: AdventureService {
       body: payload,
       requiresAuth: true
     )
+  }
+
+  func favoriteAdventure(id: String) async throws {
+    try await client.postNoContent(
+      pathComponents: ["adventures", id, "favorite"],
+      requiresAuth: true
+    )
+    FavoriteStateChange.post(adventureID: id, isFavorited: true)
+  }
+
+  func unfavoriteAdventure(id: String) async throws {
+    try await client.deleteNoContent(
+      pathComponents: ["adventures", id, "favorite"],
+      requiresAuth: true
+    )
+    FavoriteStateChange.post(adventureID: id, isFavorited: false)
   }
 
   private func uploadPhoto(
