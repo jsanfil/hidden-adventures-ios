@@ -608,7 +608,9 @@
 		0BDACA920C5867DE59E3FCEA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -627,7 +629,9 @@
 		0F4C0462246F4AC176298245 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -646,7 +650,9 @@
 		2CE09E2B7A1D15D36DB0559B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -746,7 +752,9 @@
 		860F1824BA086B6B756AB72F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;

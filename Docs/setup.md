@@ -11,6 +11,7 @@
 7. Use `HiddenAdventures-Production` only for production configuration and release validation.
 8. Provide `HA_COGNITO_REGION` and `HA_COGNITO_CLIENT_ID` for native manual-QA and production email-code auth.
 9. Provide `HA_TEST_AUTH_TOKEN` for automation mode, or `HA_AUTH_TOKEN` for manual QA and production when you need an explicit bearer-token override.
+10. Run simulator-backed UI tests through the checked-in scripts. In Codex, prefer host-permitted runs for those scripts rather than forcing `xcodebuild test` through the filesystem sandbox.
 
 ## Runtime Modes
 
@@ -48,3 +49,4 @@
 - local manual QA and local automation should be selectable by scheme rather than hand-editing env vars
 - release slices should be validated locally before any cloud smoke flow
 - the UI harness should remain part of the acceptance path while moving from fixtures to real APIs
+- the default UI test path should stay close to normal Xcode behavior, with sandbox-specific overrides used only for debugging

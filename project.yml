@@ -46,6 +46,8 @@ targets:
       - target: HiddenAdventures
     settings:
       base:
+        AD_HOC_CODE_SIGNING_ALLOWED: true
+        CODE_SIGN_IDENTITY: iPhone Developer
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: com.hiddenadventures.ios.uitests
@@ -60,6 +62,8 @@ targets:
       - target: HiddenAdventures
     settings:
       base:
+        AD_HOC_CODE_SIGNING_ALLOWED: true
+        CODE_SIGN_IDENTITY: iPhone Developer
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: com.hiddenadventures.ios.tests

@@ -147,7 +147,7 @@ final class WalkthroughFlowUITests: HiddenAdventuresUITestCase {
 
     app.buttons["tab.explore"].tap()
     assertExists(
-      app.buttons["map.card.blue-pool"],
+      app.buttons["map.card.\(bluePoolID)"],
       name: "map-card",
       in: app,
       screenshotDir: screenshotDir
@@ -161,9 +161,17 @@ final class WalkthroughFlowUITests: HiddenAdventuresUITestCase {
     )
     saveScreenshot(named: "05-map", to: screenshotDir)
 
-    let mapCard = app.buttons["map.card.blue-pool"]
+    let mapCard = app.buttons["map.card.\(bluePoolID)"]
     assertExists(mapCard, name: "map-card-tap", in: app, screenshotDir: screenshotDir)
     mapCard.tap()
+
+    assertExists(
+      app.otherElements["map.preview"],
+      name: "map-preview",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    app.otherElements["map.preview"].tap()
 
     assertExists(
       app.buttons["detail.back"],
@@ -175,7 +183,7 @@ final class WalkthroughFlowUITests: HiddenAdventuresUITestCase {
 
     app.buttons["detail.back"].tap()
     assertExists(
-      app.buttons["map.card.blue-pool"],
+      app.otherElements["map.preview"],
       name: "map-return",
       in: app,
       screenshotDir: screenshotDir

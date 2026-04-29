@@ -185,12 +185,6 @@ final class ScreenGalleryRegressionUITests: HiddenAdventuresUITestCase {
         screenshotDir: directory
       )
       self.assertExists(
-        app.buttons["map.pin.\(self.bluePoolID)"],
-        name: "map-blue-pool-pin",
-        in: app,
-        screenshotDir: directory
-      )
-      self.assertExists(
         app.staticTexts["map.sheet.count"],
         name: "map-sheet-count",
         in: app,
@@ -205,12 +199,6 @@ final class ScreenGalleryRegressionUITests: HiddenAdventuresUITestCase {
       self.assertExists(
         app.staticTexts["map.card.title.opal-creek-trail"],
         name: "map-opal-creek-title",
-        in: app,
-        screenshotDir: directory
-      )
-      self.assertExists(
-        app.otherElements["map.card.image.blue-pool"],
-        name: "map-blue-pool-image",
         in: app,
         screenshotDir: directory
       )

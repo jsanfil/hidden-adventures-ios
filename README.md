@@ -68,6 +68,8 @@ SwiftUI iOS client for the Hidden Adventures rebuild.
 - Use `Scripts/run_ui_screen_tests.sh` for day-to-day work on a single screen or top-level view.
 - Pass `UITEST_ONLY_TESTING` or a second argument to narrow the run to a specific test class or method, for example `HiddenAdventuresUITests/ExploreMapScreenUITests/testExploreMap_rendersCoreChrome`.
 - Use `Scripts/run_ui_gallery.sh` when you want the full regression pass, including the screenshot/gallery coverage and walkthrough flow.
+- When running under Codex, prefer these checked-in scripts with host permission for simulator execution instead of ad hoc `xcodebuild test` commands inside the sandbox.
+- The scripts use a stable DerivedData path in `/tmp` by default so simulator test bundles stay consistently signable across Codex and normal terminal runs. `UITEST_DERIVED_DATA_DIR`, `UITEST_DESTINATION`, and `UITEST_SKIP_SIMCTL_PREP=1` remain available for diagnostics when needed.
 - The `HiddenAdventures-LocalAutomation` scheme now references the checked-in `LocalDev` and `FullRegression` test plans so Xcode can run the fast subset by default and the full suite on demand.
 
 ## Suggested App Structure

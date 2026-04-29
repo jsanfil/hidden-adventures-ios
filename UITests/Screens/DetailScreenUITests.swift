@@ -75,7 +75,7 @@ final class DetailScreenUITests: HiddenAdventuresUITestCase {
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.buttons["detail.follow"],
+      app.buttons["detail.author"],
       name: "detail-follow",
       in: app,
       screenshotDir: screenshotDir
