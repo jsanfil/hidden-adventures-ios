@@ -153,7 +153,8 @@ final class DiscoverServiceTests: XCTestCase {
               "commentCount": 3,
               "ratingCount": 4,
               "averageRating": 4.75
-            }
+            },
+            "isFavorited": true
           }
         ]
       }
@@ -204,7 +205,8 @@ final class DiscoverServiceTests: XCTestCase {
             "commentCount": 3,
             "ratingCount": 4,
             "averageRating": 4.75
-          }
+          },
+          "isFavorited": true
         }
       ],
       "paging": { "limit": 20, "offset": 0, "returned": 1 }

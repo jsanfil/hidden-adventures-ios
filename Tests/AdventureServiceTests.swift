@@ -126,6 +126,68 @@ final class AdventureServiceTests: XCTestCase {
     XCTAssertEqual(payload.visibility, "sidekicks")
   }
 
+  func testFavoriteAdventurePostsToFavoriteEndpointWithoutResponseBody() async throws {
+    MockAdventureURLProtocol.requestHandler = { request in
+      XCTAssertEqual(request.httpMethod, "POST")
+      XCTAssertEqual(request.url?.path, "/api/adventures/adventure-1/favorite")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 204,
+        httpVersion: nil,
+        headerFields: nil
+      )!
+
+      return (response, Data())
+    }
+
+    let service = makeService(cache: makeCache())
+
+    try await service.favoriteAdventure(id: "adventure-1")
+  }
+
+  func testUnfavoriteAdventureDeletesFavoriteEndpointWithoutResponseBody() async throws {
+    MockAdventureURLProtocol.requestHandler = { request in
+      XCTAssertEqual(request.httpMethod, "DELETE")
+      XCTAssertEqual(request.url?.path, "/api/adventures/adventure-1/favorite")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 204,
+        httpVersion: nil,
+        headerFields: nil
+      )!
+
+      return (response, Data())
+    }
+
+    let service = makeService(cache: makeCache())
+
+    try await service.unfavoriteAdventure(id: "adventure-1")
+  }
+
+  func testFixtureFavoriteStateUpdatesFeedAndDetail() async throws {
+    let store = FavoriteFixtureStore(initialFavoriteIDs: [])
+    let service = FixtureAdventureService(favoriteStore: store)
+
+    let initialFeed = try await service.listFeed(query: FeedQuery(limit: 20, offset: 0)).items
+    XCTAssertEqual(initialFeed.first(where: { $0.id == MockFixtures.bluePoolID })?.isFavorited, false)
+
+    try await service.favoriteAdventure(id: MockFixtures.bluePoolID)
+
+    let favoriteFeed = try await service.listFeed(query: FeedQuery(limit: 20, offset: 0)).items
+    let favoriteDetail = try await service.getAdventure(id: MockFixtures.bluePoolID).item
+    XCTAssertEqual(favoriteFeed.first(where: { $0.id == MockFixtures.bluePoolID })?.isFavorited, true)
+    XCTAssertEqual(favoriteDetail.isFavorited, true)
+
+    try await service.unfavoriteAdventure(id: MockFixtures.bluePoolID)
+
+    let unfavoriteDetail = try await service.getAdventure(id: MockFixtures.bluePoolID).item
+    XCTAssertEqual(unfavoriteDetail.isFavorited, false)
+  }
+
   func testLoadMediaDataUsesFreshCacheWithoutRefetching() async throws {
     final class RequestCounter {
       var count = 0

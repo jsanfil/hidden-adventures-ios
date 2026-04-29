@@ -11,7 +11,7 @@ final class AppAuthServiceTests: XCTestCase {
   }
 
   func testGetStartedUsesSignUpWithDerivedUsername() async throws {
-    let expectedUsername = "new_1853b7412ac94d75cb23e033"
+    let expectedUsername = "new_f0030501023327437b06e5c6"
 
     CognitoMockURLProtocol.requestHandler = { request in
       XCTAssertEqual(request.value(forHTTPHeaderField: "X-Amz-Target"), "AWSCognitoIdentityProviderService.SignUp")
@@ -52,7 +52,7 @@ final class AppAuthServiceTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "X-Amz-Target"), "AWSCognitoIdentityProviderService.SignUp")
 
         let payload = try XCTUnwrap(Self.jsonPayload(from: request))
-        XCTAssertEqual(payload["Username"] as? String, "new_1853b7412ac94d75cb23e033")
+        XCTAssertEqual(payload["Username"] as? String, "new_f0030501023327437b06e5c6")
 
         return Self.errorResponse(
           request: request,
@@ -65,7 +65,7 @@ final class AppAuthServiceTests: XCTestCase {
 
         let payload = try XCTUnwrap(Self.jsonPayload(from: request))
         XCTAssertEqual(payload["ClientId"] as? String, "client-id")
-        XCTAssertEqual(payload["Username"] as? String, "new_1853b7412ac94d75cb23e033")
+        XCTAssertEqual(payload["Username"] as? String, "new_f0030501023327437b06e5c6")
 
         return Self.successResponse(
           request: request,
@@ -83,7 +83,7 @@ final class AppAuthServiceTests: XCTestCase {
     }
 
     XCTAssertEqual(challenge.kind, .signUp)
-    XCTAssertEqual(challenge.cognitoUsername, "new_1853b7412ac94d75cb23e033")
+    XCTAssertEqual(challenge.cognitoUsername, "new_f0030501023327437b06e5c6")
     XCTAssertEqual(challenge.email, "new@example.com")
     XCTAssertEqual(challenge.deliveryDestination, "ne•••@example.com")
     XCTAssertTrue(challenge.isResumed)
@@ -375,7 +375,7 @@ final class AppAuthServiceTests: XCTestCase {
   }
 
   private static func jsonPayload(from request: URLRequest) -> [String: Any]? {
-    guard let data = request.httpBody else {
+    guard let data = request.bodyData else {
       return nil
     }
 
@@ -461,4 +461,34 @@ private final class CognitoMockURLProtocol: URLProtocol {
   }
 
   override func stopLoading() {}
+}
+
+private extension URLRequest {
+  var bodyData: Data? {
+    if let httpBody {
+      return httpBody
+    }
+
+    guard let stream = httpBodyStream else {
+      return nil
+    }
+
+    stream.open()
+    defer { stream.close() }
+
+    let bufferSize = 1024
+    var data = Data()
+    let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+    defer { buffer.deallocate() }
+
+    while stream.hasBytesAvailable {
+      let read = stream.read(buffer, maxLength: bufferSize)
+      guard read > 0 else {
+        break
+      }
+      data.append(buffer, count: read)
+    }
+
+    return data.isEmpty ? nil : data
+  }
 }

@@ -4,6 +4,7 @@ import SwiftUI
 struct HiddenAdventuresApp: App {
   private static let logger = AppLogger.logger(category: "app.startup")
   private let runtime = AppRuntime()
+  private let favoriteFixtureStore = FavoriteFixtureStore.fromEnvironment()
   private let authState: AuthStateStore
 
   init() {
@@ -49,7 +50,7 @@ struct HiddenAdventuresApp: App {
 
   private var adventureService: AdventureService {
     if runtime.usesFixturePreview {
-      return FixtureAdventureService()
+      return FixtureAdventureService(favoriteStore: favoriteFixtureStore)
     }
 
     return RemoteAdventureService(client: apiClient)
@@ -57,7 +58,7 @@ struct HiddenAdventuresApp: App {
 
   private var profileService: ProfileService {
     if runtime.usesFixturePreview {
-      return FixtureProfileService()
+      return FixtureProfileService(favoriteStore: favoriteFixtureStore)
     }
 
     return RemoteProfileService(client: apiClient)

@@ -93,4 +93,37 @@ final class DetailScreenUITests: HiddenAdventuresUITestCase {
       screenshotDir: screenshotDir
     )
   }
+
+  func testDetail_favoriteButtonReflectsAndTogglesFavoriteState() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "detail-favorite-toggle")
+    let app = launchApp(
+      startScreen: "detail",
+      extraEnv: ["UITEST_DETAIL_ID": bluePoolID]
+    )
+
+    let favoriteButton = app.buttons["detail.favorite"]
+    assertExists(
+      favoriteButton,
+      name: "detail-favorite-button",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertValue(
+      favoriteButton,
+      equals: "not favorited",
+      name: "detail-favorite-button-initial-state",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+
+    favoriteButton.tap()
+
+    assertValue(
+      favoriteButton,
+      equals: "favorited",
+      name: "detail-favorite-button-toggled-state",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+  }
 }

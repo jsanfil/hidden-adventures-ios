@@ -22,6 +22,7 @@ struct AdventureDetailView: View {
   @State private var isLoading = false
   @State private var didFailToLoad = false
   @State private var isFavorited = false
+  @State private var isFavoriteMutationInFlight = false
   @State private var userRating = 0
   @State private var commentText = ""
 
@@ -106,6 +107,11 @@ struct AdventureDetailView: View {
       guard screenModel == nil, isLoading == false else { return }
       await loadScreen()
     }
+    .onReceive(NotificationCenter.default.publisher(for: FavoriteStateChange.notificationName)) { notification in
+      guard let change = FavoriteStateChange(notification: notification) else { return }
+      guard change.adventureID == MockFixtures.resolvedAdventureID(for: adventureID) else { return }
+      isFavorited = change.isFavorited
+    }
   }
 
   private var hero: some View {
@@ -181,12 +187,13 @@ struct AdventureDetailView: View {
         .opacity(usesFixturePreview ? 1 : 0.7)
         .accessibilityIdentifier("detail.share")
 
-        Button(action: { isFavorited.toggle() }) {
+        Button(action: toggleFavorite) {
           FavoriteNavigationButton(isFavorited: isFavorited)
         }
         .buttonStyle(.plain)
-        .disabled(usesFixturePreview == false)
-        .opacity(usesFixturePreview ? 1 : 0.7)
+        .disabled(isFavoriteMutationInFlight || screenModel == nil)
+        .accessibilityLabel(isFavorited ? "Remove favorite" : "Add favorite")
+        .accessibilityValue(isFavorited ? "favorited" : "not favorited")
         .accessibilityIdentifier("detail.favorite")
       }
     }
@@ -515,6 +522,9 @@ struct AdventureDetailView: View {
     defer { isLoading = false }
 
     if runtimeMode == .fixturePreview {
+      if let detail = try? await adventureService.getAdventure(id: adventureID).item {
+        isFavorited = detail.isFavorited
+      }
       screenModel = MockFixtures.adventureDetailScreenModel(
         for: adventureID,
         variant: fixtureVariant
@@ -524,6 +534,7 @@ struct AdventureDetailView: View {
 
     do {
       let detail = try await adventureService.getAdventure(id: adventureID).item
+      isFavorited = detail.isFavorited
       async let authorProfileTask: ProfileDetail? = loadAuthorProfile(handle: detail.author.handle)
       async let mediaTask: [String] = loadMediaIDs(for: detail)
 
@@ -541,6 +552,27 @@ struct AdventureDetailView: View {
       )
     } catch {
       didFailToLoad = true
+    }
+  }
+
+  private func toggleFavorite() {
+    let targetState = !isFavorited
+    let previousState = isFavorited
+    isFavorited = targetState
+    isFavoriteMutationInFlight = true
+
+    Task {
+      do {
+        if targetState {
+          try await adventureService.favoriteAdventure(id: adventureID)
+        } else {
+          try await adventureService.unfavoriteAdventure(id: adventureID)
+        }
+      } catch {
+        isFavorited = previousState
+      }
+
+      isFavoriteMutationInFlight = false
     }
   }
 
@@ -602,7 +634,7 @@ private struct FavoriteNavigationButton: View {
   let isFavorited: Bool
 
   var body: some View {
-    Image(systemName: "bookmark.fill")
+    Image(systemName: isFavorited ? "bookmark.fill" : "bookmark")
       .font(.system(size: 16, weight: .semibold))
       .foregroundStyle(isFavorited ? .white : HATheme.Colors.foreground)
       .frame(width: 40, height: 40)

@@ -49,6 +49,92 @@ final class ProfileScreenUITests: HiddenAdventuresUITestCase {
     )
   }
 
+  func testProfile_viewerFavoritesShowsPopulatedCollection() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "profile-favorites-populated")
+    let app = launchApp(
+      startScreen: "explore-profile",
+      extraEnv: ["UITEST_PROFILE_FAVORITES": "populated"]
+    )
+
+    assertExists(
+      app.buttons["profile.segment.favorites"],
+      name: "profile-favorites-segment",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    app.buttons["profile.segment.favorites"].tap()
+
+    assertExists(
+      app.staticTexts["profile.favoriteAdventuresHeading"],
+      name: "profile-favorite-adventures-heading",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(
+      app.buttons["feed.card.\(bluePoolID)"],
+      name: "profile-favorite-adventure-card",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertNotExists(
+      app.staticTexts["profile.favorites.empty"],
+      name: "profile-favorites-empty-hidden",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+  }
+
+  func testProfile_viewerFavoritesShowsEmptyState() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "profile-favorites-empty")
+    let app = launchApp(
+      startScreen: "explore-profile",
+      extraEnv: ["UITEST_PROFILE_FAVORITES": "empty"]
+    )
+
+    assertExists(
+      app.buttons["profile.segment.favorites"],
+      name: "profile-favorites-segment-empty",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    app.buttons["profile.segment.favorites"].tap()
+
+    assertExists(
+      app.staticTexts["profile.favorites.empty"],
+      name: "profile-favorites-empty-state",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+  }
+
+  func testProfile_otherProfileDoesNotShowFavoritesSegment() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "profile-favorites-hidden-other-user")
+    let app = launchApp(startScreen: "explore-profile")
+
+    app.buttons["profile.sidekicksCard"].tap()
+    let rowButton = app.buttons["sidekicks.row.sarahc"]
+    assertHittable(
+      rowButton,
+      name: "sidekicks-row-open-sarah-for-favorites-hidden",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    rowButton.tap()
+
+    assertExists(
+      app.buttons["profile.back"],
+      name: "other-profile-loaded",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertNotExists(
+      app.buttons["profile.segment.favorites"],
+      name: "other-profile-favorites-segment-hidden",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+  }
+
   func testSidekicks_supportsTabsSearchAndActions() throws {
     let screenshotDir = try preparedScreenshotDirectory(named: "profile-sidekicks-interactions")
     let app = launchApp(startScreen: "explore-profile")

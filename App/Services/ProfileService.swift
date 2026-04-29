@@ -32,11 +32,23 @@ protocol ProfileService {
     offset: Int
   ) async throws -> ProfileResponse
 
+  func getProfileFavorites(
+    handle: String,
+    limit: Int,
+    offset: Int
+  ) async throws -> ProfileFavoritesResponse
+
   func getMyProfile() async throws -> MeProfileResponse
   func updateMyProfile(request: MeProfileUpdateRequest) async throws -> MeProfileResponse
 }
 
 struct FixtureProfileService: ProfileService {
+  let favoriteStore: FavoriteFixtureStore
+
+  init(favoriteStore: FavoriteFixtureStore = FavoriteFixtureStore.fromEnvironment()) {
+    self.favoriteStore = favoriteStore
+  }
+
   func getProfile(
     handle: String,
     limit: Int,
@@ -53,8 +65,29 @@ struct FixtureProfileService: ProfileService {
     )
     return ProfileResponse(
       profile: profile,
-      adventures: adventures,
+      adventures: await applyFavoriteState(to: adventures),
       paging: Paging(limit: limit, offset: offset, returned: adventures.count)
+    )
+  }
+
+  func getProfileFavorites(
+    handle: String,
+    limit: Int,
+    offset: Int
+  ) async throws -> ProfileFavoritesResponse {
+    guard handle == MockFixtures.profile.handle else {
+      throw APIError.server(statusCode: 403, message: "Favorites are only available for the signed-in viewer.")
+    }
+
+    let favoriteIDs = await favoriteStore.favoriteIDs()
+    let favorites = MockFixtures.feedItems
+      .filter { favoriteIDs.contains($0.id) }
+      .map { $0.applyingFavoriteState(true) }
+    let pagedItems = Array(favorites.dropFirst(offset).prefix(limit))
+
+    return ProfileFavoritesResponse(
+      items: pagedItems,
+      paging: Paging(limit: limit, offset: offset, returned: pagedItems.count)
     )
   }
 
@@ -83,6 +116,13 @@ struct FixtureProfileService: ProfileService {
       )
     )
   }
+
+  private func applyFavoriteState(to adventures: [AdventureCard]) async -> [AdventureCard] {
+    let favoriteIDs = await favoriteStore.favoriteIDs()
+    return adventures.map { adventure in
+      adventure.applyingFavoriteState(favoriteIDs.contains(adventure.id))
+    }
+  }
 }
 
 struct RemoteProfileService: ProfileService {
@@ -95,6 +135,21 @@ struct RemoteProfileService: ProfileService {
   ) async throws -> ProfileResponse {
     try await client.get(
       pathComponents: ["profiles", handle],
+      queryItems: [
+        URLQueryItem(name: "limit", value: String(limit)),
+        URLQueryItem(name: "offset", value: String(offset))
+      ],
+      requiresAuth: true
+    )
+  }
+
+  func getProfileFavorites(
+    handle: String,
+    limit: Int,
+    offset: Int
+  ) async throws -> ProfileFavoritesResponse {
+    try await client.get(
+      pathComponents: ["profiles", handle, "favorites"],
       queryItems: [
         URLQueryItem(name: "limit", value: String(limit)),
         URLQueryItem(name: "offset", value: String(offset))
