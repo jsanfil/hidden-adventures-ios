@@ -758,51 +758,109 @@ enum MockFixtures {
     )
   ]
 
-  static let detailCommentsByAdventureID: [String: [AdventureDetailScreenModel.Comment]] = [
+  static let detailCommentsByAdventureID: [String: [AdventureCommentItem]] = [
     bluePoolID: [
-      AdventureDetailScreenModel.Comment(
+      AdventureCommentItem(
         id: "comment-blue-pool-1",
-        authorDisplayName: "megan",
-        authorInitials: "ME",
-        relativeTimestamp: "7 years ago",
-        body: "Absolutely magical! Got there early and had it all to ourselves."
+        body: "Absolutely magical! Got there early and had it all to ourselves.",
+        createdAt: "2019-04-12T18:00:00.000Z",
+        updatedAt: "2019-04-12T18:00:00.000Z",
+        author: AdventureCommentAuthor(
+          handle: "megan",
+          displayName: "Megan",
+          homeCity: "Eugene",
+          homeRegion: "OR",
+          avatar: MediaReference(id: "hero-mountain", storageKey: "hero-mountain")
+        )
       ),
-      AdventureDetailScreenModel.Comment(
+      AdventureCommentItem(
         id: "comment-blue-pool-2",
-        authorDisplayName: "megan",
-        authorInitials: "ME",
-        relativeTimestamp: "7 years ago",
-        body: "Takes thirty minutes on the trail before you reach the pool but totally worth every step."
+        body: "Takes thirty minutes on the trail before you reach the pool but totally worth every step.",
+        createdAt: "2019-04-13T18:00:00.000Z",
+        updatedAt: "2019-04-13T18:00:00.000Z",
+        author: AdventureCommentAuthor(
+          handle: "megan",
+          displayName: "Megan",
+          homeCity: "Eugene",
+          homeRegion: "OR",
+          avatar: MediaReference(id: "hero-mountain", storageKey: "hero-mountain")
+        )
       ),
-      AdventureDetailScreenModel.Comment(
+      AdventureCommentItem(
         id: "comment-blue-pool-3",
-        authorDisplayName: "jack",
-        authorInitials: "JA",
-        relativeTimestamp: "3 weeks ago",
-        body: "Went at sunrise and the color was unreal. The trail was mellow, but the cold coming off the water was no joke."
+        body: "Went at sunrise and the color was unreal. The trail was mellow, but the cold coming off the water was no joke.",
+        createdAt: "2026-04-08T18:00:00.000Z",
+        updatedAt: "2026-04-08T18:00:00.000Z",
+        author: AdventureCommentAuthor(
+          handle: "jack",
+          displayName: "Jack",
+          homeCity: "Salem",
+          homeRegion: "OR",
+          avatar: MediaReference(id: "scenic-overlook", storageKey: "scenic-overlook")
+        )
       ),
-      AdventureDetailScreenModel.Comment(
+      AdventureCommentItem(
         id: "comment-blue-pool-4",
-        authorDisplayName: "sarah",
-        authorInitials: "SA",
-        relativeTimestamp: "1 month ago",
-        body: "Worth bringing snacks and taking your time on the return. The overlook just before the pool ended up being my favorite photo stop."
+        body: "Worth bringing snacks and taking your time on the return. The overlook just before the pool ended up being my favorite photo stop.",
+        createdAt: "2026-03-29T18:00:00.000Z",
+        updatedAt: "2026-03-29T18:00:00.000Z",
+        author: AdventureCommentAuthor(
+          handle: "sarah",
+          displayName: "Sarah",
+          homeCity: "Bend",
+          homeRegion: "OR",
+          avatar: MediaReference(id: "trail-forest", storageKey: "trail-forest")
+        )
       )
-    ],
+    ] + (5...24).map { index in
+      AdventureCommentItem(
+        id: "comment-blue-pool-\(index)",
+        body: "Fixture thread note \(index): arrive early, keep the trail packed out, and expect the water to stay brutally cold even on warm days.",
+        createdAt: String(
+          format: "2026-03-%02dT18:00:00.000Z",
+          max(1, 29 - index)
+        ),
+        updatedAt: String(
+          format: "2026-03-%02dT18:00:00.000Z",
+          max(1, 29 - index)
+        ),
+        author: AdventureCommentAuthor(
+          handle: "fixture\(index)",
+          displayName: "Fixture \(index)",
+          homeCity: "Portland",
+          homeRegion: "OR",
+          avatar: index.isMultiple(of: 2)
+            ? MediaReference(id: "hidden-canyon", storageKey: "hidden-canyon")
+            : nil
+        )
+      )
+    },
     eagleID: [
-      AdventureDetailScreenModel.Comment(
+      AdventureCommentItem(
         id: "comment-eagle-1",
-        authorDisplayName: "amy",
-        authorInitials: "AM",
-        relativeTimestamp: "2 days ago",
-        body: "The tunnel section feels unreal after the rain. Bring a shell and expect to get misted."
+        body: "The tunnel section feels unreal after the rain. Bring a shell and expect to get misted.",
+        createdAt: "2026-04-27T18:00:00.000Z",
+        updatedAt: "2026-04-27T18:00:00.000Z",
+        author: AdventureCommentAuthor(
+          handle: "amy",
+          displayName: "Amy",
+          homeCity: "Salem",
+          homeRegion: "OR",
+          avatar: MediaReference(id: "swimming-hole", storageKey: "swimming-hole")
+        )
       ),
-      AdventureDetailScreenModel.Comment(
+      AdventureCommentItem(
         id: "comment-eagle-2",
-        authorDisplayName: "mike",
-        authorInitials: "MI",
-        relativeTimestamp: "5 days ago",
-        body: "Busy trail by late morning, but the falls absolutely delivered. Starting early made the whole thing feel calmer."
+        body: "Busy trail by late morning, but the falls absolutely delivered. Starting early made the whole thing feel calmer.",
+        createdAt: "2026-04-24T18:00:00.000Z",
+        updatedAt: "2026-04-24T18:00:00.000Z",
+        author: AdventureCommentAuthor(
+          handle: "mike",
+          displayName: "Mike",
+          homeCity: "Portland",
+          homeRegion: "OR",
+          avatar: MediaReference(id: "coastal-path", storageKey: "coastal-path")
+        )
       )
     ]
   ]
@@ -841,7 +899,7 @@ enum MockFixtures {
         ratingCount: model.ratingCount,
         author: model.author,
         directions: model.directions,
-        commentsHeaderCount: model.commentsHeaderCount,
+        commentsTotalCount: model.commentsTotalCount,
         comments: model.comments
       )
       return model
@@ -852,12 +910,12 @@ enum MockFixtures {
         categoryLabel: model.categoryLabel,
         placeLabel: model.placeLabel,
         aboutLines: model.aboutLines,
-        heroImageNames: Array(model.heroImageNames.prefix(1)),
+        heroImageNames: model.heroImageNames.isEmpty ? [] : [model.heroImageNames[0]],
         averageRating: model.averageRating,
         ratingCount: model.ratingCount,
         author: model.author,
         directions: model.directions,
-        commentsHeaderCount: model.commentsHeaderCount,
+        commentsTotalCount: model.commentsTotalCount,
         comments: model.comments
       )
       return model
@@ -873,7 +931,7 @@ enum MockFixtures {
         ratingCount: model.ratingCount,
         author: model.author,
         directions: model.directions,
-        commentsHeaderCount: 0,
+        commentsTotalCount: 0,
         comments: []
       )
       return model

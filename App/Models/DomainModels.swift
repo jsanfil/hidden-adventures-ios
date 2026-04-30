@@ -121,6 +121,14 @@ struct AdventureAuthor: Codable, Hashable, Sendable {
   let homeRegion: String?
 }
 
+struct AdventureCommentAuthor: Codable, Hashable, Sendable {
+  let handle: String
+  let displayName: String?
+  let homeCity: String?
+  let homeRegion: String?
+  let avatar: MediaReference?
+}
+
 struct MediaReference: Codable, Hashable, Sendable {
   let id: String
   let storageKey: String
@@ -354,6 +362,23 @@ struct AdventureDetailResponse: Codable, Sendable {
 
 struct AdventureMediaListResponse: Codable, Sendable {
   let items: [AdventureMediaItem]
+}
+
+struct AdventureCommentItem: Codable, Hashable, Identifiable, Sendable {
+  let id: String
+  let body: String
+  let createdAt: String
+  let updatedAt: String
+  let author: AdventureCommentAuthor
+}
+
+struct AdventureCommentListResponse: Codable, Sendable {
+  let items: [AdventureCommentItem]
+  let paging: Paging
+}
+
+struct AdventureCommentCreateResponse: Codable, Sendable {
+  let item: AdventureCommentItem
 }
 
 struct ProfileResponse: Codable, Sendable {

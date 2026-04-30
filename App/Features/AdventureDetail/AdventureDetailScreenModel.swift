@@ -11,8 +11,10 @@ struct AdventureDetailScreenModel: Identifiable, Equatable, Sendable {
 
   struct Comment: Identifiable, Equatable, Sendable {
     let id: String
+    let authorHandle: String
     let authorDisplayName: String
     let authorInitials: String
+    let avatarMediaID: String?
     let relativeTimestamp: String
     let body: String
   }
@@ -32,8 +34,12 @@ struct AdventureDetailScreenModel: Identifiable, Equatable, Sendable {
   let ratingCount: Int
   let author: Author
   let directions: Directions?
-  let commentsHeaderCount: Int
+  let commentsTotalCount: Int
   let comments: [Comment]
+
+  var commentsHeaderCount: Int {
+    commentsTotalCount
+  }
 }
 
 enum AdventureDetailFixtureVariant: String, CaseIterable, Sendable {
@@ -55,7 +61,8 @@ extension AdventureDetailScreenModel {
   init(
     detail: AdventureDetail,
     heroImageNames: [String],
-    comments: [Comment],
+    comments: [AdventureCommentItem],
+    commentsTotalCount: Int? = nil,
     authorProfile: ProfileDetail? = nil
   ) {
     let authorHandle = authorProfile?.handle ?? detail.author.handle
@@ -92,8 +99,29 @@ extension AdventureDetailScreenModel {
     } else {
       self.directions = nil
     }
-    self.commentsHeaderCount = comments.isEmpty ? detail.stats.commentCount : comments.count
-    self.comments = comments
+    let mappedComments = comments.map(Self.comment(from:))
+    self.commentsTotalCount = commentsTotalCount ?? max(detail.stats.commentCount, mappedComments.count)
+    self.comments = mappedComments
+  }
+
+  func replacingComments(
+    _ comments: [Comment],
+    totalCount: Int
+  ) -> AdventureDetailScreenModel {
+    AdventureDetailScreenModel(
+      id: id,
+      title: title,
+      categoryLabel: categoryLabel,
+      placeLabel: placeLabel,
+      aboutLines: aboutLines,
+      heroImageNames: heroImageNames,
+      averageRating: averageRating,
+      ratingCount: ratingCount,
+      author: author,
+      directions: directions,
+      commentsTotalCount: totalCount,
+      comments: comments
+    )
   }
 
   static func initials(for name: String) -> String {
@@ -106,4 +134,44 @@ extension AdventureDetailScreenModel {
 
     return letters.isEmpty ? "HA" : letters
   }
+
+  static func comment(from item: AdventureCommentItem) -> Comment {
+    comment(from: item, profile: nil)
+  }
+
+  static func comment(from item: AdventureCommentItem, profile: ProfileDetail?) -> Comment {
+    let displayName = profile?.displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
+      ?? item.author.displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let resolvedName = displayName?.isEmpty == false ? displayName! : item.author.handle
+
+    return Comment(
+      id: item.id,
+      authorHandle: item.author.handle,
+      authorDisplayName: resolvedName,
+      authorInitials: initials(for: resolvedName),
+      avatarMediaID: profile?.avatar?.id ?? item.author.avatar?.id,
+      relativeTimestamp: relativeTimestamp(from: item.createdAt),
+      body: item.body
+    )
+  }
+
+  private static func relativeTimestamp(from createdAt: String) -> String {
+    let date = ISO8601DateFormatter.haDateTime.date(from: createdAt)
+      ?? ISO8601DateFormatter().date(from: createdAt)
+    guard let date else {
+      return "Recently"
+    }
+
+    let formatter = RelativeDateTimeFormatter()
+    formatter.unitsStyle = .full
+    return formatter.localizedString(for: date, relativeTo: Date())
+  }
+}
+
+private extension ISO8601DateFormatter {
+  static let haDateTime: ISO8601DateFormatter = {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return formatter
+  }()
 }

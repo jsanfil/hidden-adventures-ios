@@ -29,6 +29,10 @@ struct CreateAdventureResponse: Codable, Equatable, Sendable {
   let item: CreatedAdventureItem
 }
 
+private struct AdventureCommentCreatePayload: Encodable {
+  let body: String
+}
+
 private struct AdventureUploadAllocationRequest: Encodable {
   struct Item: Encodable {
     let clientId: String
@@ -91,6 +95,17 @@ protocol AdventureService {
   func loadMediaData(
     id: String
   ) async throws -> Data
+
+  func listComments(
+    adventureID: String,
+    limit: Int,
+    offset: Int
+  ) async throws -> AdventureCommentListResponse
+
+  func createComment(
+    adventureID: String,
+    body: String
+  ) async throws -> AdventureCommentCreateResponse
 
   func createAdventure(
     request: CreateAdventureRequest
@@ -181,11 +196,75 @@ actor FavoriteFixtureStore {
   }
 }
 
+actor CommentFixtureStore {
+  private var storedCommentsByAdventureID: [String: [AdventureCommentItem]]
+  private var nextOrdinal: Int
+
+  init(
+    initialCommentsByAdventureID: [String: [AdventureCommentItem]] = MockFixtures.detailCommentsByAdventureID
+  ) {
+    self.storedCommentsByAdventureID = initialCommentsByAdventureID
+    self.nextOrdinal = initialCommentsByAdventureID.values.flatMap { $0 }.count + 1
+  }
+
+  func list(
+    adventureID: String,
+    limit: Int,
+    offset: Int
+  ) -> AdventureCommentListResponse {
+    let comments = storedCommentsByAdventureID[adventureID] ?? []
+    let items = Array(comments.dropFirst(offset).prefix(limit))
+    return AdventureCommentListResponse(
+      items: items,
+      paging: Paging(limit: limit, offset: offset, returned: items.count)
+    )
+  }
+
+  func create(
+    adventureID: String,
+    body: String
+  ) throws -> AdventureCommentCreateResponse {
+    guard MockFixtures.adventureDetails[adventureID] != nil else {
+      throw FixtureServiceError.notFound
+    }
+
+    let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
+    let item = AdventureCommentItem(
+      id: "fixture-comment-\(nextOrdinal)",
+      body: trimmedBody,
+      createdAt: "2026-04-29T12:00:00Z",
+      updatedAt: "2026-04-29T12:00:00Z",
+      author: AdventureCommentAuthor(
+        handle: MockFixtures.profile.handle,
+        displayName: MockFixtures.profile.displayName,
+        homeCity: MockFixtures.profile.homeCity,
+        homeRegion: MockFixtures.profile.homeRegion,
+        avatar: MockFixtures.profile.avatar
+      )
+    )
+    nextOrdinal += 1
+    storedCommentsByAdventureID[adventureID, default: []].append(item)
+    return AdventureCommentCreateResponse(item: item)
+  }
+}
+
 struct FixtureAdventureService: AdventureService {
   let favoriteStore: FavoriteFixtureStore
+  let commentStore: CommentFixtureStore
 
-  init(favoriteStore: FavoriteFixtureStore = FavoriteFixtureStore.fromEnvironment()) {
+  init(
+    favoriteStore: FavoriteFixtureStore = FavoriteFixtureStore.fromEnvironment()
+  ) {
     self.favoriteStore = favoriteStore
+    self.commentStore = CommentFixtureStore()
+  }
+
+  init(
+    favoriteStore: FavoriteFixtureStore,
+    commentStore: CommentFixtureStore
+  ) {
+    self.favoriteStore = favoriteStore
+    self.commentStore = commentStore
   }
 
   func listFeed(
@@ -294,6 +373,33 @@ struct FixtureAdventureService: AdventureService {
     throw FixtureServiceError.notSupported
   }
 
+  func listComments(
+    adventureID: String,
+    limit: Int,
+    offset: Int
+  ) async throws -> AdventureCommentListResponse {
+    let resolvedID = MockFixtures.resolvedAdventureID(for: adventureID)
+    guard MockFixtures.adventureDetails[resolvedID] != nil else {
+      throw FixtureServiceError.notFound
+    }
+
+    return await commentStore.list(
+      adventureID: resolvedID,
+      limit: limit,
+      offset: offset
+    )
+  }
+
+  func createComment(
+    adventureID: String,
+    body: String
+  ) async throws -> AdventureCommentCreateResponse {
+    try await commentStore.create(
+      adventureID: MockFixtures.resolvedAdventureID(for: adventureID),
+      body: body
+    )
+  }
+
   func createAdventure(
     request: CreateAdventureRequest
   ) async throws -> CreateAdventureResponse {
@@ -391,6 +497,36 @@ struct RemoteAdventureService: AdventureService {
       Self.logger.info("Media cache miss for mediaID=\(id, privacy: .public); fetching from API")
       return try await loadOrJoinNetworkFetch(id: id)
     }
+  }
+
+  func listComments(
+    adventureID: String,
+    limit: Int,
+    offset: Int
+  ) async throws -> AdventureCommentListResponse {
+    try await client.get(
+      pathComponents: ["adventures", adventureID, "comments"],
+      queryItems: [
+        URLQueryItem(name: "limit", value: String(limit)),
+        URLQueryItem(name: "offset", value: String(offset))
+      ],
+      requiresAuth: true
+    )
+  }
+
+  func createComment(
+    adventureID: String,
+    body: String
+  ) async throws -> AdventureCommentCreateResponse {
+    let payload = AdventureCommentCreatePayload(
+      body: body.trimmingCharacters(in: .whitespacesAndNewlines)
+    )
+
+    return try await client.post(
+      pathComponents: ["adventures", adventureID, "comments"],
+      body: payload,
+      requiresAuth: true
+    )
   }
 
   func createAdventure(

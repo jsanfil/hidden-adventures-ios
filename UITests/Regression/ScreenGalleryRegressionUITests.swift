@@ -526,7 +526,7 @@ final class ScreenGalleryRegressionUITests: HiddenAdventuresUITestCase {
         screenshotDir: directory
       )
       self.assertExists(
-        app.buttons["detail.composer"],
+        app.buttons["detail.send"],
         name: "detail-send",
         in: app,
         screenshotDir: directory
