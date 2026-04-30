@@ -25,6 +25,7 @@ struct AdventureDetailView: View {
   @State private var isFavoriteMutationInFlight = false
   @State private var userRating = 0
   @State private var commentText = ""
+  @State private var viewerProfile: ProfileDetail?
   @State private var isLoadingComments = false
   @State private var isLoadingMoreComments = false
   @State private var isSendingComment = false
@@ -85,6 +86,20 @@ struct AdventureDetailView: View {
 
   private var commentPageSize: Int {
     usesFixturePreview ? 20 : 20
+  }
+
+  private var viewerInitials: String {
+    let name = viewerProfile?.displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
+    if let name, name.isEmpty == false {
+      return AdventureDetailScreenModel.initials(for: name)
+    }
+
+    let handle = viewerProfile?.handle.trimmingCharacters(in: .whitespacesAndNewlines)
+    if let handle, handle.isEmpty == false {
+      return AdventureDetailScreenModel.initials(for: handle)
+    }
+
+    return "ME"
   }
 
   var body: some View {
@@ -437,7 +452,7 @@ struct AdventureDetailView: View {
       } else {
         VStack(spacing: 14) {
           ForEach(visibleComments) { comment in
-            CommentBubble(comment: comment)
+            CommentBubble(comment: comment, mediaLoader: adventureService)
               .onAppear {
                 Task {
                   await loadMoreCommentsIfNeeded(currentCommentID: comment.id)
@@ -461,11 +476,16 @@ struct AdventureDetailView: View {
 
   private var commentComposerBar: some View {
     HStack(alignment: .bottom, spacing: 12) {
-      HAAvatarView(
-        initials: "ME",
+      ProfileAvatarView(
+        initials: viewerInitials,
+        mediaID: viewerProfile?.avatar?.id,
+        mediaLoader: adventureService,
         size: 34,
         background: HATheme.Colors.primary,
-        foreground: .white
+        foreground: .white,
+        borderColor: nil,
+        borderWidth: 0,
+        loadingTint: .white
       )
 
       TextField(
@@ -497,7 +517,7 @@ struct AdventureDetailView: View {
           }
         }
         .frame(width: 38, height: 38)
-        .background(HATheme.Colors.accent.opacity(canSendComment ? 1 : 0.5))
+        .background(canSendComment ? HATheme.Colors.primary : HATheme.Colors.accent.opacity(0.5))
         .clipShape(Circle())
       }
       .buttonStyle(.plain)
@@ -561,6 +581,7 @@ struct AdventureDetailView: View {
       do {
         let detail = try await adventureService.getAdventure(id: adventureID).item
         isFavorited = detail.isFavorited
+        viewerProfile = await loadViewerProfile()
         let baseModel = MockFixtures.adventureDetailScreenModel(
           for: adventureID,
           variant: fixtureVariant
@@ -582,9 +603,11 @@ struct AdventureDetailView: View {
       let detail = try await adventureService.getAdventure(id: adventureID).item
       isFavorited = detail.isFavorited
       async let authorProfileTask: ProfileDetail? = loadAuthorProfile(handle: detail.author.handle)
+      async let viewerProfileTask: ProfileDetail? = loadViewerProfile()
       async let mediaTask: [String] = loadMediaIDs(for: detail)
 
       let authorProfile = await authorProfileTask
+      viewerProfile = await viewerProfileTask
       mediaIDs = await mediaTask
       let heroImageNames = AdventurePresentation.imageNames(
         for: adventureID,
@@ -664,6 +687,43 @@ struct AdventureDetailView: View {
     }
   }
 
+  private func loadViewerProfile() async -> ProfileDetail? {
+    do {
+      return try await profileService.getMyProfile().profile
+    } catch {
+      return nil
+    }
+  }
+
+  private func loadCommentAuthorProfiles(
+    for items: [AdventureCommentItem]
+  ) async -> [String: ProfileDetail] {
+    let handlesNeedingProfiles = Array(
+      Set(
+        items.compactMap { item -> String? in
+          guard item.author.avatar == nil else { return nil }
+          return item.author.handle
+        }
+      )
+    )
+
+    return await withTaskGroup(of: (String, ProfileDetail?).self) { group in
+      for handle in handlesNeedingProfiles {
+        group.addTask {
+          (handle, await loadAuthorProfile(handle: handle))
+        }
+      }
+
+      var profiles: [String: ProfileDetail] = [:]
+      for await (handle, profile) in group {
+        if let profile {
+          profiles[handle] = profile
+        }
+      }
+      return profiles
+    }
+  }
+
   @MainActor
   private func loadComments(reset: Bool) async {
     guard let currentScreenModel = screenModel else { return }
@@ -692,7 +752,10 @@ struct AdventureDetailView: View {
         limit: commentPageSize,
         offset: offset
       )
-      let mappedComments = response.items.map(AdventureDetailScreenModel.comment(from:))
+      let authorProfiles = await loadCommentAuthorProfiles(for: response.items)
+      let mappedComments = response.items.map { item in
+        AdventureDetailScreenModel.comment(from: item, profile: authorProfiles[item.author.handle])
+      }
       let latestScreenModel = screenModel ?? currentScreenModel
       let existingComments = reset ? [] : latestScreenModel.comments
       let mergedComments = mergeComments(existingComments, mappedComments)
@@ -730,7 +793,10 @@ struct AdventureDetailView: View {
         adventureID: adventureID,
         body: trimmedCommentText
       )
-      let newComment = AdventureDetailScreenModel.comment(from: response.item)
+      if viewerProfile == nil {
+        viewerProfile = await loadViewerProfile()
+      }
+      let newComment = AdventureDetailScreenModel.comment(from: response.item, profile: viewerProfile)
       let latestScreenModel = screenModel ?? currentScreenModel
       let updatedComments = mergeComments(latestScreenModel.comments, [newComment])
       screenModel = latestScreenModel.replacingComments(
@@ -869,14 +935,20 @@ private struct StylizedMapCard: View {
 
 private struct CommentBubble: View {
   let comment: AdventureDetailScreenModel.Comment
+  let mediaLoader: any AdventureService
 
   var body: some View {
     HStack(alignment: .top, spacing: 12) {
-      HAAvatarView(
+      ProfileAvatarView(
         initials: comment.authorInitials,
+        mediaID: comment.avatarMediaID,
+        mediaLoader: mediaLoader,
         size: 36,
         background: HATheme.Colors.accent.opacity(0.95),
-        foreground: .white
+        foreground: .white,
+        borderColor: nil,
+        borderWidth: 0,
+        loadingTint: .white
       )
 
       VStack(alignment: .leading, spacing: 6) {

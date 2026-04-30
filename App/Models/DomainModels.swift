@@ -126,6 +126,7 @@ struct AdventureCommentAuthor: Codable, Hashable, Sendable {
   let displayName: String?
   let homeCity: String?
   let homeRegion: String?
+  let avatar: MediaReference?
 }
 
 struct MediaReference: Codable, Hashable, Sendable {

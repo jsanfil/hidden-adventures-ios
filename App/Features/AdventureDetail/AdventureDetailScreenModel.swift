@@ -11,8 +11,10 @@ struct AdventureDetailScreenModel: Identifiable, Equatable, Sendable {
 
   struct Comment: Identifiable, Equatable, Sendable {
     let id: String
+    let authorHandle: String
     let authorDisplayName: String
     let authorInitials: String
+    let avatarMediaID: String?
     let relativeTimestamp: String
     let body: String
   }
@@ -134,13 +136,20 @@ extension AdventureDetailScreenModel {
   }
 
   static func comment(from item: AdventureCommentItem) -> Comment {
-    let displayName = item.author.displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
+    comment(from: item, profile: nil)
+  }
+
+  static func comment(from item: AdventureCommentItem, profile: ProfileDetail?) -> Comment {
+    let displayName = profile?.displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
+      ?? item.author.displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
     let resolvedName = displayName?.isEmpty == false ? displayName! : item.author.handle
 
     return Comment(
       id: item.id,
+      authorHandle: item.author.handle,
       authorDisplayName: resolvedName,
       authorInitials: initials(for: resolvedName),
+      avatarMediaID: profile?.avatar?.id ?? item.author.avatar?.id,
       relativeTimestamp: relativeTimestamp(from: item.createdAt),
       body: item.body
     )

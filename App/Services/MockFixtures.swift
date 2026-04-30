@@ -769,7 +769,8 @@ enum MockFixtures {
           handle: "megan",
           displayName: "Megan",
           homeCity: "Eugene",
-          homeRegion: "OR"
+          homeRegion: "OR",
+          avatar: MediaReference(id: "hero-mountain", storageKey: "hero-mountain")
         )
       ),
       AdventureCommentItem(
@@ -781,7 +782,8 @@ enum MockFixtures {
           handle: "megan",
           displayName: "Megan",
           homeCity: "Eugene",
-          homeRegion: "OR"
+          homeRegion: "OR",
+          avatar: MediaReference(id: "hero-mountain", storageKey: "hero-mountain")
         )
       ),
       AdventureCommentItem(
@@ -793,7 +795,8 @@ enum MockFixtures {
           handle: "jack",
           displayName: "Jack",
           homeCity: "Salem",
-          homeRegion: "OR"
+          homeRegion: "OR",
+          avatar: MediaReference(id: "scenic-overlook", storageKey: "scenic-overlook")
         )
       ),
       AdventureCommentItem(
@@ -805,7 +808,8 @@ enum MockFixtures {
           handle: "sarah",
           displayName: "Sarah",
           homeCity: "Bend",
-          homeRegion: "OR"
+          homeRegion: "OR",
+          avatar: MediaReference(id: "trail-forest", storageKey: "trail-forest")
         )
       )
     ] + (5...24).map { index in
@@ -824,7 +828,10 @@ enum MockFixtures {
           handle: "fixture\(index)",
           displayName: "Fixture \(index)",
           homeCity: "Portland",
-          homeRegion: "OR"
+          homeRegion: "OR",
+          avatar: index.isMultiple(of: 2)
+            ? MediaReference(id: "hidden-canyon", storageKey: "hidden-canyon")
+            : nil
         )
       )
     },
@@ -838,7 +845,8 @@ enum MockFixtures {
           handle: "amy",
           displayName: "Amy",
           homeCity: "Salem",
-          homeRegion: "OR"
+          homeRegion: "OR",
+          avatar: MediaReference(id: "swimming-hole", storageKey: "swimming-hole")
         )
       ),
       AdventureCommentItem(
@@ -850,7 +858,8 @@ enum MockFixtures {
           handle: "mike",
           displayName: "Mike",
           homeCity: "Portland",
-          homeRegion: "OR"
+          homeRegion: "OR",
+          avatar: MediaReference(id: "coastal-path", storageKey: "coastal-path")
         )
       )
     ]

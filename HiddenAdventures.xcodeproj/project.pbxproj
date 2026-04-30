@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		076777D4581EFF309C15E7E3 /* ProfileAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71BA45BE7CD68CE2FA68E60 /* ProfileAvatarView.swift */; };
 		0ACE0DF246E6C9113117D9D2 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54CD3A506F4844D6ADED50F /* APIClientTests.swift */; };
+		0D7A4F65C0D147C6B7BA4B8A /* AdventureDetailScreenModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D7A4F64C0D147C6B7BA4B8A /* AdventureDetailScreenModelTests.swift */; };
 		0C6B0CE3F06323A7EED7744E /* MediaDataCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 123ADE336B82C5AEFE389FE9 /* MediaDataCache.swift */; };
 		14BA6C2A8C833314C7A48661 /* CreateDetailsScreenUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 878A93B1461049232AB47961 /* CreateDetailsScreenUITests.swift */; };
 		14D0ACE06F9A6B84A86D42E8 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C53BE638AC1AEE1B0EF53F /* AppRuntime.swift */; };
@@ -91,6 +92,7 @@
 		0AC6E797CF0BA0AEC6CD09C5 /* AppSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSessionTests.swift; sourceTree = "<group>"; };
 		0E40A4A859110E763484291F /* HAComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HAComponents.swift; sourceTree = "<group>"; };
 		0FB2EE7B37F2B8D24184BFC1 /* CategoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryTests.swift; sourceTree = "<group>"; };
+		0D7A4F64C0D147C6B7BA4B8A /* AdventureDetailScreenModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdventureDetailScreenModelTests.swift; sourceTree = "<group>"; };
 		11C94430132D9F87A520CB09 /* CreateAdventureScreenModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateAdventureScreenModel.swift; sourceTree = "<group>"; };
 		123ADE336B82C5AEFE389FE9 /* MediaDataCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDataCache.swift; sourceTree = "<group>"; };
 		1456AD27A70CE746F35FB259 /* DetailLayoutRegressionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailLayoutRegressionUITests.swift; sourceTree = "<group>"; };
@@ -287,6 +289,7 @@
 		87BD4C84611E9C3B3B317DCE /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				0D7A4F64C0D147C6B7BA4B8A /* AdventureDetailScreenModelTests.swift */,
 				BB1D5B2ECB2BDA4F62F95B12 /* AdventureServiceTests.swift */,
 				A54CD3A506F4844D6ADED50F /* APIClientTests.swift */,
 				40DD20342AFA48F59E803B89 /* AppAuthServiceTests.swift */,
@@ -535,6 +538,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0ACE0DF246E6C9113117D9D2 /* APIClientTests.swift in Sources */,
+				0D7A4F65C0D147C6B7BA4B8A /* AdventureDetailScreenModelTests.swift in Sources */,
 				D5807D3BB1478C4255B30064 /* AdventureServiceTests.swift in Sources */,
 				9E6D7FE6A5B6C4039C4BF53C /* AppAuthServiceTests.swift in Sources */,
 				7AEC3634F2409B8FE515F6FA /* AppSessionTests.swift in Sources */,

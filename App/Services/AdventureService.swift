@@ -238,7 +238,8 @@ actor CommentFixtureStore {
         handle: MockFixtures.profile.handle,
         displayName: MockFixtures.profile.displayName,
         homeCity: MockFixtures.profile.homeCity,
-        homeRegion: MockFixtures.profile.homeRegion
+        homeRegion: MockFixtures.profile.homeRegion,
+        avatar: MockFixtures.profile.avatar
       )
     )
     nextOrdinal += 1
