@@ -11,7 +11,7 @@ Keep one entry per feature or slice, and update the notes as verification progre
 | 2026-04-19 | sidekicks-profile-discovery | `main` | `manual QA` | Add/remove sidekicks, sidekicks list, search for users, profile cards for sidekicks | Pass | Sidekicks functionality completely done. |
 | 2026-04-25 | discover-tab | `7cf2fa1dc474ed882903206684d7ba51e3ef5497` | `manual QA` | All features of the Discover tab | Pass with bugs | Several minor cosmetic bugs have been logged. |
 | 2026-04-28 | Favorites | `codex/favorites-ios-slice` | `manual QA` | All Favorites surfaces and the User Profile Shared/Favorites toggle | Pass | Testing complete. |
-| 2026-04-29 | Comments | `working tree` | `local manual QA` | Adventure detail comment load, composer submit, pagination, empty state, and error handling | Blocked | Automated verification passed, but local manual QA could not start because `http://127.0.0.1:3000/api` was unavailable and no local auth token override was present. |
+| 2026-04-29 | Comments | `working tree` | `local manual QA` | Adventure detail comment load, composer submit, pagination, empty state, and error handling | Pass | Local manual QA passed for the integrated comments flow, including loading existing comments, creating a new comment, paging additional comments, and verifying empty and error states. |
 
 ## Recommended Notes
 
