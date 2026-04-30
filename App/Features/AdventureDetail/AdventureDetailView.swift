@@ -25,6 +25,11 @@ struct AdventureDetailView: View {
   @State private var isFavoriteMutationInFlight = false
   @State private var userRating = 0
   @State private var commentText = ""
+  @State private var isLoadingComments = false
+  @State private var isLoadingMoreComments = false
+  @State private var isSendingComment = false
+  @State private var commentsErrorMessage: String?
+  @State private var commentAlertMessage: String?
 
   init(
     adventureID: String,
@@ -62,31 +67,24 @@ struct AdventureDetailView: View {
   }
 
   private var visibleComments: [AdventureDetailScreenModel.Comment] {
-    guard let screenModel else { return [] }
-    if usesFixturePreview == false {
-      return screenModel.comments
-    }
+    screenModel?.comments ?? []
+  }
 
-    if screenModel.comments.isEmpty {
-      return [
-        AdventureDetailScreenModel.Comment(
-          id: "placeholder-comment-1",
-          authorDisplayName: "alex",
-          authorInitials: "AL",
-          relativeTimestamp: "2 days ago",
-          body: "This is a solid layout check comment. The bubble spacing feels good, and the pinned composer still leaves enough room to read the thread."
-        ),
-        AdventureDetailScreenModel.Comment(
-          id: "placeholder-comment-2",
-          authorDisplayName: "maya",
-          authorInitials: "MA",
-          relativeTimestamp: "1 week ago",
-          body: "Second placeholder comment for visual QA. Long enough to wrap onto another line so we can judge the notched bubble shape and timestamp alignment."
-        )
-      ]
-    }
+  private var trimmedCommentText: String {
+    commentText.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
 
-    return screenModel.comments
+  private var canSendComment: Bool {
+    trimmedCommentText.isEmpty == false && isSendingComment == false && screenModel != nil
+  }
+
+  private var hasMoreComments: Bool {
+    guard let screenModel else { return false }
+    return screenModel.comments.count < screenModel.commentsTotalCount
+  }
+
+  private var commentPageSize: Int {
+    usesFixturePreview ? 20 : 20
   }
 
   var body: some View {
@@ -106,6 +104,19 @@ struct AdventureDetailView: View {
     .task {
       guard screenModel == nil, isLoading == false else { return }
       await loadScreen()
+    }
+    .alert(
+      "Hidden Adventures",
+      isPresented: Binding(
+        get: { commentAlertMessage != nil },
+        set: { if $0 == false { commentAlertMessage = nil } }
+      )
+    ) {
+      Button("OK", role: .cancel) {
+        commentAlertMessage = nil
+      }
+    } message: {
+      Text(commentAlertMessage ?? "")
     }
     .onReceive(NotificationCenter.default.publisher(for: FavoriteStateChange.notificationName)) { notification in
       guard let change = FavoriteStateChange(notification: notification) else { return }
@@ -410,16 +421,35 @@ struct AdventureDetailView: View {
       }
 
       if visibleComments.isEmpty {
-        UnsupportedSectionCard(
-          systemImage: "ellipsis.message",
-          message: commentsCount == 0
-            ? "Comments will show up here once this API is available in a later slice."
-            : "This adventure has comments, but the Slice 1 API does not expose the thread yet."
-        )
+        if isLoadingComments {
+          ProgressView("Loading comments...")
+            .tint(HATheme.Colors.primary)
+            .font(.system(size: 14, weight: .medium))
+            .accessibilityIdentifier("detail.comments.loading")
+        } else if let commentsErrorMessage {
+          CommentsErrorCard(
+            message: commentsErrorMessage,
+            retry: { Task { await loadComments(reset: true) } }
+          )
+        } else {
+          EmptyCommentsCard()
+        }
       } else {
         VStack(spacing: 14) {
           ForEach(visibleComments) { comment in
             CommentBubble(comment: comment)
+              .onAppear {
+                Task {
+                  await loadMoreCommentsIfNeeded(currentCommentID: comment.id)
+                }
+              }
+          }
+
+          if isLoadingMoreComments {
+            ProgressView("Loading more comments...")
+              .tint(HATheme.Colors.primary)
+              .font(.system(size: 13, weight: .medium))
+              .accessibilityIdentifier("detail.comments.loadingMore")
           }
         }
       }
@@ -439,7 +469,7 @@ struct AdventureDetailView: View {
       )
 
       TextField(
-        usesFixturePreview ? "Add a comment..." : "Commenting is coming in a later slice",
+        "Add a comment...",
         text: $commentText,
         axis: .vertical
       )
@@ -452,19 +482,26 @@ struct AdventureDetailView: View {
         .padding(.vertical, 11)
         .background(HATheme.Colors.muted)
         .clipShape(Capsule(style: .continuous))
-        .disabled(usesFixturePreview == false)
+        .disabled(isSendingComment)
         .accessibilityIdentifier("detail.composer")
 
       Button(action: sendComment) {
-        Image(systemName: "paperplane")
-          .font(.system(size: 16, weight: .semibold))
-          .foregroundStyle(.white)
-          .frame(width: 38, height: 38)
-          .background(HATheme.Colors.accent.opacity(commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1))
-          .clipShape(Circle())
+        Group {
+          if isSendingComment {
+            ProgressView()
+              .tint(.white)
+          } else {
+            Image(systemName: "paperplane")
+              .font(.system(size: 16, weight: .semibold))
+              .foregroundStyle(.white)
+          }
+        }
+        .frame(width: 38, height: 38)
+        .background(HATheme.Colors.accent.opacity(canSendComment ? 1 : 0.5))
+        .clipShape(Circle())
       }
       .buttonStyle(.plain)
-      .disabled(usesFixturePreview == false || commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+      .disabled(canSendComment == false)
       .accessibilityIdentifier("detail.send")
     }
     .padding(.horizontal, 16)
@@ -475,7 +512,6 @@ struct AdventureDetailView: View {
       Divider()
         .overlay(HATheme.Colors.border)
     }
-    .accessibilityIdentifier("detail.composer")
   }
 
   private var loadingState: some View {
@@ -522,13 +558,23 @@ struct AdventureDetailView: View {
     defer { isLoading = false }
 
     if runtimeMode == .fixturePreview {
-      if let detail = try? await adventureService.getAdventure(id: adventureID).item {
+      do {
+        let detail = try await adventureService.getAdventure(id: adventureID).item
         isFavorited = detail.isFavorited
+        let baseModel = MockFixtures.adventureDetailScreenModel(
+          for: adventureID,
+          variant: fixtureVariant
+        )
+        let totalCount = fixtureVariant == .noComments
+          ? 0
+          : MockFixtures.detailCommentsByAdventureID[MockFixtures.resolvedAdventureID(for: adventureID)]?.count ?? 0
+        screenModel = baseModel.replacingComments([], totalCount: totalCount)
+        if totalCount > 0 {
+          await loadComments(reset: true)
+        }
+      } catch {
+        didFailToLoad = true
       }
-      screenModel = MockFixtures.adventureDetailScreenModel(
-        for: adventureID,
-        variant: fixtureVariant
-      )
       return
     }
 
@@ -548,8 +594,13 @@ struct AdventureDetailView: View {
         detail: detail,
         heroImageNames: heroImageNames,
         comments: [],
+        commentsTotalCount: detail.stats.commentCount,
         authorProfile: authorProfile
       )
+
+      if detail.stats.commentCount > 0 {
+        await loadComments(reset: true)
+      }
     } catch {
       didFailToLoad = true
     }
@@ -569,10 +620,14 @@ struct AdventureDetailView: View {
           try await adventureService.unfavoriteAdventure(id: adventureID)
         }
       } catch {
-        isFavorited = previousState
+        await MainActor.run {
+          isFavorited = previousState
+        }
       }
 
-      isFavoriteMutationInFlight = false
+      await MainActor.run {
+        isFavoriteMutationInFlight = false
+      }
     }
   }
 
@@ -588,15 +643,9 @@ struct AdventureDetailView: View {
   }
 
   private func sendComment() {
-    guard usesFixturePreview else {
-      return
+    Task {
+      await submitComment()
     }
-
-    guard commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
-      return
-    }
-
-    commentText = ""
   }
 
   private func loadMediaIDs(for detail: AdventureDetail) async -> [String] {
@@ -613,6 +662,103 @@ struct AdventureDetailView: View {
     } catch {
       return nil
     }
+  }
+
+  @MainActor
+  private func loadComments(reset: Bool) async {
+    guard let currentScreenModel = screenModel else { return }
+    guard isLoadingComments == false, isLoadingMoreComments == false else { return }
+
+    let offset = reset ? 0 : currentScreenModel.comments.count
+    if reset == false, offset >= currentScreenModel.commentsTotalCount {
+      return
+    }
+
+    if reset {
+      isLoadingComments = true
+      commentsErrorMessage = nil
+    } else {
+      isLoadingMoreComments = true
+    }
+
+    defer {
+      isLoadingComments = false
+      isLoadingMoreComments = false
+    }
+
+    do {
+      let response = try await adventureService.listComments(
+        adventureID: adventureID,
+        limit: commentPageSize,
+        offset: offset
+      )
+      let mappedComments = response.items.map(AdventureDetailScreenModel.comment(from:))
+      let latestScreenModel = screenModel ?? currentScreenModel
+      let existingComments = reset ? [] : latestScreenModel.comments
+      let mergedComments = mergeComments(existingComments, mappedComments)
+      let totalCount = response.paging.returned == 0
+        ? mergedComments.count
+        : max(latestScreenModel.commentsTotalCount, mergedComments.count)
+      screenModel = latestScreenModel.replacingComments(mergedComments, totalCount: totalCount)
+    } catch {
+      if reset {
+        commentsErrorMessage = "Unable to load comments right now."
+      } else {
+        commentAlertMessage = "Unable to load more comments right now."
+      }
+    }
+  }
+
+  @MainActor
+  private func loadMoreCommentsIfNeeded(currentCommentID: String) async {
+    guard let screenModel else { return }
+    guard hasMoreComments else { return }
+    guard screenModel.comments.last?.id == currentCommentID else { return }
+    await loadComments(reset: false)
+  }
+
+  @MainActor
+  private func submitComment() async {
+    guard canSendComment else { return }
+    guard let currentScreenModel = screenModel else { return }
+
+    isSendingComment = true
+    defer { isSendingComment = false }
+
+    do {
+      let response = try await adventureService.createComment(
+        adventureID: adventureID,
+        body: trimmedCommentText
+      )
+      let newComment = AdventureDetailScreenModel.comment(from: response.item)
+      let latestScreenModel = screenModel ?? currentScreenModel
+      let updatedComments = mergeComments(latestScreenModel.comments, [newComment])
+      screenModel = latestScreenModel.replacingComments(
+        updatedComments,
+        totalCount: max(latestScreenModel.commentsTotalCount + 1, updatedComments.count)
+      )
+      commentText = ""
+      commentsErrorMessage = nil
+    } catch let error as APIError {
+      commentAlertMessage = error.localizedDescription
+    } catch {
+      commentAlertMessage = "Unable to post your comment right now."
+    }
+  }
+
+  private func mergeComments(
+    _ existing: [AdventureDetailScreenModel.Comment],
+    _ incoming: [AdventureDetailScreenModel.Comment]
+  ) -> [AdventureDetailScreenModel.Comment] {
+    var seen = Set(existing.map(\.id))
+    var merged = existing
+
+    for comment in incoming where seen.contains(comment.id) == false {
+      merged.append(comment)
+      seen.insert(comment.id)
+    }
+
+    return merged
   }
 }
 
@@ -762,6 +908,7 @@ private struct CommentBubble: View {
         topTrailingRadius: 20
       )
     )
+    .accessibilityIdentifier("detail.comment.\(comment.id)")
   }
 }
 
@@ -786,6 +933,36 @@ private struct UnsupportedSectionCard: View {
     .padding(14)
     .background(HATheme.Colors.muted)
     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+  }
+}
+
+private struct EmptyCommentsCard: View {
+  var body: some View {
+    UnsupportedSectionCard(
+      systemImage: "ellipsis.message",
+      message: "No comments yet. Be the first!"
+    )
+    .accessibilityIdentifier("detail.comments.empty")
+  }
+}
+
+private struct CommentsErrorCard: View {
+  let message: String
+  let retry: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      UnsupportedSectionCard(
+        systemImage: "exclamationmark.bubble",
+        message: message
+      )
+
+      Button("Try Again", action: retry)
+        .buttonStyle(.plain)
+        .font(.system(size: 14, weight: .semibold))
+        .foregroundStyle(HATheme.Colors.primary)
+    }
+    .accessibilityIdentifier("detail.comments.error")
   }
 }
 

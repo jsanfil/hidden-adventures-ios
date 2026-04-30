@@ -168,6 +168,158 @@ final class AdventureServiceTests: XCTestCase {
     try await service.unfavoriteAdventure(id: "adventure-1")
   }
 
+  func testListCommentsGetsPagedCommentsForAdventure() async throws {
+    MockAdventureURLProtocol.requestHandler = { request in
+      XCTAssertEqual(request.httpMethod, "GET")
+      XCTAssertEqual(request.url?.path, "/api/adventures/adventure-1/comments")
+      XCTAssertEqual(
+        request.url?.query,
+        "limit=20&offset=40"
+      )
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 200,
+        httpVersion: nil,
+        headerFields: ["Content-Type": "application/json"]
+      )!
+
+      return (
+        response,
+        Data(
+          #"""
+          {
+            "items": [
+              {
+                "id": "comment-1",
+                "body": "Still one of the best swims in Oregon.",
+                "createdAt": "2026-04-28T18:00:00.000Z",
+                "updatedAt": "2026-04-28T18:00:00.000Z",
+                "author": {
+                  "handle": "mayaexplores",
+                  "displayName": "Maya Reyes",
+                  "homeCity": "Portland",
+                  "homeRegion": "OR"
+                }
+              }
+            ],
+            "paging": {
+              "limit": 20,
+              "offset": 40,
+              "returned": 1
+            }
+          }
+          """#.utf8
+        )
+      )
+    }
+
+    let service = makeService(cache: makeCache())
+    let response = try await service.listComments(
+      adventureID: "adventure-1",
+      limit: 20,
+      offset: 40
+    )
+
+    XCTAssertEqual(response.items.count, 1)
+    XCTAssertEqual(response.items.first?.id, "comment-1")
+    XCTAssertEqual(response.items.first?.author.displayName, "Maya Reyes")
+    XCTAssertEqual(response.paging.limit, 20)
+    XCTAssertEqual(response.paging.offset, 40)
+    XCTAssertEqual(response.paging.returned, 1)
+  }
+
+  func testCreateCommentPostsTrimmedBodyAndDecodesResponse() async throws {
+    final class RequestBox {
+      var body: Data?
+    }
+
+    let requestBox = RequestBox()
+
+    MockAdventureURLProtocol.requestHandler = { request in
+      XCTAssertEqual(request.httpMethod, "POST")
+      XCTAssertEqual(request.url?.path, "/api/adventures/adventure-1/comments")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
+      requestBox.body = request.bodyData
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 201,
+        httpVersion: nil,
+        headerFields: ["Content-Type": "application/json"]
+      )!
+
+      return (
+        response,
+        Data(
+          #"""
+          {
+            "item": {
+              "id": "comment-2",
+              "body": "Fresh trail beta.",
+              "createdAt": "2026-04-29T12:00:00.000Z",
+              "updatedAt": "2026-04-29T12:00:00.000Z",
+              "author": {
+                "handle": "jordan",
+                "displayName": "Jordan",
+                "homeCity": "Portland",
+                "homeRegion": "OR"
+              }
+            }
+          }
+          """#.utf8
+        )
+      )
+    }
+
+    let service = makeService(cache: makeCache())
+    let response = try await service.createComment(
+      adventureID: "adventure-1",
+      body: "  Fresh trail beta.  "
+    )
+
+    let requestBody = try XCTUnwrap(requestBox.body)
+    let payload = try JSONDecoder().decode(CommentCreatePayloadAssertion.self, from: requestBody)
+
+    XCTAssertEqual(payload.body, "Fresh trail beta.")
+    XCTAssertEqual(response.item.id, "comment-2")
+    XCTAssertEqual(response.item.author.handle, "jordan")
+  }
+
+  func testCreateCommentPropagatesServerError() async throws {
+    MockAdventureURLProtocol.requestHandler = { request in
+      XCTAssertEqual(request.httpMethod, "POST")
+      XCTAssertEqual(request.url?.path, "/api/adventures/adventure-1/comments")
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 403,
+        httpVersion: nil,
+        headerFields: ["Content-Type": "application/json"]
+      )!
+
+      return (
+        response,
+        Data(#"{"error":"Adventure comments require a completed local account."}"#.utf8)
+      )
+    }
+
+    let service = makeService(cache: makeCache())
+
+    do {
+      _ = try await service.createComment(adventureID: "adventure-1", body: "Hello")
+      XCTFail("Expected createComment to throw")
+    } catch let error as APIError {
+      guard case .server(let statusCode, let message) = error else {
+        return XCTFail("Expected server error, got \(error)")
+      }
+
+      XCTAssertEqual(statusCode, 403)
+      XCTAssertEqual(message, "Adventure comments require a completed local account.")
+    }
+  }
+
   func testFixtureFavoriteStateUpdatesFeedAndDetail() async throws {
     let store = FavoriteFixtureStore(initialFavoriteIDs: [])
     let service = FixtureAdventureService(favoriteStore: store)
@@ -186,6 +338,33 @@ final class AdventureServiceTests: XCTestCase {
 
     let unfavoriteDetail = try await service.getAdventure(id: MockFixtures.bluePoolID).item
     XCTAssertEqual(unfavoriteDetail.isFavorited, false)
+  }
+
+  func testFixtureCommentsSupportPagingAndCreate() async throws {
+    let service = FixtureAdventureService()
+
+    let initial = try await service.listComments(
+      adventureID: MockFixtures.bluePoolID,
+      limit: 2,
+      offset: 0
+    )
+    XCTAssertEqual(initial.items.count, 2)
+    XCTAssertEqual(initial.paging.returned, 2)
+
+    let created = try await service.createComment(
+      adventureID: MockFixtures.bluePoolID,
+      body: "  Worth packing extra layers.  "
+    )
+    XCTAssertEqual(created.item.body, "Worth packing extra layers.")
+    XCTAssertEqual(created.item.author.handle, MockFixtures.profile.handle)
+
+    let refreshed = try await service.listComments(
+      adventureID: MockFixtures.bluePoolID,
+      limit: 40,
+      offset: 0
+    )
+    XCTAssertEqual(refreshed.items.last?.id, created.item.id)
+    XCTAssertEqual(refreshed.items.last?.body, "Worth packing extra layers.")
   }
 
   func testLoadMediaDataUsesFreshCacheWithoutRefetching() async throws {
@@ -458,6 +637,10 @@ final class AdventureServiceTests: XCTestCase {
 
 private struct CreateAdventurePayloadAssertion: Decodable {
   let visibility: String
+}
+
+private struct CommentCreatePayloadAssertion: Decodable {
+  let body: String
 }
 
 private extension URLRequest {
