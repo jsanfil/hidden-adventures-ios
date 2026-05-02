@@ -12,6 +12,8 @@
 		0D7A4F65C0D147C6B7BA4B8A /* AdventureDetailScreenModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D7A4F64C0D147C6B7BA4B8A /* AdventureDetailScreenModelTests.swift */; };
 		0F0F9D8631B54BEF95A041A1 /* AdventureSharePayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F0F9D8531B54BEF95A041A1 /* AdventureSharePayloadTests.swift */; };
 		1B827E8105304F10B5A37346 /* InviteFriendsCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B827E8005304F10B5A37346 /* InviteFriendsCopyTests.swift */; };
+		1D2F1FCD192D47E98F0F889A /* InviteFriendsScreenModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2F1FCC192D47E98F0F889A /* InviteFriendsScreenModelTests.swift */; };
+		1D2F1FCE192D47E98F0F889A /* InviteFriendsScreenModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2F1FCB192D47E98F0F889A /* InviteFriendsScreenModel.swift */; };
 		0C6B0CE3F06323A7EED7744E /* MediaDataCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 123ADE336B82C5AEFE389FE9 /* MediaDataCache.swift */; };
 		14BA6C2A8C833314C7A48661 /* CreateDetailsScreenUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 878A93B1461049232AB47961 /* CreateDetailsScreenUITests.swift */; };
 		14D0ACE06F9A6B84A86D42E8 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C53BE638AC1AEE1B0EF53F /* AppRuntime.swift */; };
@@ -105,6 +107,8 @@
 		1E072F3A3C72543FDC9598B6 /* SidekickServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidekickServiceTests.swift; sourceTree = "<group>"; };
 		1FCDFA427313D13A957A8283 /* WalkthroughFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkthroughFlowUITests.swift; sourceTree = "<group>"; };
 		1B827E8005304F10B5A37346 /* InviteFriendsCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteFriendsCopyTests.swift; sourceTree = "<group>"; };
+		1D2F1FCB192D47E98F0F889A /* InviteFriendsScreenModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteFriendsScreenModel.swift; sourceTree = "<group>"; };
+		1D2F1FCC192D47E98F0F889A /* InviteFriendsScreenModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteFriendsScreenModelTests.swift; sourceTree = "<group>"; };
 		24E31B86A6D94F6F8E66C9F3 /* AdventureSharePayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdventureSharePayload.swift; sourceTree = "<group>"; };
 		2B33EC6D97B65EF29FDCB70C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		2AC2F596D70D4530917DA88F /* InviteFriendsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteFriendsModels.swift; sourceTree = "<group>"; };
@@ -239,6 +243,7 @@
 			children = (
 				24E31B86A6D94F6F8E66C9F3 /* AdventureSharePayload.swift */,
 				2AC2F596D70D4530917DA88F /* InviteFriendsModels.swift */,
+				1D2F1FCB192D47E98F0F889A /* InviteFriendsScreenModel.swift */,
 				68B7F37A47244389A2C7A0D5 /* InviteFriendsService.swift */,
 			);
 			path = Sharing;
@@ -313,6 +318,7 @@
 				0D7A4F64C0D147C6B7BA4B8A /* AdventureDetailScreenModelTests.swift */,
 				0F0F9D8531B54BEF95A041A1 /* AdventureSharePayloadTests.swift */,
 				1B827E8005304F10B5A37346 /* InviteFriendsCopyTests.swift */,
+				1D2F1FCC192D47E98F0F889A /* InviteFriendsScreenModelTests.swift */,
 				BB1D5B2ECB2BDA4F62F95B12 /* AdventureServiceTests.swift */,
 				A54CD3A506F4844D6ADED50F /* APIClientTests.swift */,
 				40DD20342AFA48F59E803B89 /* AppAuthServiceTests.swift */,
@@ -564,6 +570,7 @@
 				0D7A4F65C0D147C6B7BA4B8A /* AdventureDetailScreenModelTests.swift in Sources */,
 				0F0F9D8631B54BEF95A041A1 /* AdventureSharePayloadTests.swift in Sources */,
 				1B827E8105304F10B5A37346 /* InviteFriendsCopyTests.swift in Sources */,
+				1D2F1FCD192D47E98F0F889A /* InviteFriendsScreenModelTests.swift in Sources */,
 				D5807D3BB1478C4255B30064 /* AdventureServiceTests.swift in Sources */,
 				9E6D7FE6A5B6C4039C4BF53C /* AppAuthServiceTests.swift in Sources */,
 				7AEC3634F2409B8FE515F6FA /* AppSessionTests.swift in Sources */,
@@ -605,6 +612,7 @@
 				AF5F56F417AC628A475C211F /* HATheme.swift in Sources */,
 				D1D79C7D9E1EBDA25A8F421F /* HiddenAdventuresApp.swift in Sources */,
 				2AC2F597D70D4530917DA88F /* InviteFriendsModels.swift in Sources */,
+				1D2F1FCE192D47E98F0F889A /* InviteFriendsScreenModel.swift in Sources */,
 				68B7F37B47244389A2C7A0D5 /* InviteFriendsService.swift in Sources */,
 				7C1BD75A72A2384DDDF4B5E5 /* MapExploreView.swift in Sources */,
 				0C6B0CE3F06323A7EED7744E /* MediaDataCache.swift in Sources */,

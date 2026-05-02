@@ -14,7 +14,7 @@ struct InviteFriendContact: Identifiable, Equatable, Sendable {
 }
 
 enum InviteComposerResult: Equatable, Sendable {
-  case sent
+  case sent(Int)
   case cancelled
   case failed
 }
