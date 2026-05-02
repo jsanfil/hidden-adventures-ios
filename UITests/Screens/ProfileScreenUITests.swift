@@ -3,14 +3,17 @@ import XCTest
 final class ProfileScreenUITests: HiddenAdventuresUITestCase {
   func testInviteFriends_authorizedStateSupportsSearchAndSelection() throws {
     let sarahContactID = "contact-sarah"
+    let mikeContactID = "contact-mike"
     let app = launchApp(
       startScreen: "explore-profile",
       extraEnv: ["UITEST_INVITE_PERMISSION": "authorized"]
     )
 
     app.buttons["profile.inviteFriends"].tap()
+    XCTAssertTrue(app.buttons["inviteFriends.contact.\(mikeContactID)"].waitForExistence(timeout: 2))
     app.textFields["inviteFriends.search"].tap()
     app.textFields["inviteFriends.search"].typeText("Sarah")
+    XCTAssertFalse(app.buttons["inviteFriends.contact.\(mikeContactID)"].exists)
     app.buttons["inviteFriends.contact.\(sarahContactID)"].tap()
 
     XCTAssertTrue(app.buttons["inviteFriends.cta"].isEnabled)
