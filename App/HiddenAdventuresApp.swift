@@ -80,6 +80,10 @@ struct HiddenAdventuresApp: App {
     return RemoteDiscoverService(client: apiClient)
   }
 
+  private var inviteFriendsService: InviteFriendsService {
+    FixtureInviteFriendsService()
+  }
+
   private var backendAuthService: AuthService? {
     guard runtime.usesFixturePreview == false else {
       return nil
