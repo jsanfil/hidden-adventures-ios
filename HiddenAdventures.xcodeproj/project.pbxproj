@@ -56,6 +56,7 @@
 		9E295AA47B93077BE647C1E1 /* DiscoverService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B24D6AC2313925D6894F3C4 /* DiscoverService.swift */; };
 		9E6D7FE6A5B6C4039C4BF53C /* AppAuthServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DD20342AFA48F59E803B89 /* AppAuthServiceTests.swift */; };
 		A8C4B0E9F16AC84BEC0B95E9 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEBD234077F99604B20D3700 /* FeedView.swift */; };
+		AF478FAC83DFE9FF4BE6BD75 /* AdventureShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08DA23BBFBCC8C3CAEB2029 /* AdventureShareSheet.swift */; };
 		AF5F56F417AC628A475C211F /* HATheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C28907C1C2F454066D9FD614 /* HATheme.swift */; };
 		B1DF9589204BED1CC96452D9 /* DiscoverScreenModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 962E713AC4D4E4378D79E037 /* DiscoverScreenModel.swift */; };
 		B6D4E78A2B750DF065BCF686 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43A73CAE79695A47AF0A128 /* ProfileView.swift */; };
@@ -156,6 +157,7 @@
 		C28907C1C2F454066D9FD614 /* HATheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HATheme.swift; sourceTree = "<group>"; };
 		CDF7EF28E13F858A8A323023 /* AdventureDetailScreenModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdventureDetailScreenModel.swift; sourceTree = "<group>"; };
 		D03C9F255C1253A3E7CEBA87 /* WelcomeScreenUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeScreenUITests.swift; sourceTree = "<group>"; };
+		D08DA23BBFBCC8C3CAEB2029 /* AdventureShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdventureShareSheet.swift; sourceTree = "<group>"; };
 		D4C53BE638AC1AEE1B0EF53F /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
 		D7D16887C4FBEEAD1AAC53C6 /* VerificationCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerificationCodeView.swift; sourceTree = "<group>"; };
 		DEBD234077F99604B20D3700 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
@@ -278,6 +280,7 @@
 			isa = PBXGroup;
 			children = (
 				33882C14E42E8DC1A9279993 /* AdventureSharePayload.swift */,
+				D08DA23BBFBCC8C3CAEB2029 /* AdventureShareSheet.swift */,
 				E965F714A809F4CA1BC3DA5A /* InviteFriendsMessageComposer.swift */,
 				F8DCA5535F25CCCB42681B92 /* InviteFriendsModels.swift */,
 				09A08A1A6CD2D9A3A2FA561C /* InviteFriendsScreenModel.swift */,
@@ -598,6 +601,7 @@
 				71B6DE7A2A03523127BDDA8C /* AdventurePresentation.swift in Sources */,
 				F00FAC9FEA692263063DE968 /* AdventureService.swift in Sources */,
 				3CFD28DFCB6A6981AD23B916 /* AdventureSharePayload.swift in Sources */,
+				AF478FAC83DFE9FF4BE6BD75 /* AdventureShareSheet.swift in Sources */,
 				8CDF375376256283378E729E /* AppAuthService.swift in Sources */,
 				1A9F0B5216EB828C06527DD6 /* AppCoordinator.swift in Sources */,
 				847A62A8477527C62F54C9EA /* AppLogger.swift in Sources */,

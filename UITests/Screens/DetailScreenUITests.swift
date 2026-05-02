@@ -1,6 +1,26 @@
 import XCTest
 
 final class DetailScreenUITests: HiddenAdventuresUITestCase {
+  func testDetail_publicAdventureKeepsShareEnabled() throws {
+    let app = launchApp(
+      startScreen: "detail",
+      extraEnv: ["UITEST_DETAIL_ID": eagleID]
+    )
+
+    XCTAssertTrue(app.buttons["detail.share"].isEnabled)
+  }
+
+  func testDetail_nonPublicAdventureShowsShareExplanation() throws {
+    let app = launchApp(
+      startScreen: "detail",
+      extraEnv: ["UITEST_DETAIL_ID": bluePoolID]
+    )
+
+    app.buttons["detail.share"].tap()
+
+    XCTAssertTrue(app.staticTexts["Only public adventures can be shared outside Hidden Adventures."].waitForExistence(timeout: 2))
+  }
+
   func testDetail_rendersCoreChrome() throws {
     let screenshotDir = try preparedScreenshotDirectory(named: "detail-smoke")
     let app = launchApp(

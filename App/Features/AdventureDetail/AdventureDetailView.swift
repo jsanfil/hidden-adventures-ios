@@ -17,6 +17,7 @@ struct AdventureDetailView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.openURL) private var openURL
 
+  @State private var currentDetail: AdventureDetail?
   @State private var screenModel: AdventureDetailScreenModel?
   @State private var mediaIDs: [String] = []
   @State private var isLoading = false
@@ -33,6 +34,8 @@ struct AdventureDetailView: View {
   @State private var commentsErrorMessage: String?
   @State private var commentAlertMessage: String?
   @State private var ratingErrorMessage: String?
+  @State private var sharePayload: AdventureSharePayload?
+  @State private var shareUnavailableMessage: String?
 
   init(
     adventureID: String,
@@ -117,6 +120,14 @@ struct AdventureDetailView: View {
     .safeAreaInset(edge: .bottom, spacing: 0) {
       commentComposerBar
     }
+    .sheet(isPresented: Binding(
+      get: { sharePayload != nil },
+      set: { if $0 == false { sharePayload = nil } }
+    )) {
+      if let sharePayload {
+        AdventureShareSheet(items: [sharePayload.message, sharePayload.url])
+      }
+    }
     .toolbar(.hidden, for: .navigationBar)
     .task {
       guard screenModel == nil, isLoading == false else { return }
@@ -134,6 +145,20 @@ struct AdventureDetailView: View {
       }
     } message: {
       Text(commentAlertMessage ?? "")
+    }
+    .alert(
+      "Sharing unavailable",
+      isPresented: Binding(
+        get: { shareUnavailableMessage != nil },
+        set: { if $0 == false { shareUnavailableMessage = nil } }
+      )
+    ) {
+      Button("OK", role: .cancel) {
+        shareUnavailableMessage = nil
+      }
+    } message: {
+      Text(shareUnavailableMessage ?? "")
+        .accessibilityIdentifier("detail.shareUnavailableMessage")
     }
     .onReceive(NotificationCenter.default.publisher(for: FavoriteStateChange.notificationName)) { notification in
       guard let change = FavoriteStateChange(notification: notification) else { return }
@@ -207,12 +232,12 @@ struct AdventureDetailView: View {
       Spacer()
 
       HStack(spacing: 10) {
-        Button(action: {}) {
+        Button(action: handleShareTapped) {
           NavigationCircleButton(systemImage: "square.and.arrow.up")
         }
         .buttonStyle(.plain)
-        .disabled(usesFixturePreview == false)
-        .opacity(usesFixturePreview ? 1 : 0.7)
+        .disabled(currentDetail == nil)
+        .opacity(currentDetail == nil ? 0.7 : 1)
         .accessibilityIdentifier("detail.share")
 
         Button(action: toggleFavorite) {
@@ -596,6 +621,7 @@ struct AdventureDetailView: View {
     if runtimeMode == .fixturePreview {
       do {
         let detail = try await adventureService.getAdventure(id: adventureID).item
+        currentDetail = detail
         isFavorited = detail.isFavorited
         userRating = detail.viewerRating ?? 0
         ratingErrorMessage = nil
@@ -624,6 +650,7 @@ struct AdventureDetailView: View {
 
     do {
       let detail = try await adventureService.getAdventure(id: adventureID).item
+      currentDetail = detail
       isFavorited = detail.isFavorited
       userRating = detail.viewerRating ?? 0
       ratingErrorMessage = nil
@@ -688,6 +715,20 @@ struct AdventureDetailView: View {
     }
 
     openURL(url)
+  }
+
+  private func handleShareTapped() {
+    guard let currentDetail else { return }
+
+    if let payload = AdventureSharePayload.make(
+      detail: currentDetail,
+      baseURL: URL(string: "https://hiddenadventures.app")!
+    ) {
+      sharePayload = payload
+      return
+    }
+
+    shareUnavailableMessage = AdventureSharePayload.unavailableMessage(for: currentDetail.visibility)
   }
 
   private func sendComment() {
