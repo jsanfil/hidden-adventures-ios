@@ -33,6 +33,10 @@ private struct AdventureCommentCreatePayload: Encodable {
   let body: String
 }
 
+private struct AdventureRatingUpsertPayload: Encodable {
+  let score: Int
+}
+
 private struct AdventureUploadAllocationRequest: Encodable {
   struct Item: Encodable {
     let clientId: String
@@ -107,6 +111,15 @@ protocol AdventureService {
     body: String
   ) async throws -> AdventureCommentCreateResponse
 
+  func rateAdventure(
+    id: String,
+    score: Int
+  ) async throws -> AdventureDetailResponse
+
+  func clearRating(
+    id: String
+  ) async throws -> AdventureDetailResponse
+
   func createAdventure(
     request: CreateAdventureRequest
   ) async throws -> CreateAdventureResponse
@@ -143,6 +156,63 @@ struct FavoriteStateChange: Sendable {
         adventureIDKey: adventureID,
         isFavoritedKey: isFavorited
       ]
+    )
+  }
+}
+
+struct RatingStateChange: Sendable, Equatable {
+  static let notificationName = Notification.Name("HiddenAdventuresRatingStateDidChange")
+  static let adventureIDKey = "adventureID"
+  static let averageRatingKey = "averageRating"
+  static let ratingCountKey = "ratingCount"
+  static let viewerRatingKey = "viewerRating"
+
+  let adventureID: String
+  let averageRating: Double
+  let ratingCount: Int
+  let viewerRating: Int?
+
+  init(
+    adventureID: String,
+    averageRating: Double,
+    ratingCount: Int,
+    viewerRating: Int?
+  ) {
+    self.adventureID = adventureID
+    self.averageRating = averageRating
+    self.ratingCount = ratingCount
+    self.viewerRating = viewerRating
+  }
+
+  init?(notification: Notification) {
+    guard
+      let adventureID = notification.userInfo?[Self.adventureIDKey] as? String,
+      let averageRating = notification.userInfo?[Self.averageRatingKey] as? Double,
+      let ratingCount = notification.userInfo?[Self.ratingCountKey] as? Int
+    else {
+      return nil
+    }
+
+    self.init(
+      adventureID: adventureID,
+      averageRating: averageRating,
+      ratingCount: ratingCount,
+      viewerRating: notification.userInfo?[Self.viewerRatingKey] as? Int
+    )
+  }
+
+  static func post(detail: AdventureDetail) {
+    var userInfo: [String: Any] = [
+      adventureIDKey: detail.id,
+      averageRatingKey: detail.stats.averageRating,
+      ratingCountKey: detail.stats.ratingCount
+    ]
+    userInfo[viewerRatingKey] = detail.viewerRating
+
+    NotificationCenter.default.post(
+      name: notificationName,
+      object: nil,
+      userInfo: userInfo
     )
   }
 }
@@ -248,23 +318,56 @@ actor CommentFixtureStore {
   }
 }
 
+actor RatingFixtureStore {
+  private var storedRatingsByAdventureID: [String: Int]
+
+  init(initialRatingsByAdventureID: [String: Int] = [:]) {
+    self.storedRatingsByAdventureID = initialRatingsByAdventureID
+  }
+
+  func rating(for adventureID: String) -> Int? {
+    storedRatingsByAdventureID[adventureID]
+  }
+
+  func rate(adventureID: String, score: Int) throws -> Int {
+    guard MockFixtures.adventureDetails[adventureID] != nil else {
+      throw FixtureServiceError.notFound
+    }
+
+    storedRatingsByAdventureID[adventureID] = score
+    return score
+  }
+
+  func clear(adventureID: String) throws {
+    guard MockFixtures.adventureDetails[adventureID] != nil else {
+      throw FixtureServiceError.notFound
+    }
+
+    storedRatingsByAdventureID.removeValue(forKey: adventureID)
+  }
+}
+
 struct FixtureAdventureService: AdventureService {
   let favoriteStore: FavoriteFixtureStore
   let commentStore: CommentFixtureStore
+  let ratingStore: RatingFixtureStore
 
   init(
     favoriteStore: FavoriteFixtureStore = FavoriteFixtureStore.fromEnvironment()
   ) {
     self.favoriteStore = favoriteStore
     self.commentStore = CommentFixtureStore()
+    self.ratingStore = RatingFixtureStore()
   }
 
   init(
     favoriteStore: FavoriteFixtureStore,
-    commentStore: CommentFixtureStore
+    commentStore: CommentFixtureStore,
+    ratingStore: RatingFixtureStore = RatingFixtureStore()
   ) {
     self.favoriteStore = favoriteStore
     self.commentStore = commentStore
+    self.ratingStore = ratingStore
   }
 
   func listFeed(
@@ -343,14 +446,7 @@ struct FixtureAdventureService: AdventureService {
   func getAdventure(
     id: String
   ) async throws -> AdventureDetailResponse {
-    let resolvedID = MockFixtures.resolvedAdventureID(for: id)
-    if let detail = MockFixtures.adventureDetails[resolvedID] {
-      return AdventureDetailResponse(
-        item: detail.applyingFavoriteState(await favoriteStore.contains(resolvedID))
-      )
-    }
-
-    throw FixtureServiceError.notFound
+    AdventureDetailResponse(item: try await hydratedDetail(id: id))
   }
 
   func listAdventureMedia(
@@ -400,6 +496,27 @@ struct FixtureAdventureService: AdventureService {
     )
   }
 
+  func rateAdventure(
+    id: String,
+    score: Int
+  ) async throws -> AdventureDetailResponse {
+    let resolvedID = MockFixtures.resolvedAdventureID(for: id)
+    _ = try await ratingStore.rate(adventureID: resolvedID, score: score)
+    let response = AdventureDetailResponse(item: try await hydratedDetail(id: resolvedID))
+    RatingStateChange.post(detail: response.item)
+    return response
+  }
+
+  func clearRating(
+    id: String
+  ) async throws -> AdventureDetailResponse {
+    let resolvedID = MockFixtures.resolvedAdventureID(for: id)
+    try await ratingStore.clear(adventureID: resolvedID)
+    let response = AdventureDetailResponse(item: try await hydratedDetail(id: resolvedID))
+    RatingStateChange.post(detail: response.item)
+    return response
+  }
+
   func createAdventure(
     request: CreateAdventureRequest
   ) async throws -> CreateAdventureResponse {
@@ -418,6 +535,19 @@ struct FixtureAdventureService: AdventureService {
 
   func unfavoriteAdventure(id: String) async throws {
     try await favoriteStore.unfavorite(id: MockFixtures.resolvedAdventureID(for: id))
+  }
+
+  private func hydratedDetail(id: String) async throws -> AdventureDetail {
+    let resolvedID = MockFixtures.resolvedAdventureID(for: id)
+    guard let detail = MockFixtures.adventureDetails[resolvedID] else {
+      throw FixtureServiceError.notFound
+    }
+
+    let favoriteState = await favoriteStore.contains(resolvedID)
+    let viewerRating = await ratingStore.rating(for: resolvedID)
+    return detail
+      .applyingFavoriteState(favoriteState)
+      .applyingViewerRating(viewerRating)
   }
 }
 
@@ -527,6 +657,30 @@ struct RemoteAdventureService: AdventureService {
       body: payload,
       requiresAuth: true
     )
+  }
+
+  func rateAdventure(
+    id: String,
+    score: Int
+  ) async throws -> AdventureDetailResponse {
+    let response: AdventureDetailResponse = try await client.post(
+      pathComponents: ["adventures", id, "rating"],
+      body: AdventureRatingUpsertPayload(score: score),
+      requiresAuth: true
+    )
+    RatingStateChange.post(detail: response.item)
+    return response
+  }
+
+  func clearRating(
+    id: String
+  ) async throws -> AdventureDetailResponse {
+    let response: AdventureDetailResponse = try await client.delete(
+      pathComponents: ["adventures", id, "rating"],
+      requiresAuth: true
+    )
+    RatingStateChange.post(detail: response.item)
+    return response
   }
 
   func createAdventure(

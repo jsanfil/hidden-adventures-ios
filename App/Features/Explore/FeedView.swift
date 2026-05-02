@@ -125,6 +125,14 @@ private struct FeedCardView: View {
       guard change.adventureID == visibleAdventure.id else { return }
       visibleAdventure = visibleAdventure.applyingFavoriteState(change.isFavorited)
     }
+    .onReceive(NotificationCenter.default.publisher(for: RatingStateChange.notificationName)) { notification in
+      guard let change = RatingStateChange(notification: notification) else { return }
+      guard change.adventureID == visibleAdventure.id else { return }
+      visibleAdventure = visibleAdventure.applyingRatingState(
+        averageRating: change.averageRating,
+        ratingCount: change.ratingCount
+      )
+    }
   }
 
   private var cardContent: some View {
@@ -204,6 +212,8 @@ private struct FeedCardView: View {
       HStack(spacing: 4) {
         Image(systemName: "star.fill")
         Text(String(format: "%.1f", visibleAdventure.stats.averageRating))
+          .accessibilityValue(String(format: "%.1f", visibleAdventure.stats.averageRating))
+          .accessibilityIdentifier("feed.card.rating.\(accessibilityAdventureID)")
       }
       HStack(spacing: 4) {
         Image(systemName: "heart")

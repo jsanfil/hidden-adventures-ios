@@ -192,6 +192,48 @@ final class ExploreFeedScreenUITests: HiddenAdventuresUITestCase {
     saveScreenshot(named: "feed-after-detail-return", to: screenshotDir)
   }
 
+  func testExploreFeed_returningFromDetailShowsUpdatedRatingWithoutManualRefresh() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "explore-feed-detail-rating-return")
+    let app = launchApp(startScreen: "explore-feed")
+
+    app.buttons["header.search"].tap()
+    let searchField = app.textFields["feed.searchField"]
+    assertExists(searchField, name: "feed-search-field-before-rating-return", in: app, screenshotDir: screenshotDir)
+    searchField.tap()
+    searchField.typeText("Port")
+    app.buttons["feed.searchSuggestion.portland-oregon"].tap()
+
+    let feedCard = app.buttons["feed.card.\(jordanHiddenRidgeID)"]
+    let ratingSummary = app.staticTexts["feed.card.rating.\(jordanHiddenRidgeID)"]
+    assertExists(feedCard, name: "feed-card-before-rating-return", in: app, screenshotDir: screenshotDir)
+    assertValue(
+      ratingSummary,
+      equals: "4.6",
+      name: "feed-rating-before-detail-update",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+
+    feedCard.tap()
+
+    let ratingStars = app.otherElements.matching(identifier: "detail.ratingStars")
+    let oneStarButton = ratingStars.element(boundBy: 0)
+    assertExists(oneStarButton, name: "detail-rating-one-from-feed", in: app, screenshotDir: screenshotDir)
+    oneStarButton.tap()
+
+    let detailBackButton = app.buttons["detail.back"]
+    assertExists(detailBackButton, name: "detail-back-after-rating-update", in: app, screenshotDir: screenshotDir)
+    detailBackButton.tap()
+
+    assertValue(
+      ratingSummary,
+      equals: "4.5",
+      name: "feed-rating-after-detail-update",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+  }
+
   func testExploreFeed_placeSearchSuggestionsSyncWithMap() throws {
     let screenshotDir = try preparedScreenshotDirectory(named: "explore-feed-search")
     let app = launchApp(startScreen: "explore-feed")

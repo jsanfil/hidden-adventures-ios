@@ -12,6 +12,7 @@ Keep one entry per feature or slice, and update the notes as verification progre
 | 2026-04-25 | discover-tab | `7cf2fa1dc474ed882903206684d7ba51e3ef5497` | `manual QA` | All features of the Discover tab | Pass with bugs | Several minor cosmetic bugs have been logged. |
 | 2026-04-28 | Favorites | `codex/favorites-ios-slice` | `manual QA` | All Favorites surfaces and the User Profile Shared/Favorites toggle | Pass | Testing complete. |
 | 2026-04-29 | Comments | `working tree` | `local manual QA` | Adventure detail comment load, composer submit, pagination, empty state, and error handling | Pass | Local manual QA passed for the integrated comments flow, including loading existing comments, creating a new comment, paging additional comments, and verifying empty and error states. |
+| 2026-05-01 | Ratings | `codex/implement-ratings-feature` | `manual QA` | Add, update, and delete rating on adventure detail and feed sync on return | Pass | Manual QA passed for ratings. All targeted tests passed. |
 
 ## Recommended Notes
 
