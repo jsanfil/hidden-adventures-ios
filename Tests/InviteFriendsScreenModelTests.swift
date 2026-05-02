@@ -31,11 +31,24 @@ final class InviteFriendsScreenModelTests: XCTestCase {
   }
 
   @MainActor
-  func testSelectedContactsReturnContactsMatchingSelectionOrder() {
+  func testInviteButtonDisablesWhenSelectionBecomesStaleAfterContactsRefresh() {
     let model = InviteFriendsScreenModel(permissionState: .authorized, contacts: MockFixtures.inviteContacts)
 
-    model.toggleSelection(contactID: MockFixtures.inviteContacts[1].id)
+    model.toggleSelection(contactID: MockFixtures.inviteContacts[0].id)
+    XCTAssertTrue(model.canSendInvites)
+
+    model.contacts = [MockFixtures.inviteContacts[1], MockFixtures.inviteContacts[2]]
+
+    XCTAssertTrue(model.selectedContacts.isEmpty)
+    XCTAssertFalse(model.canSendInvites)
+  }
+
+  @MainActor
+  func testSelectedContactsFollowContactsOrderingNotToggleOrdering() {
+    let model = InviteFriendsScreenModel(permissionState: .authorized, contacts: MockFixtures.inviteContacts)
+
     model.toggleSelection(contactID: MockFixtures.inviteContacts[3].id)
+    model.toggleSelection(contactID: MockFixtures.inviteContacts[1].id)
 
     XCTAssertEqual(
       model.selectedContacts.map(\.id),

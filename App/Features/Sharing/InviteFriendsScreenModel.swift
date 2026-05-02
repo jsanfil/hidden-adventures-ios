@@ -23,7 +23,7 @@ final class InviteFriendsScreenModel: ObservableObject {
   }
 
   var canSendInvites: Bool {
-    permissionState == .authorized && selectedContactIDs.isEmpty == false
+    permissionState == .authorized && selectedContacts.isEmpty == false
   }
 
   var selectedContacts: [InviteFriendContact] {
