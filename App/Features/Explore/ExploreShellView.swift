@@ -13,6 +13,7 @@ struct ExploreShellView: View {
   @Binding var createAdventureVariant: CreateAdventureFixtureVariant?
   let onViewerProfileLoaded: (ProfileDetail) -> Void
   let onOpenProfile: (String) -> Void
+  let onOpenInviteFriends: () -> Void
   let onOpenDetail: (String) -> Void
   let onLogout: () -> Void
 
@@ -47,6 +48,7 @@ struct ExploreShellView: View {
     createAdventureVariant: Binding<CreateAdventureFixtureVariant?>,
     onViewerProfileLoaded: @escaping (ProfileDetail) -> Void,
     onOpenProfile: @escaping (String) -> Void,
+    onOpenInviteFriends: @escaping () -> Void,
     onOpenDetail: @escaping (String) -> Void,
     onLogout: @escaping () -> Void
   ) {
@@ -61,6 +63,7 @@ struct ExploreShellView: View {
     self._createAdventureVariant = createAdventureVariant
     self.onViewerProfileLoaded = onViewerProfileLoaded
     self.onOpenProfile = onOpenProfile
+    self.onOpenInviteFriends = onOpenInviteFriends
     self.onOpenDetail = onOpenDetail
     self.onLogout = onLogout
     _locationSearchController = StateObject(
@@ -312,6 +315,7 @@ struct ExploreShellView: View {
       viewerHandle: viewerHandle,
       onProfileLoaded: onViewerProfileLoaded,
       onOpenProfile: onOpenProfile,
+      onOpenInviteFriends: onOpenInviteFriends,
       onOpenDetail: onOpenDetail,
       onLogout: onLogout
     )
@@ -880,6 +884,7 @@ private struct ExploreShellPreviewWrapper: View {
       createAdventureVariant: $createAdventureVariant,
       onViewerProfileLoaded: { _ in },
       onOpenProfile: { _ in },
+      onOpenInviteFriends: {},
       onOpenDetail: { _ in },
       onLogout: {}
     )

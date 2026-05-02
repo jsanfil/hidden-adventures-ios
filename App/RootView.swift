@@ -7,6 +7,7 @@ struct RootView: View {
   private let profileService: ProfileService
   private let sidekickService: SidekickService
   private let discoverService: DiscoverService
+  private let inviteFriendsService: InviteFriendsService
 
   @Environment(\.scenePhase) private var scenePhase
   @StateObject private var coordinator: AppCoordinator
@@ -28,6 +29,7 @@ struct RootView: View {
     self.profileService = profileService
     self.sidekickService = sidekickService
     self.discoverService = discoverService
+    inviteFriendsService = FixtureInviteFriendsService()
     _coordinator = StateObject(wrappedValue: AppCoordinator())
     _session = StateObject(
       wrappedValue: AppSession(
@@ -89,6 +91,9 @@ struct RootView: View {
             onOpenProfile: { handle in
               coordinator.path.append(.profile(handle))
             },
+            onOpenInviteFriends: {
+              coordinator.path.append(.inviteFriends)
+            },
             onOpenDetail: { adventureID in
               coordinator.path.append(.detail(adventureID))
             },
@@ -117,11 +122,16 @@ struct RootView: View {
             onOpenProfile: { nextHandle in
               coordinator.path.append(.profile(nextHandle))
             },
+            onOpenInviteFriends: {
+              coordinator.path.append(.inviteFriends)
+            },
             onOpenDetail: { adventureID in
               coordinator.path.append(.detail(adventureID))
             },
             onLogout: logout
           )
+        case .inviteFriends:
+          InviteFriendsView(service: inviteFriendsService)
         }
       }
     }

@@ -1,6 +1,15 @@
 import XCTest
 
 final class ProfileScreenUITests: HiddenAdventuresUITestCase {
+  func testProfile_opensInviteFriendsFlow() throws {
+    let app = launchApp(startScreen: "explore-profile")
+
+    app.buttons["profile.inviteFriends"].tap()
+
+    XCTAssertTrue(app.staticTexts["inviteFriends.title"].waitForExistence(timeout: 2))
+    XCTAssertTrue(app.buttons["inviteFriends.cta"].exists)
+  }
+
   func testProfile_rendersSidekicksEntryPoint() throws {
     let screenshotDir = try preparedScreenshotDirectory(named: "profile-sidekicks-smoke")
     let app = launchApp(startScreen: "explore-profile")

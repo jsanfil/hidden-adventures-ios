@@ -17,6 +17,7 @@ struct ProfileView: View {
   let viewerHandle: String?
   let onProfileLoaded: (ProfileDetail) -> Void
   let onOpenProfile: (String) -> Void
+  let onOpenInviteFriends: () -> Void
   let onOpenDetail: (String) -> Void
   let onLogout: () -> Void
 
@@ -206,6 +207,8 @@ struct ProfileView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("profile.sidekicksCard")
+
+            inviteFriendsButton
           }
         }
         .padding(.horizontal, 24)
@@ -315,6 +318,26 @@ struct ProfileView: View {
     }
 
     return "\(sidekickSummaryItems.count) Sidekicks"
+  }
+
+  private var inviteFriendsButton: some View {
+    Button {
+      onOpenInviteFriends()
+    } label: {
+      Label("Invite Friends", systemImage: "person.crop.circle.badge.plus")
+        .font(.system(size: 16, weight: .semibold))
+        .foregroundStyle(HATheme.Colors.foreground)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+    }
+    .buttonStyle(.plain)
+    .background(HATheme.Colors.card)
+    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .overlay {
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .stroke(HATheme.Colors.border, lineWidth: 1)
+    }
+    .accessibilityIdentifier("profile.inviteFriends")
   }
 
   private var collectionSegment: some View {
@@ -658,6 +681,7 @@ struct ProfileView_Previews: PreviewProvider {
         viewerHandle: MockFixtures.profile.handle,
         onProfileLoaded: { _ in },
         onOpenProfile: { _ in },
+        onOpenInviteFriends: {},
         onOpenDetail: { _ in },
         onLogout: {}
       )
