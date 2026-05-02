@@ -20,6 +20,7 @@ struct RootView: View {
     profileService: ProfileService,
     sidekickService: SidekickService,
     discoverService: DiscoverService,
+    inviteFriendsService: InviteFriendsService,
     backendAuthService: AuthService?,
     appAuthService: AppAuthService?,
     authState: AuthStateStore
@@ -29,7 +30,7 @@ struct RootView: View {
     self.profileService = profileService
     self.sidekickService = sidekickService
     self.discoverService = discoverService
-    inviteFriendsService = FixtureInviteFriendsService()
+    self.inviteFriendsService = inviteFriendsService
     _coordinator = StateObject(wrappedValue: AppCoordinator())
     _session = StateObject(
       wrappedValue: AppSession(
@@ -272,6 +273,7 @@ struct RootView_Previews: PreviewProvider {
       profileService: FixtureProfileService(),
       sidekickService: FixtureSidekickService(),
       discoverService: FixtureDiscoverService(),
+      inviteFriendsService: FixtureInviteFriendsService(),
       backendAuthService: nil,
       appAuthService: nil,
       authState: AuthStateStore()

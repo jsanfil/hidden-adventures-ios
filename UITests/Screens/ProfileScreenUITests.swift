@@ -7,6 +7,8 @@ final class ProfileScreenUITests: HiddenAdventuresUITestCase {
     app.buttons["profile.inviteFriends"].tap()
 
     XCTAssertTrue(app.staticTexts["inviteFriends.title"].waitForExistence(timeout: 2))
+    XCTAssertTrue(app.otherElements["inviteFriends.shell"].exists)
+    XCTAssertTrue(app.staticTexts["Contacts access is ready with 4 friends available in this fixture shell."].exists)
     XCTAssertTrue(app.buttons["inviteFriends.cta"].exists)
   }
 

@@ -114,6 +114,7 @@ struct HiddenAdventuresApp: App {
         profileService: profileService,
         sidekickService: sidekickService,
         discoverService: discoverService,
+        inviteFriendsService: inviteFriendsService,
         backendAuthService: backendAuthService,
         appAuthService: appAuthService,
         authState: authState

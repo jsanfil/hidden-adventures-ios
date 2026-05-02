@@ -144,6 +144,8 @@ struct InviteFriendsView: View {
       RoundedRectangle(cornerRadius: 28, style: .continuous)
         .stroke(HATheme.Colors.border, lineWidth: 1)
     }
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("inviteFriends.shell")
   }
 
   @MainActor
