@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct InviteFriendsView: View {
   @Environment(\.dismiss) private var dismiss
@@ -7,6 +8,9 @@ struct InviteFriendsView: View {
   let service: InviteFriendsService
 
   @State private var hasLoaded = false
+  @State private var presentComposer = false
+  @State private var presentFallbackShare = false
+  @FocusState private var isSearchFocused: Bool
 
   init(service: InviteFriendsService) {
     self.service = service
@@ -36,6 +40,15 @@ struct InviteFriendsView: View {
       hasLoaded = true
       await loadPermissionState()
     }
+    .sheet(isPresented: $presentComposer) {
+      InviteFriendsMessageComposer(
+        recipients: model.selectedContacts.map(\.phoneNumber),
+        bodyText: MockFixtures.inviteMessage
+      )
+    }
+    .sheet(isPresented: $presentFallbackShare) {
+      InviteFriendsShareSheet(items: [MockFixtures.inviteMessage, MockFixtures.inviteAppURL])
+    }
     .navigationBarBackButtonHidden(true)
     .toolbar(.hidden, for: .navigationBar)
   }
@@ -61,8 +74,23 @@ struct InviteFriendsView: View {
       title: "Pick friends to text",
       message: authorizedMessage
     ) {
-      HAPrimaryButton(title: "Invite by text") {}
+      VStack(spacing: 16) {
+        searchField
+
+        ScrollView {
+          LazyVStack(spacing: 12) {
+            ForEach(model.visibleContacts) { contact in
+              contactRow(for: contact)
+            }
+          }
+        }
+
+        HAPrimaryButton(title: "Invite via Messages") {
+          presentComposer = true
+        }
+        .disabled(model.canSendInvites == false || service.canSendTextMessages() == false)
         .accessibilityIdentifier("inviteFriends.cta")
+      }
     }
   }
 
@@ -72,8 +100,22 @@ struct InviteFriendsView: View {
       title: "Share Hidden Adventures",
       message: model.fallbackMessage
     ) {
-      HAPrimaryButton(title: "Share invite link") {}
+      VStack(alignment: .leading, spacing: 12) {
+        Text("Contacts access is off.")
+          .font(HATheme.Typography.bodyMedium)
+          .foregroundStyle(HATheme.Colors.foreground)
+
+        Text(model.fallbackMessage)
+          .font(HATheme.Typography.body)
+          .foregroundStyle(HATheme.Colors.mutedForeground)
+          .fixedSize(horizontal: false, vertical: true)
+          .accessibilityIdentifier("inviteFriends.fallbackMessage")
+
+        HAPrimaryButton(title: "Share App Invite") {
+          presentFallbackShare = true
+        }
         .accessibilityIdentifier("inviteFriends.cta")
+      }
     }
   }
 
@@ -81,10 +123,77 @@ struct InviteFriendsView: View {
     let count = model.contacts.count
 
     if count == 0 {
-      return "Contacts access is ready. We’ll show your invite list here as the full picker lands."
+      return "Search your contacts and choose who should get your next Hidden Adventures invite."
     }
 
-    return "Contacts access is ready with \(count) friends available in this fixture shell."
+    return "Select one or more friends below, then send your invite by text."
+  }
+
+  private var searchField: some View {
+    HStack(spacing: 12) {
+      Image(systemName: "magnifyingglass")
+        .font(.system(size: 18, weight: .medium))
+        .foregroundStyle(HATheme.Colors.mutedForeground)
+
+      TextField("Search contacts", text: $model.searchText)
+        .font(HATheme.Typography.body)
+        .foregroundStyle(HATheme.Colors.foreground)
+        .textInputAutocapitalization(.never)
+        .disableAutocorrection(true)
+        .focused($isSearchFocused)
+        .accessibilityIdentifier("inviteFriends.search")
+    }
+    .padding(.horizontal, 18)
+    .frame(height: 56)
+    .background(HATheme.Colors.secondary)
+    .overlay {
+      RoundedRectangle(cornerRadius: 20, style: .continuous)
+        .stroke(isSearchFocused ? HATheme.Colors.primary.opacity(0.45) : HATheme.Colors.secondary, lineWidth: 2)
+    }
+    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+  }
+
+  private func contactRow(for contact: InviteFriendContact) -> some View {
+    Button {
+      model.toggleSelection(contactID: contact.id)
+    } label: {
+      HStack(spacing: 16) {
+        VStack(alignment: .leading, spacing: 4) {
+          Text(contact.displayName)
+            .font(HATheme.Typography.bodyMedium)
+            .foregroundStyle(HATheme.Colors.foreground)
+
+          Text(contact.phoneNumber)
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(HATheme.Colors.mutedForeground)
+        }
+
+        Spacer()
+
+        Image(systemName: model.selectedContactIDs.contains(contact.id) ? "checkmark.circle.fill" : "circle")
+          .font(.system(size: 22, weight: .semibold))
+          .foregroundStyle(
+            model.selectedContactIDs.contains(contact.id)
+              ? HATheme.Colors.primary
+              : HATheme.Colors.mutedForeground.opacity(0.85)
+          )
+      }
+      .padding(.horizontal, 18)
+      .padding(.vertical, 16)
+      .background(HATheme.Colors.secondary)
+      .overlay {
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+          .stroke(
+            model.selectedContactIDs.contains(contact.id)
+              ? HATheme.Colors.primary.opacity(0.45)
+              : HATheme.Colors.border,
+            lineWidth: model.selectedContactIDs.contains(contact.id) ? 2 : 1
+          )
+      }
+      .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+    .buttonStyle(.plain)
+    .accessibilityIdentifier("inviteFriends.contact.\(contact.id)")
   }
 
   private func contentCard<Footer: View>(
@@ -113,8 +222,6 @@ struct InviteFriendsView: View {
         Spacer()
       }
 
-      Spacer(minLength: 0)
-
       VStack(alignment: .leading, spacing: 14) {
         Text(eyebrow.uppercased())
           .font(HATheme.Typography.micro)
@@ -133,8 +240,7 @@ struct InviteFriendsView: View {
       }
 
       footer()
-
-      Spacer(minLength: 0)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .padding(24)
@@ -153,7 +259,11 @@ struct InviteFriendsView: View {
     let permissionState = await service.permissionState()
     model.permissionState = permissionState
 
-    guard permissionState == .authorized else { return }
+    guard permissionState == .authorized else {
+      model.contacts = []
+      return
+    }
+
     model.contacts = (try? await service.loadContacts()) ?? []
   }
 
@@ -162,9 +272,23 @@ struct InviteFriendsView: View {
     let permissionState = await service.requestAccess()
     model.permissionState = permissionState
 
-    guard permissionState == .authorized else { return }
+    guard permissionState == .authorized else {
+      model.contacts = []
+      return
+    }
+
     model.contacts = (try? await service.loadContacts()) ?? []
   }
+}
+
+private struct InviteFriendsShareSheet: UIViewControllerRepresentable {
+  let items: [Any]
+
+  func makeUIViewController(context: Context) -> UIActivityViewController {
+    UIActivityViewController(activityItems: items, applicationActivities: nil)
+  }
+
+  func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 struct InviteFriendsView_Previews: PreviewProvider {

@@ -1,6 +1,31 @@
 import XCTest
 
 final class ProfileScreenUITests: HiddenAdventuresUITestCase {
+  func testInviteFriends_authorizedStateSupportsSearchAndSelection() throws {
+    let sarahContactID = "contact-sarah"
+    let app = launchApp(
+      startScreen: "explore-profile",
+      extraEnv: ["UITEST_INVITE_PERMISSION": "authorized"]
+    )
+
+    app.buttons["profile.inviteFriends"].tap()
+    app.textFields["inviteFriends.search"].tap()
+    app.textFields["inviteFriends.search"].typeText("Sarah")
+    app.buttons["inviteFriends.contact.\(sarahContactID)"].tap()
+
+    XCTAssertTrue(app.buttons["inviteFriends.cta"].isEnabled)
+  }
+
+  func testInviteFriends_deniedStateShowsFallback() throws {
+    let app = launchApp(
+      startScreen: "explore-profile",
+      extraEnv: ["UITEST_INVITE_PERMISSION": "denied"]
+    )
+
+    app.buttons["profile.inviteFriends"].tap()
+    XCTAssertTrue(app.staticTexts["inviteFriends.fallbackMessage"].waitForExistence(timeout: 2))
+  }
+
   func testProfile_opensInviteFriendsFlow() throws {
     let app = launchApp(startScreen: "explore-profile")
 
@@ -8,7 +33,7 @@ final class ProfileScreenUITests: HiddenAdventuresUITestCase {
 
     XCTAssertTrue(app.staticTexts["inviteFriends.title"].waitForExistence(timeout: 2))
     XCTAssertTrue(app.otherElements["inviteFriends.shell"].exists)
-    XCTAssertTrue(app.staticTexts["Contacts access is ready with 4 friends available in this fixture shell."].exists)
+    XCTAssertTrue(app.textFields["inviteFriends.search"].exists)
     XCTAssertTrue(app.buttons["inviteFriends.cta"].exists)
   }
 

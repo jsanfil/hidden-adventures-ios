@@ -8,9 +8,26 @@ protocol InviteFriendsService {
 }
 
 struct FixtureInviteFriendsService: InviteFriendsService {
-  func permissionState() async -> InviteFriendsPermissionState { .authorized }
+  let permission: InviteFriendsPermissionState
 
-  func requestAccess() async -> InviteFriendsPermissionState { .authorized }
+  init(environment: [String: String] = ProcessInfo.processInfo.environment) {
+    switch environment["UITEST_INVITE_PERMISSION"]?.lowercased() {
+    case "denied":
+      permission = .denied
+    case "restricted":
+      permission = .restricted
+    case "not_determined":
+      permission = .notDetermined
+    default:
+      permission = .authorized
+    }
+  }
+
+  func permissionState() async -> InviteFriendsPermissionState { permission }
+
+  func requestAccess() async -> InviteFriendsPermissionState {
+    permission == .notDetermined ? .authorized : permission
+  }
 
   func loadContacts() async throws -> [InviteFriendContact] { MockFixtures.inviteContacts }
 
