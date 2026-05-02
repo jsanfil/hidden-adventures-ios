@@ -1,7 +1,7 @@
 import XCTest
 @testable import HiddenAdventures
 
-final class InviteFriendsScreenModelTests: XCTestCase {
+final class InviteFriendsCopyTests: XCTestCase {
   func testInviteMessageIncludesAppNameAndURL() {
     let url = URL(string: "https://hiddenadventures.app/invite")!
 
