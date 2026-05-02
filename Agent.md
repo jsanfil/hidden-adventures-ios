@@ -2,6 +2,8 @@
 
 This repository is the SwiftUI iOS client for the Hidden Adventures rebuild. Use this file as the quick-start operating guide for AI coding agents working in this repo.
 
+Workflow routing policy lives in [AGENTS.md](/Users/josephsanfilippo/Documents/projects/hidden-adventures-rebuild/hidden-adventures-ios/AGENTS.md). Follow that file for when to implement directly versus when to ask before entering heavyweight Superpowers workflows.
+
 ## Repo Boundaries
 
 - Keep this repo focused on the native iOS app.

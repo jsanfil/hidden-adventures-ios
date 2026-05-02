@@ -1,4 +1,5 @@
 import Foundation
+import MessageUI
 
 protocol InviteFriendsService {
   func permissionState() async -> InviteFriendsPermissionState
@@ -9,8 +10,11 @@ protocol InviteFriendsService {
 
 struct FixtureInviteFriendsService: InviteFriendsService {
   let permission: InviteFriendsPermissionState
+  private let environment: [String: String]
 
   init(environment: [String: String] = ProcessInfo.processInfo.environment) {
+    self.environment = environment
+
     switch environment["UITEST_INVITE_PERMISSION"]?.lowercased() {
     case "denied":
       permission = .denied
@@ -31,5 +35,11 @@ struct FixtureInviteFriendsService: InviteFriendsService {
 
   func loadContacts() async throws -> [InviteFriendContact] { MockFixtures.inviteContacts }
 
-  func canSendTextMessages() -> Bool { true }
+  func canSendTextMessages() -> Bool {
+    if let override = environment["UITEST_CAN_SEND_TEXT_MESSAGES"]?.lowercased() {
+      return override == "true"
+    }
+
+    return MFMessageComposeViewController.canSendText()
+  }
 }

@@ -294,6 +294,11 @@ struct InviteFriendsView: View {
       return
     }
 
+    guard service.canSendTextMessages() else {
+      presentFallbackShare = true
+      return
+    }
+
     presentComposer = true
   }
 
