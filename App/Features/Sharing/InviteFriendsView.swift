@@ -43,7 +43,8 @@ struct InviteFriendsView: View {
     .sheet(isPresented: $presentComposer) {
       InviteFriendsMessageComposer(
         recipients: model.selectedContacts.map(\.phoneNumber),
-        bodyText: MockFixtures.inviteMessage
+        bodyText: MockFixtures.inviteMessage,
+        onResult: handleComposerResult
       )
     }
     .sheet(isPresented: $presentFallbackShare) {
@@ -85,9 +86,16 @@ struct InviteFriendsView: View {
           }
         }
 
-        HAPrimaryButton(title: "Invite via Messages") {
-          presentComposer = true
+        if let completionState = model.completionState {
+          Text(completionState.title)
+            .font(HATheme.Typography.bodyMedium)
+            .foregroundStyle(HATheme.Colors.primary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityIdentifier("inviteFriends.completion")
         }
+
+        HAPrimaryButton(title: "Invite via Messages", action: handleInviteCTA)
         .disabled(model.canSendInvites == false || service.canSendTextMessages() == false)
         .accessibilityIdentifier("inviteFriends.cta")
       }
@@ -278,6 +286,32 @@ struct InviteFriendsView: View {
     }
 
     model.contacts = (try? await service.loadContacts()) ?? []
+  }
+
+  private func handleInviteCTA() {
+    if let simulatedResult = simulatedComposerResult {
+      model.handleComposerResult(simulatedResult)
+      return
+    }
+
+    presentComposer = true
+  }
+
+  private func handleComposerResult(_ result: InviteComposerResult) {
+    model.handleComposerResult(result)
+  }
+
+  private var simulatedComposerResult: InviteComposerResult? {
+    switch ProcessInfo.processInfo.environment["UITEST_INVITE_COMPOSER_RESULT"]?.lowercased() {
+    case "sent":
+      return .sent(model.selectedContacts.count)
+    case "cancelled":
+      return .cancelled
+    case "failed":
+      return .failed
+    default:
+      return nil
+    }
   }
 }
 

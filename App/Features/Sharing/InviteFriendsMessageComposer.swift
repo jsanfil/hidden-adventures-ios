@@ -4,10 +4,10 @@ import SwiftUI
 struct InviteFriendsMessageComposer: UIViewControllerRepresentable {
   let recipients: [String]
   let bodyText: String
-  var onFinish: ((MessageComposeResult) -> Void)?
+  var onResult: ((InviteComposerResult) -> Void)?
 
   func makeCoordinator() -> Coordinator {
-    Coordinator(onFinish: onFinish)
+    Coordinator(onResult: onResult)
   }
 
   func makeUIViewController(context: Context) -> MFMessageComposeViewController {
@@ -21,17 +21,26 @@ struct InviteFriendsMessageComposer: UIViewControllerRepresentable {
   func updateUIViewController(_ uiViewController: MFMessageComposeViewController, context: Context) {}
 
   final class Coordinator: NSObject, MFMessageComposeViewControllerDelegate {
-    private let onFinish: ((MessageComposeResult) -> Void)?
+    private let onResult: ((InviteComposerResult) -> Void)?
 
-    init(onFinish: ((MessageComposeResult) -> Void)?) {
-      self.onFinish = onFinish
+    init(onResult: ((InviteComposerResult) -> Void)?) {
+      self.onResult = onResult
     }
 
     func messageComposeViewController(
       _ controller: MFMessageComposeViewController,
       didFinishWith result: MessageComposeResult
     ) {
-      onFinish?(result)
+      switch result {
+      case .sent:
+        onResult?(.sent(controller.recipients?.count ?? 0))
+      case .cancelled:
+        onResult?(.cancelled)
+      case .failed:
+        onResult?(.failed)
+      @unknown default:
+        onResult?(.failed)
+      }
       controller.dismiss(animated: true)
     }
   }

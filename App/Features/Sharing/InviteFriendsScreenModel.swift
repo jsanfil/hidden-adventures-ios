@@ -41,4 +41,29 @@ final class InviteFriendsScreenModel: ObservableObject {
       selectedContactIDs.insert(contactID)
     }
   }
+
+  func handleComposerResult(_ result: InviteComposerResult) {
+    switch result {
+    case .sent(let count):
+      completionState = .sent(count)
+      selectedContactIDs.removeAll()
+    case .cancelled:
+      completionState = .cancelled
+    case .failed:
+      completionState = .failed
+    }
+  }
+}
+
+extension InviteComposerResult {
+  var title: String {
+    switch self {
+    case .sent(let count):
+      return count == 1 ? "Invite sent to 1 friend." : "Invites sent to \(count) friends."
+    case .cancelled:
+      return "Invite cancelled."
+    case .failed:
+      return "We couldn't open Messages right now."
+    }
+  }
 }
