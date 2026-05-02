@@ -32,6 +32,7 @@ struct AdventureDetailScreenModel: Identifiable, Equatable, Sendable {
   let heroImageNames: [String]
   let averageRating: Double
   let ratingCount: Int
+  let viewerRating: Int?
   let author: Author
   let directions: Directions?
   let commentsTotalCount: Int
@@ -84,6 +85,7 @@ extension AdventureDetailScreenModel {
     self.heroImageNames = heroImageNames
     self.averageRating = detail.stats.averageRating
     self.ratingCount = detail.stats.ratingCount
+    self.viewerRating = detail.viewerRating
     self.author = Author(
       handle: authorHandle,
       displayName: displayName,
@@ -117,9 +119,32 @@ extension AdventureDetailScreenModel {
       heroImageNames: heroImageNames,
       averageRating: averageRating,
       ratingCount: ratingCount,
+      viewerRating: viewerRating,
       author: author,
       directions: directions,
       commentsTotalCount: totalCount,
+      comments: comments
+    )
+  }
+
+  func replacingRating(
+    viewerRating: Int?,
+    averageRating: Double,
+    ratingCount: Int
+  ) -> AdventureDetailScreenModel {
+    AdventureDetailScreenModel(
+      id: id,
+      title: title,
+      categoryLabel: categoryLabel,
+      placeLabel: placeLabel,
+      aboutLines: aboutLines,
+      heroImageNames: heroImageNames,
+      averageRating: averageRating,
+      ratingCount: ratingCount,
+      viewerRating: viewerRating,
+      author: author,
+      directions: directions,
+      commentsTotalCount: commentsTotalCount,
       comments: comments
     )
   }

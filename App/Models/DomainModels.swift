@@ -166,6 +166,21 @@ struct AdventureStats: Codable, Hashable, Sendable {
       averageRating: averageRating
     )
   }
+
+  func ratingAdjusted(previousViewerRating: Int?, viewerRating: Int?) -> AdventureStats {
+    let removedScore = previousViewerRating ?? 0
+    let addedScore = viewerRating ?? 0
+    let currentSum = averageRating * Double(ratingCount)
+    let updatedCount = max(0, ratingCount - (previousViewerRating == nil ? 0 : 1) + (viewerRating == nil ? 0 : 1))
+    let updatedSum = max(0, currentSum - Double(removedScore) + Double(addedScore))
+
+    return AdventureStats(
+      favoriteCount: favoriteCount,
+      commentCount: commentCount,
+      ratingCount: updatedCount,
+      averageRating: updatedCount > 0 ? updatedSum / Double(updatedCount) : 0
+    )
+  }
 }
 
 struct AdventureCard: Codable, Identifiable, Hashable, Sendable {
@@ -238,6 +253,31 @@ struct AdventureCard: Codable, Identifiable, Hashable, Sendable {
       isFavorited: isFavorited
     )
   }
+
+  func applyingRatingState(averageRating: Double, ratingCount: Int) -> AdventureCard {
+    AdventureCard(
+      id: id,
+      title: title,
+      description: description,
+      categorySlug: categorySlug,
+      categoryLabel: categoryLabel,
+      visibility: visibility,
+      createdAt: createdAt,
+      publishedAt: publishedAt,
+      location: location,
+      placeLabel: placeLabel,
+      author: author,
+      primaryMedia: primaryMedia,
+      stats: AdventureStats(
+        favoriteCount: stats.favoriteCount,
+        commentCount: stats.commentCount,
+        ratingCount: ratingCount,
+        averageRating: averageRating
+      ),
+      distanceMiles: distanceMiles,
+      isFavorited: isFavorited
+    )
+  }
 }
 
 struct AdventureDetail: Codable, Identifiable, Hashable, Sendable {
@@ -256,6 +296,7 @@ struct AdventureDetail: Codable, Identifiable, Hashable, Sendable {
   let placeLabel: String?
   let updatedAt: String
   let isFavorited: Bool
+  let viewerRating: Int?
 
   init(
     id: String,
@@ -272,7 +313,8 @@ struct AdventureDetail: Codable, Identifiable, Hashable, Sendable {
     stats: AdventureStats,
     placeLabel: String?,
     updatedAt: String,
-    isFavorited: Bool = false
+    isFavorited: Bool = false,
+    viewerRating: Int? = nil
   ) {
     self.id = id
     self.title = title
@@ -289,6 +331,7 @@ struct AdventureDetail: Codable, Identifiable, Hashable, Sendable {
     self.placeLabel = placeLabel
     self.updatedAt = updatedAt
     self.isFavorited = isFavorited
+    self.viewerRating = viewerRating
   }
 
   func applyingFavoriteState(_ isFavorited: Bool) -> AdventureDetail {
@@ -307,7 +350,29 @@ struct AdventureDetail: Codable, Identifiable, Hashable, Sendable {
       stats: stats.favoriteCountAdjusted(isFavorited: isFavorited, wasFavorited: self.isFavorited),
       placeLabel: placeLabel,
       updatedAt: updatedAt,
-      isFavorited: isFavorited
+      isFavorited: isFavorited,
+      viewerRating: viewerRating
+    )
+  }
+
+  func applyingViewerRating(_ viewerRating: Int?) -> AdventureDetail {
+    AdventureDetail(
+      id: id,
+      title: title,
+      description: description,
+      categorySlug: categorySlug,
+      categoryLabel: categoryLabel,
+      visibility: visibility,
+      createdAt: createdAt,
+      publishedAt: publishedAt,
+      location: location,
+      author: author,
+      primaryMedia: primaryMedia,
+      stats: stats.ratingAdjusted(previousViewerRating: self.viewerRating, viewerRating: viewerRating),
+      placeLabel: placeLabel,
+      updatedAt: updatedAt,
+      isFavorited: isFavorited,
+      viewerRating: viewerRating
     )
   }
 }

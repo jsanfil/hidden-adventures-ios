@@ -24,6 +24,7 @@ struct AdventureDetailView: View {
   @State private var isFavorited = false
   @State private var isFavoriteMutationInFlight = false
   @State private var userRating = 0
+  @State private var isRatingMutationInFlight = false
   @State private var commentText = ""
   @State private var viewerProfile: ProfileDetail?
   @State private var isLoadingComments = false
@@ -31,6 +32,7 @@ struct AdventureDetailView: View {
   @State private var isSendingComment = false
   @State private var commentsErrorMessage: String?
   @State private var commentAlertMessage: String?
+  @State private var ratingErrorMessage: String?
 
   init(
     adventureID: String,
@@ -376,7 +378,7 @@ struct AdventureDetailView: View {
 
       HStack(spacing: 2) {
         ForEach(1...5, id: \.self) { rating in
-          Button(action: { userRating = rating }) {
+          Button(action: { submitRating(rating) }) {
             Image(systemName: rating <= userRating ? "star.fill" : "star")
               .font(.system(size: 28, weight: .regular))
               .foregroundStyle(
@@ -387,7 +389,11 @@ struct AdventureDetailView: View {
               .frame(width: 36, height: 36)
           }
           .buttonStyle(.plain)
-          .disabled(usesFixturePreview == false)
+          .disabled(isRatingMutationInFlight || screenModel == nil)
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel("Rate \(rating) star\(rating == 1 ? "" : "s")")
+          .accessibilityIdentifier("detail.ratingStar.\(rating)")
+          .accessibilityValue(rating <= userRating ? "selected" : "not selected")
         }
 
         if let feedback = ratingFeedback {
@@ -395,14 +401,34 @@ struct AdventureDetailView: View {
             .font(.system(size: 14, weight: .medium))
             .foregroundStyle(HATheme.Colors.mutedForeground)
             .padding(.leading, 8)
+            .accessibilityIdentifier("detail.ratingFeedback")
         }
       }
       .accessibilityIdentifier("detail.ratingStars")
 
-      if usesFixturePreview == false {
-        Text("Rating submission is not part of the Slice 1 server contract yet.")
+      HStack(spacing: 12) {
+        if userRating > 0 {
+          Button("Clear rating") {
+            submitRating(nil)
+          }
+          .buttonStyle(.plain)
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(HATheme.Colors.primary)
+          .disabled(isRatingMutationInFlight || screenModel == nil)
+          .accessibilityIdentifier("detail.ratingClear")
+        }
+
+        if isRatingMutationInFlight {
+          ProgressView()
+            .tint(HATheme.Colors.primary)
+            .scaleEffect(0.8)
+        }
+      }
+
+      if let ratingErrorMessage {
+        Text(ratingErrorMessage)
           .font(.system(size: 13, weight: .medium))
-          .foregroundStyle(HATheme.Colors.mutedForeground)
+          .foregroundStyle(.red)
       }
     }
     .padding(.top, 28)
@@ -581,15 +607,22 @@ struct AdventureDetailView: View {
       do {
         let detail = try await adventureService.getAdventure(id: adventureID).item
         isFavorited = detail.isFavorited
+        userRating = detail.viewerRating ?? 0
+        ratingErrorMessage = nil
         viewerProfile = await loadViewerProfile()
         let baseModel = MockFixtures.adventureDetailScreenModel(
           for: adventureID,
           variant: fixtureVariant
         )
+        screenModel = baseModel.replacingRating(
+          viewerRating: detail.viewerRating,
+          averageRating: detail.stats.averageRating,
+          ratingCount: detail.stats.ratingCount
+        )
         let totalCount = fixtureVariant == .noComments
           ? 0
           : MockFixtures.detailCommentsByAdventureID[MockFixtures.resolvedAdventureID(for: adventureID)]?.count ?? 0
-        screenModel = baseModel.replacingComments([], totalCount: totalCount)
+        screenModel = screenModel?.replacingComments([], totalCount: totalCount)
         if totalCount > 0 {
           await loadComments(reset: true)
         }
@@ -602,6 +635,8 @@ struct AdventureDetailView: View {
     do {
       let detail = try await adventureService.getAdventure(id: adventureID).item
       isFavorited = detail.isFavorited
+      userRating = detail.viewerRating ?? 0
+      ratingErrorMessage = nil
       async let authorProfileTask: ProfileDetail? = loadAuthorProfile(handle: detail.author.handle)
       async let viewerProfileTask: ProfileDetail? = loadViewerProfile()
       async let mediaTask: [String] = loadMediaIDs(for: detail)
@@ -668,6 +703,12 @@ struct AdventureDetailView: View {
   private func sendComment() {
     Task {
       await submitComment()
+    }
+  }
+
+  private func submitRating(_ rating: Int?) {
+    Task {
+      await mutateRating(rating)
     }
   }
 
@@ -810,6 +851,45 @@ struct AdventureDetailView: View {
     } catch {
       commentAlertMessage = "Unable to post your comment right now."
     }
+  }
+
+  @MainActor
+  private func mutateRating(_ rating: Int?) async {
+    guard screenModel != nil else { return }
+    guard isRatingMutationInFlight == false else { return }
+
+    let previousRating = userRating
+    userRating = rating ?? 0
+    isRatingMutationInFlight = true
+    ratingErrorMessage = nil
+
+    defer { isRatingMutationInFlight = false }
+
+    do {
+      let response = if let rating {
+        try await adventureService.rateAdventure(id: adventureID, score: rating)
+      } else {
+        try await adventureService.clearRating(id: adventureID)
+      }
+      applyUpdatedRating(response.item)
+    } catch let error as APIError {
+      userRating = previousRating
+      ratingErrorMessage = error.localizedDescription
+    } catch {
+      userRating = previousRating
+      ratingErrorMessage = "Unable to update your rating right now."
+    }
+  }
+
+  @MainActor
+  private func applyUpdatedRating(_ detail: AdventureDetail) {
+    let latestScreenModel = screenModel
+    userRating = detail.viewerRating ?? 0
+    screenModel = latestScreenModel?.replacingRating(
+      viewerRating: detail.viewerRating,
+      averageRating: detail.stats.averageRating,
+      ratingCount: detail.stats.ratingCount
+    )
   }
 
   private func mergeComments(

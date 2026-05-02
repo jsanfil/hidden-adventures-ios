@@ -168,6 +168,309 @@ final class AdventureServiceTests: XCTestCase {
     try await service.unfavoriteAdventure(id: "adventure-1")
   }
 
+  func testRateAdventurePostsScoreAndDecodesUpdatedDetail() async throws {
+    final class RequestBox {
+      var body: Data?
+    }
+
+    let requestBox = RequestBox()
+
+    MockAdventureURLProtocol.requestHandler = { request in
+      XCTAssertEqual(request.httpMethod, "POST")
+      XCTAssertEqual(request.url?.path, "/api/adventures/adventure-1/rating")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
+      requestBox.body = request.bodyData
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 200,
+        httpVersion: nil,
+        headerFields: ["Content-Type": "application/json"]
+      )!
+
+      return (
+        response,
+        Data(
+          #"""
+          {
+            "item": {
+              "id": "adventure-1",
+              "title": "Blue Pool",
+              "description": "Worth the hike.",
+              "categorySlug": "water_spots",
+              "categoryLabel": "Hidden Gem",
+              "visibility": "public",
+              "createdAt": "2026-04-28T18:00:00.000Z",
+              "publishedAt": "2026-04-28T18:00:00.000Z",
+              "location": { "latitude": 44.4, "longitude": -122.1 },
+              "author": {
+                "handle": "mayaexplores",
+                "displayName": "Maya Reyes",
+                "homeCity": "Portland",
+                "homeRegion": "OR"
+              },
+              "primaryMedia": null,
+              "stats": {
+                "favoriteCount": 10,
+                "commentCount": 4,
+                "ratingCount": 13,
+                "averageRating": 4.3
+              },
+              "placeLabel": "Oregon",
+              "updatedAt": "2026-04-29T18:00:00.000Z",
+              "isFavorited": false,
+              "viewerRating": 4
+            }
+          }
+          """#.utf8
+        )
+      )
+    }
+
+    let service = makeService(cache: makeCache())
+    let response = try await service.rateAdventure(id: "adventure-1", score: 4)
+
+    let requestBody = try XCTUnwrap(requestBox.body)
+    let payload = try JSONDecoder().decode(RatingCreatePayloadAssertion.self, from: requestBody)
+
+    XCTAssertEqual(payload.score, 4)
+    XCTAssertEqual(response.item.viewerRating, 4)
+    XCTAssertEqual(response.item.stats.ratingCount, 13)
+    XCTAssertEqual(response.item.stats.averageRating, 4.3)
+  }
+
+  func testRateAdventurePostsRatingStateChangeNotification() async throws {
+    let notificationExpectation = expectation(description: "rating change notification posted")
+    var observedChange: RatingStateChange?
+
+    let observer = NotificationCenter.default.addObserver(
+      forName: RatingStateChange.notificationName,
+      object: nil,
+      queue: nil
+    ) { notification in
+      guard let change = RatingStateChange(notification: notification) else {
+        return
+      }
+
+      observedChange = change
+      notificationExpectation.fulfill()
+    }
+
+    defer {
+      NotificationCenter.default.removeObserver(observer)
+    }
+
+    MockAdventureURLProtocol.requestHandler = { request in
+      XCTAssertEqual(request.httpMethod, "POST")
+      XCTAssertEqual(request.url?.path, "/api/adventures/adventure-1/rating")
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 200,
+        httpVersion: nil,
+        headerFields: ["Content-Type": "application/json"]
+      )!
+
+      return (
+        response,
+        Data(
+          #"""
+          {
+            "item": {
+              "id": "adventure-1",
+              "title": "Blue Pool",
+              "description": "Worth the hike.",
+              "categorySlug": "water_spots",
+              "categoryLabel": "Hidden Gem",
+              "visibility": "public",
+              "createdAt": "2026-04-28T18:00:00.000Z",
+              "publishedAt": "2026-04-28T18:00:00.000Z",
+              "location": { "latitude": 44.4, "longitude": -122.1 },
+              "author": {
+                "handle": "mayaexplores",
+                "displayName": "Maya Reyes",
+                "homeCity": "Portland",
+                "homeRegion": "OR"
+              },
+              "primaryMedia": null,
+              "stats": {
+                "favoriteCount": 10,
+                "commentCount": 4,
+                "ratingCount": 13,
+                "averageRating": 4.3
+              },
+              "placeLabel": "Oregon",
+              "updatedAt": "2026-04-29T18:00:00.000Z",
+              "isFavorited": false,
+              "viewerRating": 4
+            }
+          }
+          """#.utf8
+        )
+      )
+    }
+
+    let service = makeService(cache: makeCache())
+    _ = try await service.rateAdventure(id: "adventure-1", score: 4)
+
+    await fulfillment(of: [notificationExpectation], timeout: 1.0)
+    XCTAssertEqual(
+      observedChange,
+      RatingStateChange(
+        adventureID: "adventure-1",
+        averageRating: 4.3,
+        ratingCount: 13,
+        viewerRating: 4
+      )
+    )
+  }
+
+  func testClearRatingDeletesRatingEndpointAndDecodesUpdatedDetail() async throws {
+    MockAdventureURLProtocol.requestHandler = { request in
+      XCTAssertEqual(request.httpMethod, "DELETE")
+      XCTAssertEqual(request.url?.path, "/api/adventures/adventure-1/rating")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 200,
+        httpVersion: nil,
+        headerFields: ["Content-Type": "application/json"]
+      )!
+
+      return (
+        response,
+        Data(
+          #"""
+          {
+            "item": {
+              "id": "adventure-1",
+              "title": "Blue Pool",
+              "description": "Worth the hike.",
+              "categorySlug": "water_spots",
+              "categoryLabel": "Hidden Gem",
+              "visibility": "public",
+              "createdAt": "2026-04-28T18:00:00.000Z",
+              "publishedAt": "2026-04-28T18:00:00.000Z",
+              "location": { "latitude": 44.4, "longitude": -122.1 },
+              "author": {
+                "handle": "mayaexplores",
+                "displayName": "Maya Reyes",
+                "homeCity": "Portland",
+                "homeRegion": "OR"
+              },
+              "primaryMedia": null,
+              "stats": {
+                "favoriteCount": 10,
+                "commentCount": 4,
+                "ratingCount": 12,
+                "averageRating": 4.5
+              },
+              "placeLabel": "Oregon",
+              "updatedAt": "2026-04-29T18:00:00.000Z",
+              "isFavorited": false,
+              "viewerRating": null
+            }
+          }
+          """#.utf8
+        )
+      )
+    }
+
+    let service = makeService(cache: makeCache())
+    let response = try await service.clearRating(id: "adventure-1")
+
+    XCTAssertNil(response.item.viewerRating)
+    XCTAssertEqual(response.item.stats.ratingCount, 12)
+    XCTAssertEqual(response.item.stats.averageRating, 4.5)
+  }
+
+  func testClearRatingPostsRatingStateChangeNotification() async throws {
+    let notificationExpectation = expectation(description: "rating clear notification posted")
+    var observedChange: RatingStateChange?
+
+    let observer = NotificationCenter.default.addObserver(
+      forName: RatingStateChange.notificationName,
+      object: nil,
+      queue: nil
+    ) { notification in
+      guard let change = RatingStateChange(notification: notification) else {
+        return
+      }
+
+      observedChange = change
+      notificationExpectation.fulfill()
+    }
+
+    defer {
+      NotificationCenter.default.removeObserver(observer)
+    }
+
+    MockAdventureURLProtocol.requestHandler = { request in
+      XCTAssertEqual(request.httpMethod, "DELETE")
+      XCTAssertEqual(request.url?.path, "/api/adventures/adventure-1/rating")
+
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 200,
+        httpVersion: nil,
+        headerFields: ["Content-Type": "application/json"]
+      )!
+
+      return (
+        response,
+        Data(
+          #"""
+          {
+            "item": {
+              "id": "adventure-1",
+              "title": "Blue Pool",
+              "description": "Worth the hike.",
+              "categorySlug": "water_spots",
+              "categoryLabel": "Hidden Gem",
+              "visibility": "public",
+              "createdAt": "2026-04-28T18:00:00.000Z",
+              "publishedAt": "2026-04-28T18:00:00.000Z",
+              "location": { "latitude": 44.4, "longitude": -122.1 },
+              "author": {
+                "handle": "mayaexplores",
+                "displayName": "Maya Reyes",
+                "homeCity": "Portland",
+                "homeRegion": "OR"
+              },
+              "primaryMedia": null,
+              "stats": {
+                "favoriteCount": 10,
+                "commentCount": 4,
+                "ratingCount": 12,
+                "averageRating": 4.5
+              },
+              "placeLabel": "Oregon",
+              "updatedAt": "2026-04-29T18:00:00.000Z",
+              "isFavorited": false,
+              "viewerRating": null
+            }
+          }
+          """#.utf8
+        )
+      )
+    }
+
+    let service = makeService(cache: makeCache())
+    _ = try await service.clearRating(id: "adventure-1")
+
+    await fulfillment(of: [notificationExpectation], timeout: 1.0)
+    XCTAssertEqual(
+      observedChange,
+      RatingStateChange(
+        adventureID: "adventure-1",
+        averageRating: 4.5,
+        ratingCount: 12,
+        viewerRating: nil
+      )
+    )
+  }
+
   func testListCommentsGetsPagedCommentsForAdventure() async throws {
     MockAdventureURLProtocol.requestHandler = { request in
       XCTAssertEqual(request.httpMethod, "GET")
@@ -365,6 +668,37 @@ final class AdventureServiceTests: XCTestCase {
     )
     XCTAssertEqual(refreshed.items.last?.id, created.item.id)
     XCTAssertEqual(refreshed.items.last?.body, "Worth packing extra layers.")
+  }
+
+  func testFixtureRatingSupportsCreateUpdateAndClear() async throws {
+    let service = FixtureAdventureService()
+
+    let initial = try await service.getAdventure(id: MockFixtures.bluePoolID).item
+    XCTAssertNil(initial.viewerRating)
+    let initialSum = initial.stats.averageRating * Double(initial.stats.ratingCount)
+
+    let rated = try await service.rateAdventure(id: MockFixtures.bluePoolID, score: 4).item
+    XCTAssertEqual(rated.viewerRating, 4)
+    XCTAssertEqual(rated.stats.ratingCount, initial.stats.ratingCount + 1)
+    XCTAssertEqual(
+      rated.stats.averageRating,
+      (initialSum + 4) / Double(initial.stats.ratingCount + 1),
+      accuracy: 0.000_001
+    )
+
+    let updated = try await service.rateAdventure(id: MockFixtures.bluePoolID, score: 2).item
+    XCTAssertEqual(updated.viewerRating, 2)
+    XCTAssertEqual(updated.stats.ratingCount, rated.stats.ratingCount)
+    XCTAssertEqual(
+      updated.stats.averageRating,
+      (initialSum + 2) / Double(initial.stats.ratingCount + 1),
+      accuracy: 0.000_001
+    )
+
+    let cleared = try await service.clearRating(id: MockFixtures.bluePoolID).item
+    XCTAssertNil(cleared.viewerRating)
+    XCTAssertEqual(cleared.stats.ratingCount, initial.stats.ratingCount)
+    XCTAssertEqual(cleared.stats.averageRating, initial.stats.averageRating, accuracy: 0.001)
   }
 
   func testLoadMediaDataUsesFreshCacheWithoutRefetching() async throws {
@@ -641,6 +975,10 @@ private struct CreateAdventurePayloadAssertion: Decodable {
 
 private struct CommentCreatePayloadAssertion: Decodable {
   let body: String
+}
+
+private struct RatingCreatePayloadAssertion: Decodable {
+  let score: Int
 }
 
 private extension URLRequest {

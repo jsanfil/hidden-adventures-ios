@@ -2,6 +2,39 @@ import XCTest
 @testable import HiddenAdventures
 
 final class AdventureDetailScreenModelTests: XCTestCase {
+  func testInitCarriesViewerRatingFromDetail() {
+    let detail = AdventureDetail(
+      id: "adventure-1",
+      title: "Blue Pool",
+      description: "Cold water and a great swim.",
+      categorySlug: .waterSpots,
+      categoryLabel: "Hidden Gem",
+      visibility: .public,
+      createdAt: "2026-04-28T18:00:00.000Z",
+      publishedAt: "2026-04-28T18:00:00.000Z",
+      location: AdventureLocation(latitude: 44.0, longitude: -122.0),
+      author: AdventureAuthor(
+        handle: "mayaexplores",
+        displayName: "Maya Reyes",
+        homeCity: "Portland",
+        homeRegion: "OR"
+      ),
+      primaryMedia: nil,
+      stats: AdventureStats(favoriteCount: 10, commentCount: 4, ratingCount: 12, averageRating: 4.4),
+      placeLabel: "Oregon",
+      updatedAt: "2026-04-28T18:00:00.000Z",
+      viewerRating: 5
+    )
+
+    let model = AdventureDetailScreenModel(
+      detail: detail,
+      heroImageNames: [],
+      comments: []
+    )
+
+    XCTAssertEqual(model.viewerRating, 5)
+  }
+
   func testCommentMappingPreservesAvatarMediaIDWhenPresent() {
     let comment = AdventureCommentItem(
       id: "comment-1",
@@ -58,5 +91,40 @@ final class AdventureDetailScreenModelTests: XCTestCase {
     XCTAssertEqual(mapped.authorDisplayName, "Joe Dev")
     XCTAssertEqual(mapped.authorInitials, "JD")
     XCTAssertEqual(mapped.avatarMediaID, "viewer-avatar")
+  }
+
+  func testAdventureCardApplyingRatingStateReplacesAggregateStatsOnly() {
+    let card = AdventureCard(
+      id: "adventure-1",
+      title: "Blue Pool",
+      description: "Cold water and a great swim.",
+      categorySlug: .waterSpots,
+      categoryLabel: "Hidden Gem",
+      visibility: .public,
+      createdAt: "2026-04-28T18:00:00.000Z",
+      publishedAt: "2026-04-28T18:00:00.000Z",
+      location: AdventureLocation(latitude: 44.0, longitude: -122.0),
+      placeLabel: "Oregon",
+      author: AdventureAuthor(
+        handle: "mayaexplores",
+        displayName: "Maya Reyes",
+        homeCity: "Portland",
+        homeRegion: "OR"
+      ),
+      primaryMedia: nil,
+      stats: AdventureStats(favoriteCount: 10, commentCount: 4, ratingCount: 12, averageRating: 4.1),
+      distanceMiles: 2.4,
+      isFavorited: true
+    )
+
+    let updated = card.applyingRatingState(averageRating: 4.3, ratingCount: 13)
+
+    XCTAssertEqual(updated.id, card.id)
+    XCTAssertEqual(updated.title, card.title)
+    XCTAssertEqual(updated.isFavorited, card.isFavorited)
+    XCTAssertEqual(updated.stats.favoriteCount, 10)
+    XCTAssertEqual(updated.stats.commentCount, 4)
+    XCTAssertEqual(updated.stats.ratingCount, 13)
+    XCTAssertEqual(updated.stats.averageRating, 4.3)
   }
 }

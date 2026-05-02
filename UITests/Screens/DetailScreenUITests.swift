@@ -199,4 +199,48 @@ final class DetailScreenUITests: HiddenAdventuresUITestCase {
       screenshotDir: screenshotDir
     )
   }
+
+  func testDetail_ratingCanBeCreatedUpdatedAndCleared() throws {
+    let screenshotDir = try preparedScreenshotDirectory(named: "detail-rating-flow")
+    let app = launchApp(
+      startScreen: "detail",
+      extraEnv: ["UITEST_DETAIL_ID": bluePoolID]
+    )
+
+    let ratingStars = app.otherElements.matching(identifier: "detail.ratingStars")
+    let fourStarButton = ratingStars.element(boundBy: 3)
+    let twoStarButton = ratingStars.element(boundBy: 1)
+    let clearButton = app.buttons["detail.ratingClear"]
+    assertExists(fourStarButton, name: "detail-rating-four", in: app, screenshotDir: screenshotDir)
+    fourStarButton.tap()
+
+    assertValue(
+      fourStarButton,
+      equals: "selected",
+      name: "detail-rating-four-selected",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+    assertExists(clearButton, name: "detail-rating-clear-visible", in: app, screenshotDir: screenshotDir)
+
+    twoStarButton.tap()
+
+    assertValue(
+      twoStarButton,
+      equals: "selected",
+      name: "detail-rating-two-selected",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+
+    clearButton.tap()
+
+    assertValue(
+      twoStarButton,
+      equals: "not selected",
+      name: "detail-rating-cleared",
+      in: app,
+      screenshotDir: screenshotDir
+    )
+  }
 }
