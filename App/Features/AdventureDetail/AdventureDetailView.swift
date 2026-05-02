@@ -449,16 +449,6 @@ struct AdventureDetailView: View {
         }
 
         Spacer()
-
-        Button(action: {}) {
-          Image(systemName: "ellipsis")
-            .font(.system(size: 18, weight: .semibold))
-            .foregroundStyle(HATheme.Colors.mutedForeground)
-            .frame(width: 30, height: 30)
-        }
-        .buttonStyle(.plain)
-        .disabled(usesFixturePreview == false)
-        .opacity(usesFixturePreview ? 1 : 0.7)
       }
 
       if visibleComments.isEmpty {
