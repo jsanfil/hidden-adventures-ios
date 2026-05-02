@@ -1,6 +1,24 @@
 import XCTest
 
 final class ProfileScreenUITests: HiddenAdventuresUITestCase {
+  func testInviteFriends_andShareAdventure_smoke() throws {
+    let profileApp = launchApp(
+      startScreen: "explore-profile",
+      extraEnv: ["UITEST_INVITE_PERMISSION": "authorized"]
+    )
+
+    profileApp.buttons["profile.inviteFriends"].tap()
+    XCTAssertTrue(profileApp.buttons["inviteFriends.cta"].waitForExistence(timeout: 2))
+    profileApp.terminate()
+
+    let detailApp = launchApp(
+      startScreen: "detail",
+      extraEnv: ["UITEST_DETAIL_ID": eagleID]
+    )
+
+    XCTAssertTrue(detailApp.buttons["detail.share"].waitForExistence(timeout: 2))
+  }
+
   func testInviteFriends_sentStateShowsCompletionCopy() throws {
     let sarahContactID = "contact-sarah"
     let app = launchApp(
