@@ -18,6 +18,7 @@ struct ProfileView: View {
   let onProfileLoaded: (ProfileDetail) -> Void
   let onOpenProfile: (String) -> Void
   let onOpenInviteFriends: () -> Void
+  let onOpenSettings: () -> Void
   let onOpenDetail: (String) -> Void
   let onLogout: () -> Void
 
@@ -115,9 +116,9 @@ struct ProfileView: View {
 
               if showsSidekicksCard {
                 circularHeaderButton(
-                  systemImage: "rectangle.portrait.and.arrow.right",
-                  accessibilityID: "profile.logout",
-                  action: onLogout
+                  systemImage: "gearshape.fill",
+                  accessibilityID: "profile.settings",
+                  action: onOpenSettings
                 )
               } else {
                 Color.clear
@@ -682,6 +683,7 @@ struct ProfileView_Previews: PreviewProvider {
         onProfileLoaded: { _ in },
         onOpenProfile: { _ in },
         onOpenInviteFriends: {},
+        onOpenSettings: {},
         onOpenDetail: { _ in },
         onLogout: {}
       )

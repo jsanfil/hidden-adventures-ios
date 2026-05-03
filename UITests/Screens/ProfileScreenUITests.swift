@@ -34,8 +34,8 @@ final class ProfileScreenUITests: HiddenAdventuresUITestCase {
       screenshotDir: screenshotDir
     )
     assertExists(
-      app.buttons["profile.logout"],
-      name: "profile-logout",
+      app.buttons["profile.settings"],
+      name: "profile-settings",
       in: app,
       screenshotDir: screenshotDir
     )

@@ -263,6 +263,39 @@ final class ScreenGalleryRegressionUITests: HiddenAdventuresUITestCase {
     }
   }
 
+  func testSettings_galleryCapturesScreenshot() throws {
+    try captureScreen(
+      named: "gallery-settings",
+      startScreen: "settings",
+      expectedIdentifier: "settings.back"
+    ) { app, directory in
+      self.assertExists(
+        app.staticTexts["settings.title"],
+        name: "settings-title",
+        in: app,
+        screenshotDir: directory
+      )
+      self.assertExists(
+        app.buttons["settings.row.feedback"],
+        name: "settings-feedback-row",
+        in: app,
+        screenshotDir: directory
+      )
+      self.assertExists(
+        app.buttons["settings.row.deleteAccount"],
+        name: "settings-delete-row",
+        in: app,
+        screenshotDir: directory
+      )
+      self.assertExists(
+        app.buttons["settings.logout"],
+        name: "settings-logout",
+        in: app,
+        screenshotDir: directory
+      )
+    }
+  }
+
   func testCreatePhotos_galleryCapturesScreenshot() throws {
     try captureScreen(
       named: "gallery-create-photos",

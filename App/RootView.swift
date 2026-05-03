@@ -93,6 +93,9 @@ struct RootView: View {
             onOpenInviteFriends: {
               presentInviteShareSheet()
             },
+            onOpenSettings: {
+              coordinator.path.append(.settings)
+            },
             onOpenDetail: { adventureID in
               coordinator.path.append(.detail(adventureID))
             },
@@ -124,11 +127,16 @@ struct RootView: View {
             onOpenInviteFriends: {
               presentInviteShareSheet()
             },
+            onOpenSettings: {
+              coordinator.path.append(.settings)
+            },
             onOpenDetail: { adventureID in
               coordinator.path.append(.detail(adventureID))
             },
             onLogout: logout
           )
+        case .settings:
+          SettingsView(onLogout: logout)
         }
       }
     }

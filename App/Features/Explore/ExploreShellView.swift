@@ -14,6 +14,7 @@ struct ExploreShellView: View {
   let onViewerProfileLoaded: (ProfileDetail) -> Void
   let onOpenProfile: (String) -> Void
   let onOpenInviteFriends: () -> Void
+  let onOpenSettings: () -> Void
   let onOpenDetail: (String) -> Void
   let onLogout: () -> Void
 
@@ -49,6 +50,7 @@ struct ExploreShellView: View {
     onViewerProfileLoaded: @escaping (ProfileDetail) -> Void,
     onOpenProfile: @escaping (String) -> Void,
     onOpenInviteFriends: @escaping () -> Void,
+    onOpenSettings: @escaping () -> Void,
     onOpenDetail: @escaping (String) -> Void,
     onLogout: @escaping () -> Void
   ) {
@@ -64,6 +66,7 @@ struct ExploreShellView: View {
     self.onViewerProfileLoaded = onViewerProfileLoaded
     self.onOpenProfile = onOpenProfile
     self.onOpenInviteFriends = onOpenInviteFriends
+    self.onOpenSettings = onOpenSettings
     self.onOpenDetail = onOpenDetail
     self.onLogout = onLogout
     _locationSearchController = StateObject(
@@ -316,6 +319,7 @@ struct ExploreShellView: View {
       onProfileLoaded: onViewerProfileLoaded,
       onOpenProfile: onOpenProfile,
       onOpenInviteFriends: onOpenInviteFriends,
+      onOpenSettings: onOpenSettings,
       onOpenDetail: onOpenDetail,
       onLogout: onLogout
     )
@@ -885,6 +889,7 @@ private struct ExploreShellPreviewWrapper: View {
       onViewerProfileLoaded: { _ in },
       onOpenProfile: { _ in },
       onOpenInviteFriends: {},
+      onOpenSettings: {},
       onOpenDetail: { _ in },
       onLogout: {}
     )

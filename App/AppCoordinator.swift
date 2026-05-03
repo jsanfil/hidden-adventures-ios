@@ -22,6 +22,7 @@ enum ExploreMode: String, CaseIterable, Identifiable {
 enum AppRoute: Hashable {
   case detail(String)
   case profile(String)
+  case settings
 }
 
 final class AppCoordinator: ObservableObject {
@@ -56,6 +57,10 @@ final class AppCoordinator: ObservableObject {
     case "explore-profile":
       stage = .explore
       exploreMode = .profile
+    case "settings":
+      stage = .explore
+      exploreMode = .profile
+      path = [.settings]
     case "detail":
       stage = .explore
       exploreMode = .feed
