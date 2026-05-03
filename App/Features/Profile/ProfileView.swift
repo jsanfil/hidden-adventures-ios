@@ -5,6 +5,11 @@ struct ProfileView: View {
   private enum Layout {
     static let contentSectionSpacing: CGFloat = 18
     static let contentTopPadding: CGFloat = 14
+    static let headerControlSize: CGFloat = 44
+    static let headerControlsHorizontalPadding: CGFloat = 16
+    static let headerContentHorizontalPadding: CGFloat = 24
+    static let headerTopPadding: CGFloat = 12
+    static let headerProfileTopPadding: CGFloat = 60
   }
 
   @Environment(\.dismiss) private var dismiss
@@ -89,144 +94,144 @@ struct ProfileView: View {
     return response.profile.handle != viewerHandle
   }
     
-    private func header(profile: ProfileDetail) -> some View {
-      VStack(spacing: 0) {
-        ZStack(alignment: .topLeading) {
-          LinearGradient(
-            gradient: Gradient(stops: [
-              .init(color: Color(red: 0.56, green: 0.77, blue: 0.80), location: 0.0),
-              .init(color: Color(red: 0.37, green: 0.65, blue: 0.61), location: 0.42),
-              .init(color: HATheme.Colors.primary, location: 1.0)
-            ]),
-            startPoint: .leading,
-            endPoint: .trailing
-          )
+  private func header(profile: ProfileDetail) -> some View {
+    VStack(spacing: 0) {
+      ZStack(alignment: .top) {
+        LinearGradient(
+          gradient: Gradient(stops: [
+            .init(color: Color(red: 0.56, green: 0.77, blue: 0.80), location: 0.0),
+            .init(color: Color(red: 0.37, green: 0.65, blue: 0.61), location: 0.42),
+            .init(color: HATheme.Colors.primary, location: 1.0)
+          ]),
+          startPoint: .leading,
+          endPoint: .trailing
+        )
 
-          VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .center) {
-              if showsBackButton {
-                plainHeaderBackButton
-              } else {
-                Color.clear
-                  .frame(width: 40, height: 40)
-                  .accessibilityHidden(true)
-              }
+        VStack(alignment: .leading, spacing: 0) {
+          HStack(alignment: .center, spacing: 16) {
+            ProfileAvatarView(
+              initials: initials(for: profile),
+              mediaID: profile.avatar?.id,
+              mediaLoader: adventureService,
+              size: 80
+            )
 
-              Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 2) {
+              Text(profile.displayName ?? profile.handle)
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
 
-              if showsSidekicksCard {
-                circularHeaderButton(
-                  systemImage: "gearshape.fill",
-                  accessibilityID: "profile.settings",
-                  action: onOpenSettings
-                )
-              } else {
-                Color.clear
-                  .frame(width: 40, height: 40)
-                  .accessibilityHidden(true)
-              }
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 12)
+              Text("@\(profile.handle)")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.86))
+                .accessibilityIdentifier("profile.handle.readonly")
 
-            HStack(alignment: .center, spacing: 16) {
-              ProfileAvatarView(
-                initials: initials(for: profile),
-                mediaID: profile.avatar?.id,
-                mediaLoader: adventureService,
-                size: 80
-              )
-
-              VStack(alignment: .leading, spacing: 2) {
-                Text(profile.displayName ?? profile.handle)
-                  .font(.system(size: 28, weight: .semibold))
-                  .foregroundStyle(.white)
-                  .lineLimit(2)
-                  .minimumScaleFactor(0.85)
-
-                Text("@\(profile.handle)")
-                  .font(.system(size: 16, weight: .semibold))
-                  .foregroundStyle(.white.opacity(0.86))
-                  .accessibilityIdentifier("profile.handle.readonly")
-
-                if let locationLabel = locationLabel(for: profile) {
-                  Label {
-                    Text(locationLabel)
-                  } icon: {
-                    Image(systemName: "location.fill")
-                  }
-                  .font(.system(size: 16, weight: .medium))
-                  .foregroundStyle(.white.opacity(0.80))
+              if let locationLabel = locationLabel(for: profile) {
+                Label {
+                  Text(locationLabel)
+                } icon: {
+                  Image(systemName: "location.fill")
                 }
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(.white.opacity(0.80))
               }
-              .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 8)
-            .padding(.bottom, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
           }
+          .padding(.horizontal, Layout.headerContentHorizontalPadding)
+          .padding(.top, Layout.headerProfileTopPadding)
+          .padding(.bottom, 16)
         }
-        .frame(height: 172)
 
-        VStack(alignment: .leading, spacing: Layout.contentSectionSpacing) {
-          Group {
-            if let bio = profile.bio, bio.isEmpty == false {
-              Text(bio)
-                .font(HATheme.Typography.body)
-                .foregroundStyle(HATheme.Colors.mutedForeground)
-                .lineSpacing(3)
-                .accessibilityIdentifier("profile.bio.readonly")
-            } else {
-              Text("Add a bio during setup or come back later to tell other explorers what you love to find.")
-                .font(HATheme.Typography.body)
-                .foregroundStyle(HATheme.Colors.mutedForeground)
-                .accessibilityIdentifier("profile.bio.placeholder")
-            }
+        HStack(alignment: .center) {
+          if showsBackButton {
+            plainHeaderBackButton
+          } else {
+            Color.clear
+              .frame(width: Layout.headerControlSize, height: Layout.headerControlSize)
+              .accessibilityHidden(true)
           }
-          .fixedSize(horizontal: false, vertical: true)
 
-          profileStatRow {
-            profileStatItem(title: "Adventures", value: MockFixtures.profileStats.adventures, showsDivider: true)
-            profileStatItem(title: "Likes", value: MockFixtures.profileStats.likesReceived, showsDivider: true)
-            profileStatItem(title: "Views", value: MockFixtures.profileStats.views, showsDivider: false)
-          }
+          Spacer(minLength: 0)
 
           if showsSidekicksCard {
-            NavigationLink {
-              SidekicksView(
-                sidekickService: sidekickService,
-                adventureService: adventureService,
-                onOpenProfile: onOpenProfile,
-                onSidekicksChanged: {
-                  Task {
-                    await loadSidekickSummary()
-                  }
-                }
-              )
-            } label: {
-              sidekicksCard
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("profile.sidekicksCard")
-
-            inviteFriendsButton
+            circularHeaderButton(
+              systemImage: "gearshape",
+              accessibilityID: "profile.settings",
+              action: onOpenSettings
+            )
+          } else {
+            Color.clear
+              .frame(width: Layout.headerControlSize, height: Layout.headerControlSize)
+              .accessibilityHidden(true)
           }
         }
-        .padding(.horizontal, 24)
-        .padding(.top, Layout.contentTopPadding)
+        .padding(.horizontal, Layout.headerControlsHorizontalPadding)
+        .padding(.top, Layout.headerTopPadding)
       }
+      .frame(height: 172)
+
+      VStack(alignment: .leading, spacing: Layout.contentSectionSpacing) {
+        Group {
+          if let bio = profile.bio, bio.isEmpty == false {
+            Text(bio)
+              .font(HATheme.Typography.body)
+              .foregroundStyle(HATheme.Colors.mutedForeground)
+              .lineSpacing(3)
+              .accessibilityIdentifier("profile.bio.readonly")
+          } else {
+            Text("Add a bio during setup or come back later to tell other explorers what you love to find.")
+              .font(HATheme.Typography.body)
+              .foregroundStyle(HATheme.Colors.mutedForeground)
+              .accessibilityIdentifier("profile.bio.placeholder")
+          }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+
+        profileStatRow {
+          profileStatItem(title: "Adventures", value: MockFixtures.profileStats.adventures, showsDivider: true)
+          profileStatItem(title: "Likes", value: MockFixtures.profileStats.likesReceived, showsDivider: true)
+          profileStatItem(title: "Views", value: MockFixtures.profileStats.views, showsDivider: false)
+        }
+
+        if showsSidekicksCard {
+          NavigationLink {
+            SidekicksView(
+              sidekickService: sidekickService,
+              adventureService: adventureService,
+              onOpenProfile: onOpenProfile,
+              onSidekicksChanged: {
+                Task {
+                  await loadSidekickSummary()
+                }
+              }
+            )
+          } label: {
+            sidekicksCard
+          }
+          .buttonStyle(.plain)
+          .accessibilityIdentifier("profile.sidekicksCard")
+
+          inviteFriendsButton
+        }
+      }
+      .padding(.horizontal, 24)
+      .padding(.top, Layout.contentTopPadding)
     }
-    
-    private func circularHeaderButton(
+  }
+
+  private func circularHeaderButton(
     systemImage: String,
     accessibilityID: String,
     action: @escaping () -> Void
   ) -> some View {
     Button(action: action) {
       Image(systemName: systemImage)
-        .font(.system(size: 16, weight: .semibold))
+        .font(.system(size: 18, weight: .semibold))
         .foregroundStyle(.white)
-        .frame(width: 40, height: 40)
+        .frame(width: Layout.headerControlSize, height: Layout.headerControlSize)
         .background(.white.opacity(0.16))
         .overlay {
           Circle()
@@ -243,7 +248,7 @@ struct ProfileView: View {
       Image(systemName: "chevron.left")
         .font(.system(size: 26, weight: .semibold))
         .foregroundStyle(.white)
-        .frame(width: 40, height: 40, alignment: .leading)
+        .frame(width: Layout.headerControlSize, height: Layout.headerControlSize, alignment: .leading)
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
