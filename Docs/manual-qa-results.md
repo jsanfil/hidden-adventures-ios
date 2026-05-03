@@ -13,7 +13,7 @@ Keep one entry per feature or slice, and update the notes as verification progre
 | 2026-04-28 | Favorites | `codex/favorites-ios-slice` | `manual QA` | All Favorites surfaces and the User Profile Shared/Favorites toggle | Pass | Testing complete. |
 | 2026-04-29 | Comments | `working tree` | `local manual QA` | Adventure detail comment load, composer submit, pagination, empty state, and error handling | Pass | Local manual QA passed for the integrated comments flow, including loading existing comments, creating a new comment, paging additional comments, and verifying empty and error states. |
 | 2026-05-01 | Ratings | `codex/implement-ratings-feature` | `manual QA` | Add, update, and delete rating on adventure detail and feed sync on return | Pass | Manual QA passed for ratings. All targeted tests passed. |
-| 2026-05-02 | Adventure Sharing + Friend Invites | `working tree` | `fixture preview + local manual QA` | Invite entrypoint, authorized contact search and selection, denied fallback, sent completion state, public adventure share, non-public share explanation | Pass with dependency | Focused invite and share verification passed. Remaining integrated dependency: canonical public host and associated-domain contract for install/open fallback behavior is still not finalized cross-repo. |
+| 2026-05-02 | Adventure Sharing + Friend Invites | `working tree` | `local manual QA + focused automation` | Profile invite native share entrypoint, public adventure share sheet, and non-public share explanation | Pass | Simplified invite sharing now matches the native share-sheet pattern used for adventure sharing. Focused unit and UI verification passed after removing the old Contacts and SMS-picker flow. |
 
 ## Recommended Notes
 
