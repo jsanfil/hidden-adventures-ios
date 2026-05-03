@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-struct AdventureShareSheet: UIViewControllerRepresentable {
+struct ShareSheet: UIViewControllerRepresentable {
   let items: [Any]
 
   func makeUIViewController(context: Context) -> UIActivityViewController {

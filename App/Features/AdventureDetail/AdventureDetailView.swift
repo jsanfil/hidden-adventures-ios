@@ -125,7 +125,7 @@ struct AdventureDetailView: View {
       set: { if $0 == false { sharePayload = nil } }
     )) {
       if let sharePayload {
-        AdventureShareSheet(items: [sharePayload.message, sharePayload.url])
+        ShareSheet(items: [sharePayload.message, sharePayload.url])
       }
     }
     .toolbar(.hidden, for: .navigationBar)

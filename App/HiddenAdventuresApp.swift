@@ -80,10 +80,6 @@ struct HiddenAdventuresApp: App {
     return RemoteDiscoverService(client: apiClient)
   }
 
-  private var inviteFriendsService: InviteFriendsService {
-    FixtureInviteFriendsService()
-  }
-
   private var backendAuthService: AuthService? {
     guard runtime.usesFixturePreview == false else {
       return nil
@@ -114,7 +110,6 @@ struct HiddenAdventuresApp: App {
         profileService: profileService,
         sidekickService: sidekickService,
         discoverService: discoverService,
-        inviteFriendsService: inviteFriendsService,
         backendAuthService: backendAuthService,
         appAuthService: appAuthService,
         authState: authState

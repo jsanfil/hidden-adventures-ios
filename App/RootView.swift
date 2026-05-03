@@ -7,12 +7,12 @@ struct RootView: View {
   private let profileService: ProfileService
   private let sidekickService: SidekickService
   private let discoverService: DiscoverService
-  private let inviteFriendsService: InviteFriendsService
 
   @Environment(\.scenePhase) private var scenePhase
   @StateObject private var coordinator: AppCoordinator
   @StateObject private var session: AppSession
   @State private var hasAttemptedSessionRestore = false
+  @State private var inviteSharePayload: InviteSharePayload?
 
   init(
     runtime: AppRuntime,
@@ -20,7 +20,6 @@ struct RootView: View {
     profileService: ProfileService,
     sidekickService: SidekickService,
     discoverService: DiscoverService,
-    inviteFriendsService: InviteFriendsService,
     backendAuthService: AuthService?,
     appAuthService: AppAuthService?,
     authState: AuthStateStore
@@ -30,7 +29,6 @@ struct RootView: View {
     self.profileService = profileService
     self.sidekickService = sidekickService
     self.discoverService = discoverService
-    self.inviteFriendsService = inviteFriendsService
     _coordinator = StateObject(wrappedValue: AppCoordinator())
     _session = StateObject(
       wrappedValue: AppSession(
@@ -93,7 +91,7 @@ struct RootView: View {
               coordinator.path.append(.profile(handle))
             },
             onOpenInviteFriends: {
-              coordinator.path.append(.inviteFriends)
+              presentInviteShareSheet()
             },
             onOpenDetail: { adventureID in
               coordinator.path.append(.detail(adventureID))
@@ -124,15 +122,13 @@ struct RootView: View {
               coordinator.path.append(.profile(nextHandle))
             },
             onOpenInviteFriends: {
-              coordinator.path.append(.inviteFriends)
+              presentInviteShareSheet()
             },
             onOpenDetail: { adventureID in
               coordinator.path.append(.detail(adventureID))
             },
             onLogout: logout
           )
-        case .inviteFriends:
-          InviteFriendsView(service: inviteFriendsService)
         }
       }
     }
@@ -155,6 +151,14 @@ struct RootView: View {
 
       Task {
         _ = await session.refreshAuthenticatedSessionIfNeeded()
+      }
+    }
+    .sheet(isPresented: Binding(
+      get: { inviteSharePayload != nil },
+      set: { if $0 == false { inviteSharePayload = nil } }
+    )) {
+      if let inviteSharePayload {
+        ShareSheet(items: inviteSharePayload.items)
       }
     }
     .overlay {
@@ -263,6 +267,10 @@ struct RootView: View {
     session.logout()
     coordinator.resetToWelcome()
   }
+
+  private func presentInviteShareSheet() {
+    inviteSharePayload = InviteSharePayload.make()
+  }
 }
 
 struct RootView_Previews: PreviewProvider {
@@ -273,7 +281,6 @@ struct RootView_Previews: PreviewProvider {
       profileService: FixtureProfileService(),
       sidekickService: FixtureSidekickService(),
       discoverService: FixtureDiscoverService(),
-      inviteFriendsService: FixtureInviteFriendsService(),
       backendAuthService: nil,
       appAuthService: nil,
       authState: AuthStateStore()

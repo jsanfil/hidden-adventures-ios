@@ -15,8 +15,9 @@ enum MockFixtures {
   static let sarahCliffsID = "adventure-sarah-cliffs"
   static let sarahSecretSpringsID = "adventure-sarah-secret-springs"
   static let sarahQuietQuarryID = "adventure-sarah-quiet-quarry"
-  static let inviteAppURL = URL(string: "https://hiddenadventures.app/invite")!
-  static let inviteMessage = InviteFriendsCopy.inviteMessage(appURL: inviteAppURL)
+  static let inviteSharePayload = InviteSharePayload.make()
+  static let inviteAppURL = inviteSharePayload.url
+  static let inviteMessage = inviteSharePayload.message
 
   static let bootstrapDraft = ProfileBootstrapDraft(
     displayName: "Jordan",
@@ -185,13 +186,6 @@ enum MockFixtures {
   ]
 
   static let initialSidekickIDs: Set<String> = Set(sidekickUsers.prefix(10).map(\.id))
-
-  static let inviteContacts: [InviteFriendContact] = [
-    InviteFriendContact(id: "contact-sarah", displayName: "Sarah Chen", phoneNumber: "5031112222"),
-    InviteFriendContact(id: "contact-mike", displayName: "Mike Rodriguez", phoneNumber: "9713334444"),
-    InviteFriendContact(id: "contact-emma", displayName: "Emma Wilson", phoneNumber: "4155550101"),
-    InviteFriendContact(id: "contact-alex", displayName: "Alex Kim", phoneNumber: "2135550147")
-  ]
 
   static let feedItems: [AdventureCard] = [
     AdventureCard(
